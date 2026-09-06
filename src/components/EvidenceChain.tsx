@@ -112,7 +112,7 @@ export default function EvidenceChain() {
                   {p.outputs.map((o, j) => (
                     <li
                       key={j}
-                      className="flex items-start gap-3 rounded-lg border border-gold-2/15 bg-gradient-to-r from-navy-3/45 to-ink/60 p-4"
+                      className="chain-output flex items-start gap-3 rounded-lg p-4"
                     >
                       <Icon name="check" size={15} className="mt-0.5 shrink-0 text-gold-2" />
                       <span className="text-[14px] leading-relaxed text-sand">{o}</span>

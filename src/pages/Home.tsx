@@ -100,7 +100,7 @@ function Hero() {
               <img
                 src="/assets/cac-building-logo.webp"
                 alt="CAC office building with logo signage"
-                className="w-full rounded-lg border border-gold-2/20 shadow-[0_60px_120px_-40px_rgba(0,0,0,0.9)]"
+                className="w-full rounded-lg border border-gold-2/55 shadow-[0_60px_120px_-40px_rgba(0,0,0,0.9),0_0_44px_-12px_rgba(201,138,4,0.55)]"
               />
               {/* corner ticks overlay */}
               <span className="pointer-events-none absolute left-3 top-3 h-6 w-6 border-l border-t border-gold-2/70" />
@@ -234,8 +234,8 @@ function FirmSummary() {
       <div className="relative mx-auto grid max-w-[1320px] grid-cols-1 items-center gap-12 px-5 lg:grid-cols-2 lg:px-8">
         <Reveal>
           <div className="relative">
-            <div className="pointer-events-none absolute -inset-4 rounded-lg border border-gold-2/15" />
-            <img src="/assets/cac-building-logo.webp" alt="CAC office building with illuminated logo" className="relative w-full rounded-lg border border-gold-2/20 shadow-2xl" />
+            <div className="pointer-events-none absolute -inset-4 rounded-lg border border-gold-2/40" />
+            <img src="/assets/cac-building-logo.webp" alt="CAC office building with illuminated logo" className="relative w-full rounded-lg border border-gold-2/55 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.9),0_0_40px_-12px_rgba(201,138,4,0.55)]" />
           </div>
         </Reveal>
 

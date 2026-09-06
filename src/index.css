@@ -396,6 +396,31 @@ body {
   transform: none;
 }
 
+/* ---------- Stage output chips ----------
+   These still carried the 0.15 border alpha the plates were corrected away
+   from, so a row of outputs dissolved into the page behind it. Same remedy: a
+   border that clears its own fill, a resting shadow to lift the chip off the
+   grid, and a gold rule on the leading edge so the outputs read as one set
+   rather than as stray text. */
+.chain-output {
+  background: linear-gradient(135deg, rgba(23, 55, 99, 0.78), rgba(5, 11, 22, 0.92));
+  border: 1px solid rgba(233, 199, 102, 0.38);
+  border-left: 3px solid rgba(233, 199, 102, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(233, 199, 102, 0.16),
+    0 14px 30px -22px rgba(0, 0, 0, 0.95),
+    0 16px 38px -30px rgba(201, 138, 4, 0.55);
+  transition: border-color 350ms ease, box-shadow 350ms ease, transform 350ms ease;
+}
+.chain-output:hover {
+  border-color: rgba(233, 199, 102, 0.9);
+  border-left-color: var(--color-gold-2);
+  box-shadow:
+    inset 0 1px 0 rgba(233, 199, 102, 0.30),
+    0 24px 50px -26px rgba(201, 138, 4, 0.60);
+  transform: translateY(-2px);
+}
+
 /* ---------- Redaction reveal ----------
    Used once, on the page heading. The bar sits over the text and retracts to
    the right to declassify it. Deliberately not applied per stage — repeated
@@ -421,6 +446,8 @@ body {
   .chain-fill { transition: none; }
   .chain-item { opacity: 1; transform: none; transition: none; }
   .chain-node { transition: none; }
+  .chain-output { transition: none; }
+  .chain-output:hover { transform: none; }
   .redact::after { display: none; }
 }
 

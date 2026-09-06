@@ -40,8 +40,8 @@ export default function Process() {
 
         {/* Assurance banner */}
           <Reveal delay={100}>
-            <div className="mt-14 grid items-center gap-6 overflow-hidden rounded-lg border border-gold-2/20 bg-navy-2/50 p-7 sm:grid-cols-[auto_1fr_auto] sm:p-8">
-              <div className="grid h-24 w-24 place-items-center rounded-full border border-gold-2/30 bg-ink/60">
+            <div className="plate mt-14 grid items-center gap-6 overflow-hidden rounded-lg p-7 sm:grid-cols-[auto_1fr_auto] sm:p-8">
+              <div className="grid h-24 w-24 place-items-center rounded-full border border-gold-2/50 bg-ink/60">
                 <Icon name="gavel" size={46} className="text-gold-2" />
               </div>
               <p className="max-w-2xl text-stone">

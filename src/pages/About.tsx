@@ -63,7 +63,7 @@ export default function About() {
             <Reveal delay={260}>
               <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {VALUES.map((v) => (
-                  <div key={v.k} className="flex flex-col items-center gap-2 rounded-md border border-gold-2/15 bg-navy-2/40 py-4 text-center">
+                  <div key={v.k} className="flex flex-col items-center gap-2 rounded-md border border-gold-2/40 bg-navy-2/70 py-4 text-center shadow-[inset_0_1px_0_rgba(233,199,102,0.14),0_14px_30px_-22px_rgba(0,0,0,0.95)] transition duration-300 hover:border-gold-2/80 hover:bg-navy-2/90">
                     <Icon name={v.g} size={22} className="text-gold-2" />
                     <span className="font-mono text-[10px] uppercase tracking-wide-2 text-stone">{v.k}</span>
                   </div>
@@ -74,8 +74,8 @@ export default function About() {
 
           <Reveal delay={120} className="lg:col-span-6">
             <div className="relative">
-              <div className="pointer-events-none absolute -inset-4 rounded-lg border border-gold-2/15" />
-              <img src="/assets/cac-building-logo.webp" alt="CAC headquarters building with illuminated logo" className="relative w-full rounded-lg border border-gold-2/20 shadow-2xl" />
+              <div className="pointer-events-none absolute -inset-4 rounded-lg border border-gold-2/40" />
+              <img src="/assets/cac-building-logo.webp" alt="CAC headquarters building with illuminated logo" className="relative w-full rounded-lg border border-gold-2/55 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.9),0_0_40px_-12px_rgba(201,138,4,0.55)]" />
             </div>
           </Reveal>
         </div>
