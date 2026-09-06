@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
-import { Eyebrow, Heading, Reveal, Tag } from "../components/ui";
-import { FAQ, MISSION, MISSION_POINTS, VISION, WHY_PRINCIPLES, waLink } from "../data";
+import { Eyebrow, Heading, Reveal } from "../components/ui";
+import { FAQ, MISSION, MISSION_POINTS, VISION, WHY_PRINCIPLES } from "../data";
 import { Seo } from "../components/Seo";
 
 const PRINCIPLE_IMAGES = [
@@ -22,15 +22,6 @@ const STANDARDS = [
   { k: "Structured Evidence Reporting", img: "/assets/illustration-forensic.webp", d: "Findings arrive as an organised portfolio with source documents attached, not a narrative summary." },
   { k: "Support Through Resolution", img: "/assets/service-ill-forensic.webp", d: "We work alongside the lawyers, executors, trustees and beneficiaries who must act on the findings." },
   { k: "Professional Standards & Ethics", img: "/assets/cac-building.webp", d: "Disciplined method, stated limitations, and no claim the documents cannot carry." },
-];
-
-const COMPARE = [
-  { row: "Evidence basis", them: "Verbal advice & assumptions", us: "Registry folios, grants & probate files" },
-  { row: "Independence", them: "Often tied to a transaction party", us: "Neutral — we answer to the record" },
-  { row: "Document depth", them: "Current title only", us: "Pioneer-to-present chain reconstruction" },
-  { row: "Court readiness", them: "Informal memos", us: "Structured evidence portfolios & binders" },
-  { row: "Confidentiality", them: "Variable", us: "Counsel-grade handling on every file" },
-  { row: "Continuity", them: "Hand-offs between vendors", us: "One team, intake to registration" },
 ];
 
 export default function WhyCAC() {
@@ -81,37 +72,6 @@ export default function WhyCAC() {
                 </div>
               </Reveal>
             ))}
-          </div>
-  
-          {/* Comparison */}
-          <div className="mt-20">
-            <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
-              <Heading eyebrow="The difference" title={<>Conventional advice<br />vs. <span className="italic text-gold-gradient">court-grade evidence.</span></>} />
-              <Reveal delay={100}><Tag>Forensic standard</Tag></Reveal>
-            </div>
-  
-            <Reveal delay={100}>
-              <div className="mt-10 overflow-x-auto [scrollbar-width:thin] rounded-xl border border-gold-2/20">
-                <div className="min-w-[600px]">
-                  <div className="grid grid-cols-[1.2fr_1fr_1fr] bg-navy-2/70 font-mono text-[10px] uppercase tracking-wide-2 text-gold-2/70">
-                    <div className="p-4">Dimension</div>
-                    <div className="border-l border-gold-2/10 p-4 text-mute">Conventional</div>
-                    <div className="border-l border-gold-2/10 p-4 text-gold-2">CAC Forensic</div>
-                  </div>
-                  {COMPARE.map((c, i) => (
-                    <div key={c.row} className={`grid grid-cols-[1.2fr_1fr_1fr] text-sm ${i % 2 ? "bg-navy-2/30" : "bg-ink/30"}`}>
-                      <div className="p-4 font-display text-ivory">{c.row}</div>
-                      <div className="flex items-start gap-2 border-l border-gold-2/10 p-4 text-mute">
-                        <Icon name="close" size={14} className="mt-0.5 shrink-0 text-rose-300/80" /> {c.them}
-                      </div>
-                      <div className="flex items-start gap-2 border-l border-gold-2/10 p-4 text-sand">
-                        <Icon name="check" size={14} className="mt-0.5 shrink-0 text-gold-2" /> {c.us}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </Reveal>
           </div>
   
           {/* Vision + Mission */}
@@ -203,27 +163,6 @@ export default function WhyCAC() {
               ))}
             </div>
           </div>
-  
-          {/* CTA */}
-          <Reveal delay={100}>
-            <div className="mt-16 corner-ticks relative overflow-hidden rounded-xl border border-gold-2/25 bg-gradient-to-br from-navy-3 to-ink p-10 text-center sm:p-14">
-              <div className="pointer-events-none absolute inset-0 bg-grid-fine opacity-40" />
-              <div className="relative">
-                <Icon name="seal" size={40} className="mx-auto text-gold-2" />
-                <h3 className="mx-auto mt-5 max-w-3xl font-display text-3xl leading-tight text-ivory sm:text-4xl">
-                  When the record matters, <span className="italic text-gold-gradient">choose the consultancy that reads it.</span>
-                </h3>
-                <div className="mt-8 flex flex-wrap justify-center gap-3">
-                  <Link to="/contact" className="gold-btn sheen-host flex items-center gap-2 rounded-sm px-7 py-3.5 text-[12px] uppercase">
-                    Open a Case File <Icon name="arrow" size={16} />
-                  </Link>
-                  <a href={waLink()} target="_blank" rel="noreferrer" className="ghost-btn flex items-center gap-2 rounded-sm px-7 py-3.5 text-[12px] uppercase">
-                    <Icon name="whatsapp" size={16} /> WhatsApp CAC
-                  </a>
-                </div>
-              </div>
-            </div>
-          </Reveal>
         </div>
       </section>
     </>

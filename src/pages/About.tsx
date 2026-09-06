@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
-import { Counter, Eyebrow, Heading, Marquee, Reveal, Tag } from "../components/ui";
-import { CONTACT, HERO_STATS, INDUSTRIES, MISSION, PRINCIPLES_HOME, STRAPLINE, TAGLINES, waLink } from "../data";
+import { Counter, Heading, Marquee, Reveal, Tag } from "../components/ui";
+import { HERO_STATS, INDUSTRIES, PRINCIPLES_HOME, STRAPLINE, TAGLINES, waLink } from "../data";
 import { Seo } from "../components/Seo";
 
 const VALUES = [
@@ -124,18 +124,6 @@ export default function About() {
                 Today CAC serves beneficiaries, legal counsel, developers and investors nationwide — from Skudai to the High Court — with the same discretion and rigour that defined its first engagement.
               </p>
             </Reveal>
-            <Reveal delay={180}>
-              <div className="mt-8 rounded-md border border-gold-2/20 bg-navy-2/50 p-6">
-                <Eyebrow>Who you&apos;ll deal with</Eyebrow>
-                <div className="mt-3 flex items-center gap-4">
-                  <img src="/assets/mohaan-profile.webp" alt={CONTACT.consultant} className="h-14 w-14 rounded-full object-cover border border-gold-2/50 shrink-0" />
-                  <div>
-                    <p className="font-display text-xl text-ivory">{CONTACT.consultant}</p>
-                    <p className="font-mono text-[10px] uppercase tracking-wide-2 text-gold-2/70">{CONTACT.consultantRole}</p>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
           </div>
 
           <div className="lg:col-span-7">
@@ -178,21 +166,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* Mission */}
-      <section className="relative py-24">
-        <div className="mx-auto max-w-[1100px] px-5 text-center lg:px-8">
-          <Reveal>
-            <Eyebrow className="justify-center">Mission</Eyebrow>
-            <p className="mx-auto mt-6 max-w-3xl font-display text-3xl leading-snug text-ivory sm:text-4xl">
-              "{MISSION}"
-            </p>
-            <div className="mx-auto mt-8 flex items-center justify-center gap-3 text-gold-2">
-              <span className="h-px w-10 bg-gold-2/50" /> <Icon name="seal" size={20} /> <span className="h-px w-10 bg-gold-2/50" />
-            </div>
-          </Reveal>
-        </div>
-      </section>
-
       {/* Industries we serve */}
       <section className="band-deep band-edge relative overflow-hidden py-24">
         <div className="mx-auto max-w-[1320px] px-5 lg:px-8">
@@ -225,9 +198,6 @@ export default function About() {
               <div className="relative grid items-center gap-8 lg:grid-cols-12">
                 <div className="lg:col-span-8">
                   <Tag>Uncover The Truth · Protect Your Legacy</Tag>
-                  <h3 className="mt-4 font-display text-4xl leading-tight text-ivory sm:text-5xl">
-                    Your estate deserves a <span className="italic text-gold-gradient">forensic reading</span>, not a guess.
-                  </h3>
                   <p className="mt-4 max-w-2xl text-stone">Begin with a confidential briefing. We will scope the investigation, outline the registry trail, and tell you — plainly — what the record can prove.</p>
                 </div>
                 <div className="flex flex-wrap gap-3 lg:col-span-4 lg:justify-end">

@@ -78,7 +78,7 @@ export default function Contact() {
                     { g: "phone", k: "Phone / WhatsApp", v: CONTACT.phoneDisplay, href: `tel:+${CONTACT.phoneRaw}` },
                     { g: "mail", k: "Email", v: CONTACT.email, href: `mailto:${CONTACT.email}` },
                     { g: "pin", k: "Headquarters", v: CONTACT.address },
-                    { g: "clock", k: "Office Hours", v: "Mon–Fri 09:00–18:00 · Sat 09:00–13:00" },
+                    { g: "clock", k: "Office Hours", v: "Mon–Fri 09:00–18:00" },
                   ].map((r) => (
                     <div key={r.k} className="plate rounded-md p-5">
                       <span className="grid h-10 w-10 place-items-center rounded-full border border-gold-2/30 text-gold-2"><Icon name={r.g} size={18} /></span>

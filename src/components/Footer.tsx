@@ -9,28 +9,6 @@ export default function Footer() {
       <div className="pointer-events-none absolute inset-0 bg-grid-fine opacity-40" />
       <div className="pointer-events-none absolute -top-32 left-1/3 h-72 w-[44rem] rounded-full blur-3xl glow-gold" />
 
-      {/* Pre-footer CTA ribbon */}
-      <div className="relative mx-auto max-w-[1320px] px-5 pt-16 lg:px-8">
-        <div className="corner-ticks relative overflow-hidden rounded-lg border border-gold-2/20 bg-gradient-to-br from-navy-3/70 to-ink p-8 sm:p-10">
-          <div className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
-            <div>
-              <p className="font-mono text-[11px] uppercase tracking-wide-2 text-gold-2/80">// Ready when you are</p>
-              <h2 className="mt-3 max-w-2xl font-display text-3xl leading-tight text-ivory sm:text-4xl">
-                Every estate has a paper trail. <span className="italic text-gold-gradient">We know how to read it.</span>
-              </h2>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <a href={waLink()} target="_blank" rel="noreferrer" className="gold-btn sheen-host flex items-center gap-2 rounded-sm px-6 py-3 text-[12px] uppercase">
-                <Icon name="whatsapp" size={18} /> WhatsApp CAC
-              </a>
-              <Link to="/contact" className="ghost-btn flex items-center gap-2 rounded-sm px-6 py-3 text-[12px] uppercase">
-                Open a Case File <Icon name="arrow" size={16} />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Columns */}
       <div className="relative mx-auto grid max-w-[1320px] grid-cols-1 gap-10 px-5 py-16 sm:grid-cols-2 lg:grid-cols-12 lg:px-8">
         <div className="lg:col-span-4">
@@ -107,7 +85,7 @@ export default function Footer() {
             </li>
             <li className="flex gap-3">
               <Icon name="clock" size={18} className="mt-0.5 shrink-0 text-gold-2" />
-              <span>Mon – Fri · 09:00 – 18:00<br />Sat · 09:00 – 13:00</span>
+              <span>Mon – Fri · 09:00 – 18:00</span>
             </li>
           </ul>
         </div>
