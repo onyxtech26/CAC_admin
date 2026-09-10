@@ -1,9 +1,13 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "./Icon";
 import { LogoMark } from "./ui";
 import { CONTACT, NAV, SERVICES, TAGLINES, waLink } from "../data";
+import { AddressModal } from "./AddressModal";
 
 export default function Footer() {
+  const [showAddressModal, setShowAddressModal] = useState(false);
+
   return (
     <footer className="relative overflow-hidden border-t border-gold-2/15 bg-ink">
       <div className="pointer-events-none absolute inset-0 bg-grid-fine opacity-40" />
@@ -26,7 +30,7 @@ export default function Footer() {
           <div className="mt-6 flex items-center gap-3">
             {[
               { n: "linkedin", href: "#" },
-              { n: "tiktok", href: "#" },
+              { n: "tiktok", href: CONTACT.tiktokUrl },
               { n: "whatsapp", href: waLink() },
               { n: "mail", href: `mailto:${CONTACT.email}` },
             ].map((s) => (
@@ -73,11 +77,24 @@ export default function Footer() {
           <ul className="mt-5 space-y-4 text-sm text-stone">
             <li className="flex gap-3">
               <Icon name="pin" size={18} className="mt-0.5 shrink-0 text-gold-2" />
-              <span>{CONTACT.address}</span>
+              <button
+                type="button"
+                onClick={() => setShowAddressModal(true)}
+                className="text-left cursor-pointer transition hover:text-gold-2"
+              >
+                {CONTACT.address}
+              </button>
             </li>
             <li className="flex gap-3">
               <Icon name="phone" size={18} className="mt-0.5 shrink-0 text-gold-2" />
-              <a href={`tel:+${CONTACT.phoneRaw}`} className="hover:text-gold-2">{CONTACT.phoneDisplay}</a>
+              <div className="flex flex-col gap-1">
+                <a href={waLink()} target="_blank" rel="noreferrer" className="hover:text-gold-2">
+                  {CONTACT.phoneDisplay} <span className="font-mono text-[10px] text-gold-2/70">(WhatsApp)</span>
+                </a>
+                <a href={`tel:+${CONTACT.officePhoneRaw}`} className="hover:text-gold-2">
+                  {CONTACT.officePhoneDisplay} <span className="font-mono text-[10px] text-mute">(Office)</span>
+                </a>
+              </div>
             </li>
             <li className="flex gap-3">
               <Icon name="mail" size={18} className="mt-0.5 shrink-0 text-gold-2" />
@@ -103,6 +120,8 @@ export default function Footer() {
           </p>
         </div>
       </div>
+
+      <AddressModal isOpen={showAddressModal} onClose={() => setShowAddressModal(false)} />
     </footer>
   );
 }

@@ -188,31 +188,6 @@ export default function About() {
           </div>
         </div>
       </section>
-
-      {/* CTA banner */}
-      <section className="relative pb-24">
-        <div className="mx-auto max-w-[1320px] px-5 lg:px-8">
-          <Reveal>
-            <div className="corner-ticks relative overflow-hidden rounded-xl border border-gold-2/25 bg-gradient-to-br from-navy-3 to-ink p-10 sm:p-14">
-              <div className="pointer-events-none absolute -right-20 -top-20 h-80 w-80 rounded-full blur-3xl glow-gold" />
-              <div className="relative grid items-center gap-8 lg:grid-cols-12">
-                <div className="lg:col-span-8">
-                  <Tag>Uncover The Truth · Protect Your Legacy</Tag>
-                  <p className="mt-4 max-w-2xl text-stone">Begin with a confidential briefing. We will scope the investigation, outline the registry trail, and tell you — plainly — what the record can prove.</p>
-                </div>
-                <div className="flex flex-wrap gap-3 lg:col-span-4 lg:justify-end">
-                  <a href={waLink()} target="_blank" rel="noreferrer" className="gold-btn sheen-host flex items-center gap-2 rounded-sm px-6 py-3 text-[12px] uppercase">
-                    <Icon name="whatsapp" size={16} /> WhatsApp CAC
-                  </a>
-                  <Link to="/contact" className="ghost-btn flex items-center gap-2 rounded-sm px-6 py-3 text-[12px] uppercase">
-                    Open a Case File
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
     </>
   );
 }

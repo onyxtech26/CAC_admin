@@ -61,11 +61,6 @@ function Hero() {
               A specialist investigation and consultancy service dedicated to uncovering the true ownership, history and legal status of real estate and estate assets — providing independent, evidence-based investigations for individuals, families, legal professionals, financial institutions, corporations and government agencies.
             </p>
           </Reveal>
-          <Reveal delay={250}>
-            <p className="mt-5 max-w-xl border-l-2 border-gold-2/40 pl-5 text-base leading-relaxed text-sand">
-              Our mission is {MISSION.charAt(0).toLowerCase() + MISSION.slice(1)}
-            </p>
-          </Reveal>
 
           <Reveal delay={220}>
             <div className="mt-8 flex flex-wrap gap-x-6 gap-y-3">
@@ -271,8 +266,8 @@ function FirmSummary() {
 /* ============== VISION & MISSION ============== */
 function VisionMission() {
   const PANELS = [
-    { k: "Our Vision", t: VISION, g: "compass-pin", points: null },
-    { k: "Our Mission", t: null, g: "seal", points: MISSION_POINTS },
+    { k: "Our Vision", t: VISION, g: "compass-pin" },
+    { k: "Our Mission", t: MISSION, g: "seal" },
   ];
   return (
     <section className="band-deep band-edge relative overflow-hidden py-24">
@@ -293,19 +288,7 @@ function VisionMission() {
                   </span>
                   <Eyebrow>{v.k}</Eyebrow>
                 </div>
-                {v.t && (
-                  <p className="mt-6 font-display text-xl leading-relaxed text-ivory sm:text-2xl">{v.t}</p>
-                )}
-                {v.points && (
-                  <ul className="mt-6 grid gap-3">
-                    {v.points.map((m) => (
-                      <li key={m.k} className="flex items-start gap-3">
-                        <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rotate-45 bg-gold-2/70" />
-                        <span className="font-display text-lg leading-snug text-ivory">{m.k}</span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                <p className="mt-6 font-display text-xl leading-relaxed text-ivory sm:text-2xl">{v.t}</p>
               </div>
             </Reveal>
           ))}

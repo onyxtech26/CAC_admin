@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
-import { Eyebrow, Heading, Reveal } from "../components/ui";
+import { Eyebrow, Heading, Reveal, Tag } from "../components/ui";
 import { FAQ, MISSION, MISSION_POINTS, VISION, WHY_PRINCIPLES } from "../data";
 import { Seo } from "../components/Seo";
 
@@ -126,7 +126,15 @@ export default function WhyCAC() {
           {/* Operating standards (6) */}
           <div className="mt-20">
             <Heading eyebrow="Operating standards" title={<>How the consultancy holds itself.</>} />
-            <div className="mt-10 grid gap-px overflow-hidden rounded-lg border border-gold-2/15 bg-gold-2/10 sm:grid-cols-2 lg:grid-cols-3">
+            <Reveal delay={120}>
+              <div className="mt-6">
+                <Tag>Uncover The Truth · Protect Your Legacy</Tag>
+              </div>
+              <p className="mt-4 max-w-2xl text-stone">
+                Begin with a confidential briefing. We will scope the investigation, outline the registry trail, and tell you — plainly — what the record can prove.
+              </p>
+            </Reveal>
+            <div className="mt-8 grid gap-px overflow-hidden rounded-lg border border-gold-2/15 bg-gold-2/10 sm:grid-cols-2 lg:grid-cols-3">
               {STANDARDS.map((s, i) => (
                 <Reveal key={s.k} delay={(i % 3) * 80}>
                   <div className="group flex h-full items-start gap-4 bg-navy-2/70 p-6 transition hover:bg-navy-3/60">

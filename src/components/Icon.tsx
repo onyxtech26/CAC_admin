@@ -299,6 +299,19 @@ const paths: Record<string, ReactElement> = {
       <circle cx="12" cy="11.6" r="1.4" />
     </>
   ),
+  "google-maps": (
+    <>
+      <path d="M12 2a8 8 0 0 0-8 8c0 5.25 8 12 8 12s8-6.75 8-12a8 8 0 0 0-8-8z" />
+      <circle cx="12" cy="10" r="3" />
+    </>
+  ),
+  waze: (
+    <>
+      <path d="M12 2a9 9 0 0 0-9 9c0 4.1 2.7 7.5 6.4 8.6.2.7.7 1.4 1.6 1.4h2c.9 0 1.4-.7 1.6-1.4 3.7-1.1 6.4-4.5 6.4-8.6a9 9 0 0 0-9-9z" />
+      <path d="M9 10h.01M15 10h.01" />
+      <path d="M9.5 14a3.5 3.5 0 0 0 5 0" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 24, ...rest }: P) {

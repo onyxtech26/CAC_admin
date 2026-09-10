@@ -101,18 +101,6 @@ export default function Services() {
               ))}
             </div>
           )}
-  
-          <Reveal delay={120}>
-            <div className="mt-14 flex flex-col items-center justify-between gap-5 rounded-lg border border-gold-2/20 bg-navy-2/50 p-7 sm:flex-row">
-              <div className="flex items-center gap-4">
-                <Icon name="scales" size={34} className="text-gold-2" />
-                <p className="max-w-xl text-sm text-stone">Not sure which discipline fits? Our senior consultant will scope the right combination during a confidential briefing.</p>
-              </div>
-              <Link to="/contact" className="gold-btn sheen-host flex items-center gap-2 rounded-sm px-6 py-3 text-[12px] uppercase">
-                Request a Scope <Icon name="arrow" size={16} />
-              </Link>
-            </div>
-          </Reveal>
         </div>
       </section>
     </>

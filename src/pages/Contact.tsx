@@ -1,10 +1,14 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
 import { Eyebrow, Heading, Reveal } from "../components/ui";
-import { CONTACT, TEAM } from "../data";
+import { CONTACT, TEAM, waLink } from "../data";
 import { Seo } from "../components/Seo";
+import { AddressModal } from "../components/AddressModal";
 
 export default function Contact() {
+  const [showAddressModal, setShowAddressModal] = useState(false);
+
   return (
     <>
     <Seo route="/contact" />
@@ -31,12 +35,6 @@ export default function Contact() {
           {/* Consultant roster */}
           <div className="mt-14 grid gap-5 lg:grid-cols-3">
             {TEAM.map((m, i) => {
-              const phoneDisplay = m.phoneDisplay ?? CONTACT.phoneDisplay;
-              const phoneRaw = m.phoneRaw ?? CONTACT.phoneRaw;
-              const email = m.email ?? CONTACT.email;
-              const waTo = `https://wa.me/${phoneRaw}?text=${encodeURIComponent(
-                `Hello CAC, I would like to speak with ${m.name} (${m.role}).`
-              )}`;
               return (
                 <Reveal key={m.name} delay={i * 110}>
                   <div className="corner-ticks relative flex h-full flex-col overflow-hidden rounded-xl border border-gold-2/25 bg-gradient-to-br from-navy-3 to-ink p-7 sm:p-8">
@@ -49,17 +47,23 @@ export default function Contact() {
                         </span>
                       </div>
                       <div className="mt-6">
-                        <Eyebrow>{m.role}</Eyebrow>
+                        {/* Roles run from two words to a full title, so this slot
+                            reserves two lines. Without it a wrapped role steps its
+                            own name down and the three names lose their shared
+                            baseline across the row. */}
+                        <div className="flex min-h-[2.1rem] items-start">
+                          <Eyebrow>{m.role}</Eyebrow>
+                        </div>
                         <h2 className="mt-2 font-display text-3xl text-ivory">{m.name}</h2>
-                        <p className="mt-3 text-sm leading-relaxed text-stone">{m.blurb}</p>
-                      </div>
-                      <div className="mt-auto flex flex-col gap-3 pt-7">
-                        <a href={waTo} target="_blank" rel="noreferrer" className="gold-btn sheen-host flex items-center justify-center gap-2 rounded-sm px-5 py-3 text-[12px] uppercase">
-                          <Icon name="whatsapp" size={16} /> {phoneDisplay}
-                        </a>
-                        <a href={`mailto:${email}`} className="ghost-btn flex items-center justify-center gap-2 rounded-sm px-5 py-3 text-[12px] uppercase">
-                          <Icon name="mail" size={16} /> Email CAC
-                        </a>
+                        {/* Justified for flush left and right edges. In a column
+                            this narrow justification alone opens rivers of white
+                            space, so hyphenation is on to let long words break and
+                            keep the word spacing even. */}
+                        <div className="mt-3 space-y-3 hyphens-auto text-justify text-sm leading-relaxed text-stone">
+                          {m.blurb.map((para, k) => (
+                            <p key={k}>{para}</p>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -75,15 +79,36 @@ export default function Contact() {
               <Reveal>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   {[
-                    { g: "phone", k: "Phone / WhatsApp", v: CONTACT.phoneDisplay, href: `tel:+${CONTACT.phoneRaw}` },
+                    {
+                      g: "phone",
+                      k: "Phone / WhatsApp",
+                      customContent: (
+                        <div className="mt-1 flex flex-col gap-1 text-sm text-sand">
+                          <a href={waLink()} target="_blank" rel="noreferrer" className="block hover:text-gold-2">
+                            {CONTACT.phoneDisplay} <span className="font-mono text-[10px] text-gold-2/70">(WhatsApp)</span>
+                          </a>
+                          <a href={`tel:+${CONTACT.officePhoneRaw}`} className="block hover:text-gold-2">
+                            {CONTACT.officePhoneDisplay} <span className="font-mono text-[10px] text-mute">(Office)</span>
+                          </a>
+                        </div>
+                      ),
+                    },
                     { g: "mail", k: "Email", v: CONTACT.email, href: `mailto:${CONTACT.email}` },
-                    { g: "pin", k: "Headquarters", v: CONTACT.address },
+                    { g: "pin", k: "Headquarters", v: CONTACT.address, onClick: () => setShowAddressModal(true) },
                     { g: "clock", k: "Office Hours", v: "Mon–Fri 09:00–18:00" },
                   ].map((r) => (
                     <div key={r.k} className="plate rounded-md p-5">
                       <span className="grid h-10 w-10 place-items-center rounded-full border border-gold-2/30 text-gold-2"><Icon name={r.g} size={18} /></span>
                       <p className="mt-3 font-mono text-[10px] uppercase tracking-wide-2 text-gold-2/70">{r.k}</p>
-                      {r.href ? <a href={r.href} target="_blank" rel="noreferrer" className="mt-1 block break-words text-sm text-sand hover:text-gold-2">{r.v}</a> : <p className="mt-1 text-sm text-sand">{r.v}</p>}
+                      {r.customContent ? (
+                        r.customContent
+                      ) : r.href ? (
+                        <a href={r.href} target="_blank" rel="noreferrer" className="mt-1 block break-words text-sm text-sand hover:text-gold-2">{r.v}</a>
+                      ) : r.onClick ? (
+                        <button type="button" onClick={r.onClick} className="mt-1 block text-left break-words text-sm text-sand hover:text-gold-2 cursor-pointer">{r.v}</button>
+                      ) : (
+                        <p className="mt-1 text-sm text-sand">{r.v}</p>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -92,6 +117,8 @@ export default function Contact() {
           </div>
         </div>
       </section>
+
+      <AddressModal isOpen={showAddressModal} onClose={() => setShowAddressModal(false)} />
     </>
   );
 }

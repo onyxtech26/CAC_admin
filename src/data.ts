@@ -8,9 +8,12 @@ export const CONTACT = {
   email: "conglomerateac@gmail.com",
   phoneDisplay: "+60 11-5960 1300",
   phoneRaw: "601159601300",
+  officePhoneDisplay: "+607 335 0256",
+  officePhoneRaw: "6073350256",
+  tiktokUrl: "https://www.tiktok.com/@conglomerate41?_r=1&_t=ZS-99btRZ6IaFc",
   site: "www.cac.com.my",
   consultant: "Mr Mohaan",
-  consultantRole: "Director",
+  consultantRole: "Managing Director",
   techPartner: "Onyxx Tech",
   techPartnerUrl: "https://onyxx-tech.vercel.app/",
   waText:
@@ -20,14 +23,16 @@ export const CONTACT = {
 export const waLink = (extra?: string) =>
   `https://wa.me/${CONTACT.phoneRaw}${extra ? `?text=${encodeURIComponent(extra)}` : `?text=${CONTACT.waText}`}`;
 
-// Consultant roster shown on /contact. `blurb` renders under the name.
+// Consultant roster shown on /contact. `blurb` renders under the name — one
+// <p> per entry, so a multi-paragraph bio stays readable instead of running
+// together into a single block.
 // Leave `phoneDisplay`/`phoneRaw`/`email` off a member to fall back to the consultancy's
 // main channels in CONTACT above.
 export type TeamMember = {
   name: string;
   role: string;
   img: string;
-  blurb: string;
+  blurb: string[];
   phoneDisplay?: string;
   phoneRaw?: string;
   email?: string;
@@ -36,24 +41,29 @@ export type TeamMember = {
 export const TEAM: TeamMember[] = [
   {
     name: "Mr Mohaan",
-    role: "Director",
+    role: "Managing Director",
     img: "/assets/mohaan-profile.webp",
-    blurb:
-      "Lead investigator across property forensic, estate recovery and fraud-exposure engagements. Personally briefs every new case and remains the point of contact through to resolution.",
+    blurb: [
+      "Our Managing Director holds a Bachelor of Science in Human Development, majoring in Human Resource Management, from Universiti Putra Malaysia (UPM). He has gained diverse professional experience in shipping and logistics, network marketing, business development, and people-oriented services.",
+      "Throughout his career, he has worked with people from diverse backgrounds, helping them overcome challenges and achieve their goals. His passion for problem-solving, analytical thinking, and resolving complex issues eventually led him into the field of Property Forensic Investigation.",
+    ],
   },
   {
     name: "Mr Shiva",
-    role: "Director",
+    role: "Managing Director",
     img: "/assets/team-03.webp",
-    blurb:
-      "Leads family estate investigations, beneficiary tracing and probate coordination, working alongside counsel through to distribution.",
+    blurb: [
+      "Our Director holds a qualification in Electro-Mechanical Engineering from Singapore and has extensive experience across various professional fields. Throughout his career, he has developed strong expertise in human relationships, communication, negotiation, and problem-solving.",
+      "His involvement in complex family disputes, inheritance matters, and property-related conflicts led him to specialise in Property Forensic Investigation. With 26 years of experience in the field and as a Senior Consultant, he has assisted clients in resolving various property and inheritance disputes through investigation, analysis, and practical solutions.",
+    ],
   },
   {
     name: "Mr Goku",
-    role: "Executive Staff",
+    role: "Executive Consultant",
     img: "/assets/team-02.webp",
-    blurb:
-      "Handles registry chain reconstruction and title tracing — from colonial grant books through to present-day land-office folios.",
+    blurb: [
+      "Our Executive Consultant brings a unique analytical background developed through previous experience in blockchain technology and digital asset intelligence. His expertise includes analysing token white papers, assessing platform legitimacy, examining transaction histories, tracing digital asset movements, and evaluating business structures and portfolios. This experience naturally extends into property forensic investigation, where the same analytical methodology is applied to property ownership, asset tracing, historical transactions, corporate relationships, missing documentation, and complex estate or family property disputes.",
+    ],
   },
 ];
 

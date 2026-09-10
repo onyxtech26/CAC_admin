@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
 import { Heading, Reveal, Tag } from "../components/ui";
 import { PROCESS, waLink } from "../data";
-import EvidenceChain from "../components/EvidenceChain";
+import ProcessFlow from "../components/ProcessFlow";
 import { Redact } from "../components/Redact";
 import { Seo } from "../components/Seo";
 
@@ -36,23 +36,13 @@ export default function Process() {
             </Reveal>
           </div>
   
-          <EvidenceChain />
+        </div>
 
-        {/* Assurance banner */}
-          <Reveal delay={100}>
-            <div className="plate mt-14 grid items-center gap-6 overflow-hidden rounded-lg p-7 sm:grid-cols-[auto_1fr_auto] sm:p-8">
-              <div className="grid h-24 w-24 place-items-center rounded-full border border-gold-2/50 bg-ink/60">
-                <Icon name="gavel" size={46} className="text-gold-2" />
-              </div>
-              <p className="max-w-2xl text-stone">
-                We deliver clear, credible and evidence-based reports that help you make <span className="text-gold-2">informed decisions</span> with confidence.
-              </p>
-              <a href={waLink()} target="_blank" rel="noreferrer" className="gold-btn sheen-host flex items-center gap-2 rounded-sm px-6 py-3 text-[12px] uppercase">
-                How We Work <Icon name="arrow" size={16} />
-              </a>
-            </div>
-          </Reveal>
-  
+        {/* Full-bleed: the horizontal track pans a screen at a time, so it
+            cannot live inside the centred 1320px wrapper. */}
+        <ProcessFlow />
+
+        <div className="relative mx-auto max-w-[1320px] px-5 lg:px-8">
           <Reveal delay={100}>
             <div className="mt-14 flex flex-wrap items-center justify-center gap-3">
               <Tag>Confidential</Tag><Tag>Evidence-led</Tag><Tag>Court-ready</Tag><Tag>End-to-end</Tag>

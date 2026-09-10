@@ -13,3 +13,6 @@ coverage/
 CLAUDE.md
 PROJECT_STATUS.md
 docs/CHANGELOG.md
+
+# Generated knowledge-graph output (regenerate with `graphify update`)
+graphify-out/
