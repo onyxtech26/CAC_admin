@@ -33,11 +33,11 @@ export default function Contact() {
           </div>
   
           {/* Consultant roster */}
-          <div className="mt-14 grid gap-5 lg:grid-cols-3">
+          <div className="mt-14 grid gap-4 lg:grid-cols-3">
             {TEAM.map((m, i) => {
               return (
                 <Reveal key={m.name} delay={i * 110}>
-                  <div className="corner-ticks relative flex h-full flex-col overflow-hidden rounded-xl border border-gold-2/25 bg-gradient-to-br from-navy-3 to-ink p-7 sm:p-8">
+                  <div className="corner-ticks relative flex h-full flex-col overflow-hidden rounded-xl border border-gold-2/25 bg-gradient-to-br from-navy-3 to-ink p-6 sm:p-6">
                     <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full blur-3xl glow-gold" />
                     <div className="relative flex flex-1 flex-col">
                       <div className="relative w-fit">
@@ -55,11 +55,12 @@ export default function Contact() {
                           <Eyebrow>{m.role}</Eyebrow>
                         </div>
                         <h2 className="mt-2 font-display text-3xl text-ivory">{m.name}</h2>
-                        {/* Justified for flush left and right edges. In a column
-                            this narrow justification alone opens rivers of white
-                            space, so hyphenation is on to let long words break and
-                            keep the word spacing even. */}
-                        <div className="mt-3 space-y-3 hyphens-auto text-justify text-sm leading-relaxed text-stone">
+                        {/* Justified for flush left and right edges. Hyphenation
+                            is deliberately OFF — breaking words across lines reads
+                            as cramped in a bio. The card padding below is pulled in
+                            instead, which widens the measure enough that justifying
+                            without hyphens does not open rivers of white space. */}
+                        <div className="mt-3 space-y-3 hyphens-none text-justify text-sm leading-relaxed text-stone">
                           {m.blurb.map((para, k) => (
                             <p key={k}>{para}</p>
                           ))}

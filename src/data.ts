@@ -44,7 +44,7 @@ export const TEAM: TeamMember[] = [
     role: "Managing Director",
     img: "/assets/mohaan-profile.webp",
     blurb: [
-      "Our Managing Director holds a Bachelor of Science in Human Development, majoring in Human Resource Management, from Universiti Putra Malaysia (UPM). He has gained diverse professional experience in shipping and logistics, network marketing, business development, and people-oriented services.",
+      "Our Managing Director holds a Bachelor of Science in Human Development, majoring in Human Resource Management, from University Putra Malaysia (UPM). He has gained diverse professional experience in shipping and logistics, network marketing, business development, and people-oriented services.",
       "Throughout his career, he has worked with people from diverse backgrounds, helping them overcome challenges and achieve their goals. His passion for problem-solving, analytical thinking, and resolving complex issues eventually led him into the field of Property Forensic Investigation.",
     ],
   },
@@ -300,14 +300,14 @@ export const PROCESS: ProcessStep[] = [
       "Corporate, plantation and portfolio holdings mapped",
       "Verified estate asset inventory produced",
     ] },
-  { no: "06", title: "Forensic Analysis", sub: "Findings Review", glyph: "chart-doc", img: "/assets/illustration-forensic.webp",
+  { no: "06", title: "Forensic Analysis", sub: "Findings Review", glyph: "chart-doc", img: "/assets/case-gavel-bRvLoHQ5.webp",
     details: "We analyse all findings, identify inconsistencies and prepare a chronological timeline — exposing forged documents, unauthorised sales, hidden beneficiaries and irregularities in distribution.",
     outputs: [
       "Signatures, wills and deeds examined for indicators of forgery",
       "Transfer timelines audited for inconsistency",
       "Chronological timeline of the matter prepared",
     ] },
-  { no: "07", title: "Reporting", sub: "Evidence Synthesis", glyph: "doc-pen", img: "/assets/service-forensic-title.webp",
+  { no: "07", title: "Reporting", sub: "Evidence Synthesis", glyph: "doc-pen", img: "/assets/cac-building-logo.webp",
     details: "We deliver a detailed investigation report with findings, supporting evidence and recommendations, structured so that legal advisers can work from it directly.",
     outputs: [
       "Detailed investigation report delivered",
