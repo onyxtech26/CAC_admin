@@ -5,118 +5,106 @@ import { LogoMark } from "./ui";
  * Two-beat splash: a fingerprint draws itself ridge by ridge, then the CAC logo
  * fades in over it.
  *
- * Built the way a loop print actually is, not as concentric arcs. Three things
- * do the work:
- *   - the ridges DRIFT rather than nest — each one sits on a slightly different
- *     centre, so they are not one shape scaled up. Perfectly concentric arcs
- *     read as a target or a letter C.
- *   - the mouths are ragged. A gap that widens linearly makes both ridge ends
- *     line up into two clean diagonals; a little jitter breaks that.
- *   - the detail sells it: a core rod at the centre, a delta on the lower left,
- *     and free-floating ridge endings sitting in the valleys.
+ * The print is a whorl, generated from a phase field rather than drawn as a
+ * stack of shapes. Ridges are the level sets of
+ *
+ *     psi(p) = rho(p) * N + theta(p) / 2pi
+ *
+ * where rho is an egg-shaped radius about the core and theta is the angle about
+ * it. The theta term is what matters: without it the level sets are closed
+ * rings and the thing reads as a target or tree rings. Adding one turn of angle
+ * per ridge makes every level set join onto the next, so the whole print is a
+ * single spiral that unwinds from the core — which is what skin actually does.
+ *
+ * Because psi is closed-form, each ridge solves directly for r at a given
+ * angle, so these are exact curves rather than traced contours.
+ *
+ * Ridge pitch is tuned for the rendered size: denser reads better on paper but
+ * aliases into mush at 86px, so N sits at 11 rather than the ~14 a print this
+ * shape would really carry.
  */
 
-/** Taller than wide, like a finger pad. */
+/** Unchanged from the previous print, so the on-screen size is identical. */
 const VIEW_W = 100;
 const VIEW_H = 108;
 
-const RIDGE_COUNT = 10;
-/** Ridge i's ellipse. Centre drifts down-right as the radii grow. */
-const geom = (i: number) => ({
-  rx: 5.5 + i * 4.5,
-  ry: 6.5 + i * 5.0,
-  cx: 47.5 + i * 0.35,
-  cy: 50 + i * 0.55,
-});
+/* ---------- finger-pad outline ---------- */
+const OUT_CX = 50;
+const OUT_CY = 54;
+const OUT_RX = 37;
+const OUT_RY = 50;
 
-/** Deterministic wobble — same print on every load, no Math.random. */
-const jitterR = (i: number) => 4.5 * Math.sin(i * 2.4);
-const jitterL = (i: number) => 4.5 * Math.sin(i * 1.7 + 1.2);
+/** Egg, not ellipse: pulled in at the bottom, a shade fuller at the top. */
+const outlineRadius = (rad: number) =>
+  OUT_RX * (1 - 0.15 * Math.max(0, Math.sin(rad))) * (1 + 0.04 * Math.max(0, -Math.sin(rad)));
 
-type Arc = {
-  rx: number;
-  ry: number;
-  cx: number;
-  cy: number;
-  /** degrees, SVG convention: 0 right, 90 bottom, -90 top */
-  from: number;
-  to: number;
-  /** ridges are never truly elliptical — this waves them slightly */
-  amp?: number;
-  freq?: number;
-  phase?: number;
-  ms: number;
-  delay: number;
-};
-
-function toPath(a: Arc) {
-  const { rx, ry, cx, cy, from, to, amp = 0, freq = 3, phase = 0 } = a;
-  const dir = to >= from ? 1 : -1;
-  const step = 3 * dir;
-  const at = (deg: number) => {
-    const rad = (deg * Math.PI) / 180;
-    const k = 1 + amp * Math.sin(freq * rad + phase);
-    return `${(cx + rx * k * Math.cos(rad)).toFixed(2)} ${(cy + ry * k * Math.sin(rad)).toFixed(2)}`;
-  };
+const OUTLINE = (() => {
   const pts: string[] = [];
-  for (let d = from; dir > 0 ? d < to : d > to; d += step) pts.push(at(d));
-  pts.push(at(to)); // land exactly on the end angle
+  for (let d = 0; d < 360; d += 3) {
+    const r = (d * Math.PI) / 180;
+    pts.push(
+      `${(OUT_CX + outlineRadius(r) * Math.cos(r)).toFixed(2)} ${(OUT_CY + OUT_RY * Math.sin(r)).toFixed(2)}`
+    );
+  }
+  return `M ${pts.join(" L ")} Z`;
+})();
+
+/* ---------- the whorl ---------- */
+/** Core sits low and a little left, as it does on a real pad. */
+const CORE_X = 46;
+const CORE_Y = 74;
+
+/** Ridges per unit radius — the pitch of the print. */
+const N = 11;
+/** Enough turns to carry the outer ridges past the outline and be clipped. */
+const TURNS = 20;
+
+/** Semi-axes about the core. y is down, so the upward reach is the -sin side. */
+const axisX = (t: number) => 40 + 4 * Math.cos(t);
+const axisY = (t: number) => 52 - 20 * Math.sin(t);
+/** Slight 2-lobe skew so the print is not mirror-symmetric. */
+const skew = (t: number) => 1 + 0.06 * Math.sin(2 * t + 0.8);
+
+/** One turn of the spiral: solve psi = k for r at each angle. */
+function ridgePath(k: number) {
+  const STEPS = 240;
+  const pts: string[] = [];
+  for (let i = 0; i <= STEPS; i++) {
+    const t = -Math.PI + (2 * Math.PI * i) / STEPS;
+    const r = (k - t / (2 * Math.PI)) / (N * skew(t));
+    pts.push(
+      `${(CORE_X + axisX(t) * r * Math.cos(t)).toFixed(2)} ${(CORE_Y + axisY(t) * r * Math.sin(t)).toFixed(2)}`
+    );
+  }
   return `M ${pts.join(" L ")}`;
 }
 
+/* Timing carried over verbatim, so the beat of the animation is unchanged. */
 const RIDGE_MS = 1300;
-const RIDGE_STAGGER = 95;
+const RIDGE_STAGGER = Math.round(1000 / (TURNS - 1)); // last ridge still lands at ~2300ms
 
-const LOOPS: Arc[] = Array.from({ length: RIDGE_COUNT }, (_, i) => {
-  const g = geom(i);
-  return {
-    ...g,
-    from: 90 - (32 + i * 1.6 + jitterR(i)),
-    to: 90 + (28 + i * 1.4 + jitterL(i)) - 360,
-    amp: 0.016 + (i % 3) * 0.006,
-    freq: 3 + (i % 2),
-    phase: i * 1.1,
-    ms: RIDGE_MS,
-    delay: i * RIDGE_STAGGER,
-  };
-});
+const PATHS = Array.from({ length: TURNS }, (_, i) => ({
+  d: ridgePath(i + 1),
+  ms: RIDGE_MS,
+  delay: i * RIDGE_STAGGER,
+}));
 
-/** The valley between ridge i and i+1 — where loose detail can sit safely. */
-const valley = (i: number) => {
-  const a = geom(i);
-  const b = geom(i + 1);
-  return {
-    rx: (a.rx + b.rx) / 2,
-    ry: (a.ry + b.ry) / 2,
-    cx: (a.cx + b.cx) / 2,
-    cy: (a.cy + b.cy) / 2,
-  };
-};
-
-const DETAIL_MS = 640;
-
-const DETAIL: Arc[] = [
-  // core rod, inside the innermost recurve
-  { rx: 1.4, ry: 2.8, cx: 47.5, cy: 48.5, from: -40, to: -320, ms: DETAIL_MS, delay: 300 },
-  // ridge endings floating in the valleys
-  { ...valley(2), from: -30, to: -74, amp: 0.02, phase: 0.6, ms: DETAIL_MS, delay: 900 },
-  { ...valley(3), from: -126, to: -172, amp: 0.02, phase: 1.4, ms: DETAIL_MS, delay: 1050 },
-  { ...valley(5), from: -12, to: 28, amp: 0.02, phase: 2.2, ms: DETAIL_MS, delay: 1200 },
-  { ...valley(6), from: -150, to: -196, amp: 0.02, phase: 0.9, ms: DETAIL_MS, delay: 1350 },
-  // delta — two short ridges diverging on the lower left
-  { ...valley(7), from: 150, to: 190, amp: 0.015, phase: 0.3, ms: DETAIL_MS, delay: 1500 },
-  { ...valley(8), from: 158, to: 196, amp: 0.015, phase: 0.9, ms: DETAIL_MS, delay: 1650 },
-];
-
-const ARCS: Arc[] = [...LOOPS, ...DETAIL];
-const PRINT_DONE_MS = Math.max(...ARCS.map((a) => a.delay + a.ms));
+const PRINT_DONE_MS = Math.max(...PATHS.map((p) => p.delay + p.ms));
 
 const BEAT_PAUSE_MS = 300;
 const LOGO_HOLD_MS = 1900;
 const FADE_MS = 700;
 
-/** Sits in the logo's 90px box; the taller aspect makes up the difference. */
 const PRINT_SIZE = 86;
+
+/**
+ * The logo artwork is 992x664 inside a square box, so `contain` fits it by
+ * width and it renders at only two thirds of the box height — at the old 90 it
+ * came out 60px tall against an 86px print, which is why the second beat looked
+ * smaller than the first. 128 puts its rendered height at ~86, matching the
+ * print, so the two beats read as the same size.
+ */
+const LOGO_SIZE = 128;
 
 function Fingerprint({ size }: { size: number }) {
   const w = (size * VIEW_W) / VIEW_H;
@@ -142,19 +130,26 @@ function Fingerprint({ size }: { size: number }) {
             <stop offset="42%" stopColor="#e9c766" />
             <stop offset="100%" stopColor="#b3810e" />
           </linearGradient>
+          {/* Clipping to the pad is what breaks the outer ridges against the
+              edge instead of letting them close into clean ovals. */}
+          <clipPath id="cac-print-pad">
+            <path d={OUTLINE} />
+          </clipPath>
         </defs>
 
-        {ARCS.map((a, i) => (
-          <path
-            key={i}
-            d={toPath(a)}
-            pathLength={1}
-            stroke="url(#cac-print-gold)"
-            strokeWidth={1.5}
-            className="print-ridge"
-            style={{ animationDuration: `${a.ms}ms`, animationDelay: `${a.delay}ms` }}
-          />
-        ))}
+        <g clipPath="url(#cac-print-pad)">
+          {PATHS.map((p, i) => (
+            <path
+              key={i}
+              d={p.d}
+              pathLength={1}
+              stroke="url(#cac-print-gold)"
+              strokeWidth={1.5}
+              className="print-ridge"
+              style={{ animationDuration: `${p.ms}ms`, animationDelay: `${p.delay}ms` }}
+            />
+          ))}
+        </g>
       </svg>
 
       {/* one gold pass down the print as it develops */}
@@ -166,9 +161,8 @@ function Fingerprint({ size }: { size: number }) {
 }
 
 export default function SplashScreen() {
-  const [visible, setVisible] = useState(() => {
-    return sessionStorage.getItem("cac_splash_shown") !== "true";
-  });
+  // Plays on every load, by request — no sessionStorage gate.
+  const [visible, setVisible] = useState(true);
   // Readers who ask for reduced motion skip the draw and open on the logo.
   const [reduced] = useState(
     () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -184,10 +178,7 @@ export default function SplashScreen() {
 
     const logoTimer = setTimeout(() => setShowLogo(true), printMs);
     const fadeTimer = setTimeout(() => setFading(true), printMs + holdMs);
-    const hideTimer = setTimeout(() => {
-      setVisible(false);
-      sessionStorage.setItem("cac_splash_shown", "true");
-    }, printMs + holdMs + FADE_MS);
+    const hideTimer = setTimeout(() => setVisible(false), printMs + holdMs + FADE_MS);
 
     return () => {
       clearTimeout(logoTimer);
@@ -223,7 +214,7 @@ export default function SplashScreen() {
           </div>
 
           <div className="splash-beat splash-logo relative grid place-items-center" data-on={showLogo}>
-            <LogoMark size={90} className="anim-float" />
+            <LogoMark size={LOGO_SIZE} className="anim-float" />
             {showLogo && (
               <span
                 className="absolute inset-0 rounded-full border border-gold-2/40"
