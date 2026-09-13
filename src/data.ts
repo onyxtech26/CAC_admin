@@ -5,15 +5,15 @@ export const CONTACT = {
   short: "CAC",
   sub: "PROPERTY FORENSIC CONSULTATION",
   address: "85-01, Jalan Wira 2, Taman Tan Sri Yaacob, 81300 Skudai, Johor, Malaysia",
-  email: "conglomerateac@gmail.com",
+  email: "admin@conglomerate4u.com",
   phoneDisplay: "+60 11-5960 1300",
   phoneRaw: "601159601300",
   officePhoneDisplay: "+607 335 0256",
   officePhoneRaw: "6073350256",
   tiktokUrl: "https://www.tiktok.com/@conglomerate41?_r=1&_t=ZS-99btRZ6IaFc",
-  site: "www.cac.com.my",
+  site: "www.conglomerate4u.com",
   consultant: "Mr Mohaan",
-  consultantRole: "Managing Director",
+  consultantRole: "Director",
   techPartner: "Onyxx Tech",
   techPartnerUrl: "https://onyxx-tech.vercel.app/",
   waText:
@@ -41,10 +41,10 @@ export type TeamMember = {
 export const TEAM: TeamMember[] = [
   {
     name: "Mr Mohaan",
-    role: "Managing Director",
+    role: "Director",
     img: "/assets/mohaan-profile.webp",
     blurb: [
-      "Our Managing Director holds a Bachelor of Science in Human Development, majoring in Human Resource Management, from University Putra Malaysia (UPM). He has gained diverse professional experience in shipping and logistics, network marketing, business development, and people-oriented services.",
+      "Our Director holds a Bachelor of Science in Human Development, majoring in Human Resource Management, from University Putra Malaysia (UPM). He has gained diverse professional experience in shipping and logistics, network marketing, business development, and people-oriented services.",
       "Throughout his career, he has worked with people from diverse backgrounds, helping them overcome challenges and achieve their goals. His passion for problem-solving, analytical thinking, and resolving complex issues eventually led him into the field of Property Forensic Investigation.",
     ],
   },
@@ -53,7 +53,7 @@ export const TEAM: TeamMember[] = [
     role: "Managing Director",
     img: "/assets/team-03.webp",
     blurb: [
-      "Our Director holds a qualification in Electro-Mechanical Engineering from Singapore and has extensive experience across various professional fields. Throughout his career, he has developed strong expertise in human relationships, communication, negotiation, and problem-solving.",
+      "Our Managing Director holds a qualification in Electro-Mechanical Engineering from Singapore and has extensive experience across various professional fields. Throughout his career, he has developed strong expertise in human relationships, communication, negotiation, and problem-solving.",
       "His involvement in complex family disputes, inheritance matters, and property-related conflicts led him to specialise in Property Forensic Investigation. With 26 years of experience in the field and as a Senior Consultant, he has assisted clients in resolving various property and inheritance disputes through investigation, analysis, and practical solutions.",
     ],
   },
@@ -262,17 +262,20 @@ export const SERVICES: Service[] = [
 
 export type ProcessStep = {
   no: string; title: string; sub: string; details: string; outputs: string[]; glyph: string; img: string;
+  /** Which edge to keep when the panel crops the image. Images with the CAC
+   *  wordmark baked into the top-left use "left" so the logo is never trimmed. */
+  imgFocus?: "left" | "center";
 };
 
 export const PROCESS: ProcessStep[] = [
-  { no: "01", title: "Initial Consultation", sub: "Case Briefing", glyph: "chat-user", img: "/assets/service-family-estate.webp",
+  { no: "01", title: "Initial Consultation", sub: "Case Briefing", glyph: "chat-user", img: "/assets/process-01-consultation.webp", imgFocus: "left",
     details: "We begin by understanding the client's concerns and reviewing the documents already in hand — establishing the exact scope of property, assets and individuals to be investigated before any work is committed.",
     outputs: [
       "Client concerns understood and case objectives agreed",
       "Available documents reviewed and gaps identified",
       "Confidentiality and engagement terms executed",
     ] },
-  { no: "02", title: "Evidence Collection", sub: "Document Gathering", glyph: "clipboard-check", img: "/assets/icon-legal.webp",
+  { no: "02", title: "Evidence Collection", sub: "Document Gathering", glyph: "clipboard-check", img: "/assets/process-02-evidence.webp", imgFocus: "left",
     details: "We gather relevant records from public authorities, land registries, archives and other lawful sources — deeds, historical maps, wills, probate files and registry entries.",
     outputs: [
       "Land office register searches and title extraction",

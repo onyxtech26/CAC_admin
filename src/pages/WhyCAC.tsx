@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
-import { Eyebrow, Heading, Reveal, Tag } from "../components/ui";
-import { FAQ, MISSION, MISSION_POINTS, VISION, WHY_PRINCIPLES } from "../data";
+import { Heading, Reveal, Tag } from "../components/ui";
+import { FAQ, MISSION_POINTS, WHY_PRINCIPLES } from "../data";
 import { Seo } from "../components/Seo";
 
 const PRINCIPLE_IMAGES = [
@@ -68,33 +68,6 @@ export default function WhyCAC() {
                     <h2 className="font-display text-2xl leading-snug text-ivory">{p.k}</h2>
                     <div className="mt-3 h-px w-10 hairline" />
                     <p className="mt-4 text-sm leading-relaxed text-stone">{p.d}</p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-  
-          {/* Vision + Mission */}
-          <div className="mt-20 grid gap-5 lg:grid-cols-2">
-            {[
-              { k: "Vision", t: VISION, img: "/assets/service-ill-forensic.webp", alt: "CAC Vision" },
-              { k: "Mission", t: MISSION, img: "/assets/service-family-estate.webp", alt: "CAC Mission" },
-            ].map((v, i) => (
-              <Reveal key={v.k} delay={i * 100}>
-                <div className="plate corner-ticks relative flex h-full flex-col overflow-hidden rounded-xl">
-                  <div className="relative h-48 w-full overflow-hidden bg-navy-3 sm:h-56">
-                    <img
-                      src={v.img}
-                      alt={v.alt}
-                      className="h-full w-full object-cover transition duration-700 hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-navy-2 via-navy-2/40 to-transparent" />
-                    <div className="absolute top-4 left-4">
-                      <Eyebrow>{v.k} Statement</Eyebrow>
-                    </div>
-                  </div>
-                  <div className="flex flex-1 flex-col p-7 sm:p-8">
-                    <p className="font-display text-xl leading-relaxed text-ivory sm:text-2xl">"{v.t}"</p>
                   </div>
                 </div>
               </Reveal>

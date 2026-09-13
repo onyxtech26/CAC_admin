@@ -19,7 +19,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(root, "dist");
-const SITE_URL = "https://www.cac.com.my";
+const SITE_URL = "https://www.conglomerate4u.com";
 
 if (!existsSync(join(dist, "index.html"))) {
   console.error("prerender: dist/index.html not found — run the build first");

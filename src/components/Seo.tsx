@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { CONTACT } from "../data";
 import ROUTES from "../seo-routes.json";
 
-export const SITE_URL = "https://www.cac.com.my";
+export const SITE_URL = "https://www.conglomerate4u.com";
 
 type Props =
   /** static page — metadata comes from src/seo-routes.json */

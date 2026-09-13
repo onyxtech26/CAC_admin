@@ -1,7 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { Icon } from "../components/Icon";
 import { Eyebrow, Reveal, Tag } from "../components/ui";
-import { PROCESS, SERVICES, waLink } from "../data";
+import { SERVICES, waLink } from "../data";
 import { Seo } from "../components/Seo";
 
 export default function ServiceDetail() {
@@ -22,8 +22,6 @@ export default function ServiceDetail() {
     );
   }
   const s = SERVICES[idx];
-  const prev = SERVICES[(idx - 1 + SERVICES.length) % SERVICES.length];
-  const next = SERVICES[(idx + 1) % SERVICES.length];
 
   return (
     <>
@@ -40,8 +38,8 @@ export default function ServiceDetail() {
           <span className="text-gold-2">{s.title}</span>
         </nav>
 
-        <div className="mt-8 grid gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-8">
+        <div className="mt-8">
+          <div>
             <Reveal>
               <div className="relative mb-6 h-56 w-full overflow-hidden rounded-xl border border-gold-2/25 shadow-2xl">
                 <img src={s.img} alt={s.title} className="h-full w-full object-cover" />
@@ -92,56 +90,9 @@ export default function ServiceDetail() {
             </Reveal>
           </div>
 
-          {/* Sidebar */}
-          <aside className="lg:col-span-4">
-            <Reveal delay={120}>
-              <div className="plate corner-ticks sticky top-28 space-y-6 rounded-lg p-6">
-                <div>
-                  <p className="font-mono text-[10px] uppercase tracking-wide-2 text-gold-2/70">Quick facts</p>
-                  <dl className="mt-3 space-y-3 text-sm">
-                    <Row k="Discipline No." v={s.no} />
-                    <Row k="Deliverables" v={`${s.deliverables.length} point checklist`} />
-                    <Row k="Engagement" v="Confidential · counsel-grade" />
-                    <Row k="Coverage" v="Johor HQ · all Malaysia" />
-                  </dl>
-                </div>
-                <div className="border-t border-gold-2/10 pt-5">
-                  <p className="font-mono text-[10px] uppercase tracking-wide-2 text-gold-2/70">Where this sits in the {PROCESS.length}-stage method</p>
-                  <ul className="mt-3 space-y-2">
-                    {PROCESS.slice(0, 5).map((p) => (
-                      <li key={p.no} className="flex items-center gap-3 text-xs text-stone">
-                        <span className="font-mono text-[10px] text-gold-2">{p.no}</span>
-                        <Icon name={p.glyph} size={14} className="text-gold-2/70" />
-                        {p.title}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link to="/process" className="mt-3 inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-wide-2 text-gold-2 hover:underline">
-                    Full methodology <Icon name="arrow" size={12} />
-                  </Link>
-                </div>
-                <div className="border-t border-gold-2/10 pt-5">
-                  <p className="font-mono text-[10px] uppercase tracking-wide-2 text-gold-2/70">Adjacent disciplines</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Link to={`/services/${prev.id}`} className="rounded border border-gold-2/20 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide-2 text-stone hover:border-gold-2 hover:text-gold-2">← {prev.no} {prev.title}</Link>
-                    <Link to={`/services/${next.id}`} className="rounded border border-gold-2/20 px-3 py-1.5 font-mono text-[10px] uppercase tracking-wide-2 text-stone hover:border-gold-2 hover:text-gold-2">{next.no} {next.title} →</Link>
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          </aside>
         </div>
       </div>
     </section>
     </>
-  );
-}
-
-function Row({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-white/5 pb-2">
-      <dt className="text-mute">{k}</dt>
-      <dd className="text-right text-sand">{v}</dd>
-    </div>
   );
 }

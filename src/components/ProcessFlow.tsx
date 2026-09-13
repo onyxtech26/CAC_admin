@@ -183,9 +183,11 @@ function ProcessTrack() {
                 >
                   <div className="plate corner-ticks relative rounded-xl p-2">
                     <div className="media-clip relative h-[420px] overflow-hidden rounded-lg xl:h-[480px]">
-                      <img src={s.img} alt="" className="h-full w-full object-cover" />
+                      <img src={s.img} alt="" className={`h-full w-full object-cover ${s.imgFocus === "left" ? "object-left" : "object-center"}`} />
                       <div className="absolute inset-0 bg-gradient-to-t from-navy-2 via-navy-2/30 to-transparent" />
-                      <span className="absolute left-4 top-4">
+                      {/* Bottom-left, not top-left: the stage art carries the CAC wordmark in
+                          its top-left corner, and the tag would sit on top of it. */}
+                      <span className="absolute bottom-4 left-4">
                         <Tag>
                           Stage {s.no} / {PROCESS.length}
                         </Tag>
