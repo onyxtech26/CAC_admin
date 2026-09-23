@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@9.15.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev:web": "pnpm --filter @cac/web dev",
     "dev:staff": "pnpm --filter @cac/staff dev",
@@ -14,6 +16,7 @@
     "test": "pnpm -r test",
     "db:generate": "pnpm --filter @cac/db generate",
     "db:migrate": "pnpm --filter @cac/db migrate",
-    "db:seed": "pnpm --filter @cac/db seed"
+    "db:seed": "pnpm --filter @cac/db seed",
+    "db:bootstrap": "pnpm --filter @cac/db bootstrap"
   }
 }

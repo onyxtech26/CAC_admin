@@ -1,4 +1,4 @@
-import { hash, verify, Algorithm } from "@node-rs/argon2";
+import { hash, verify } from "@node-rs/argon2";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
@@ -10,7 +10,10 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
  * later does not invalidate existing hashes.
  */
 const ARGON2_OPTIONS = {
-  algorithm: Algorithm.Argon2id,
+  // 2 = Argon2id. The library exports this as an ambient const enum, which
+  // cannot be read across an isolatedModules boundary (Next.js compiles that
+  // way), so the value is inlined with its meaning stated.
+  algorithm: 2,
   memoryCost: 19456, // 19 MiB
   timeCost: 2,
   parallelism: 1,

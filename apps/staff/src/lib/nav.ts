@@ -1,0 +1,98 @@
+import type { Principal } from "@cac/core";
+
+/**
+ * The internal navigation.
+ *
+ * Each entry declares the capabilities that make it relevant; an item is shown
+ * only when the caller holds at least one of them. Items for modules that are
+ * not built yet are present with `phase`, so the menu doubles as an honest
+ * statement of where the platform actually is — rather than a set of links
+ * that lead nowhere.
+ *
+ * Filtering here is presentation only. The route itself is protected
+ * server-side by requireCapability; hiding the link is not the control.
+ */
+
+export interface NavItem {
+  label: string;
+  href: string;
+  capabilities: string[];
+  /** Set when the module is not yet implemented. */
+  phase?: number;
+}
+
+export interface NavSection {
+  heading: string;
+  items: NavItem[];
+}
+
+export const NAVIGATION: NavSection[] = [
+  {
+    heading: "Overview",
+    items: [{ label: "Dashboard", href: "/", capabilities: [] }],
+  },
+  {
+    heading: "Accounting",
+    items: [
+      { label: "Chart of accounts", href: "/accounting/accounts", capabilities: ["accounting.coa.view"], phase: 2 },
+      { label: "Journals", href: "/accounting/journals", capabilities: ["accounting.journal.view"], phase: 2 },
+      { label: "Quotations", href: "/accounting/quotations", capabilities: ["accounting.quotation.view"], phase: 3 },
+      { label: "Invoices", href: "/accounting/invoices", capabilities: ["accounting.invoice.view"], phase: 3 },
+      { label: "Receipts", href: "/accounting/receipts", capabilities: ["accounting.receipt.view"], phase: 3 },
+      { label: "Payment vouchers", href: "/accounting/vouchers", capabilities: ["accounting.voucher.view"], phase: 3 },
+      { label: "Purchase orders", href: "/accounting/purchase-orders", capabilities: ["accounting.po.view"], phase: 3 },
+      { label: "Petty cash", href: "/accounting/petty-cash", capabilities: ["accounting.pettycash.view"], phase: 3 },
+      { label: "Claims", href: "/accounting/claims", capabilities: ["accounting.claim.view"], phase: 3 },
+      { label: "Reports", href: "/accounting/reports", capabilities: ["accounting.report.view"], phase: 3 },
+      { label: "Bank reconciliation", href: "/accounting/bank", capabilities: ["accounting.bank.view"], phase: 4 },
+    ],
+  },
+  {
+    heading: "Human resources",
+    items: [
+      { label: "Employees", href: "/hr/employees", capabilities: ["hr.employee.view"], phase: 5 },
+      { label: "Attendance", href: "/hr/attendance", capabilities: ["hr.attendance.view"], phase: 5 },
+      { label: "Leave", href: "/hr/leave", capabilities: ["hr.leave.view", "hr.leave.request"], phase: 6 },
+      { label: "Overtime", href: "/hr/overtime", capabilities: ["hr.overtime.view", "hr.overtime.request"], phase: 6 },
+      { label: "Payroll", href: "/hr/payroll", capabilities: ["hr.payroll.view"], phase: 7 },
+      { label: "Payslips", href: "/hr/payslips", capabilities: ["hr.payslip.view_own", "hr.payslip.view_all"], phase: 7 },
+      { label: "Letters", href: "/hr/letters", capabilities: ["hr.letter.generate"], phase: 8 },
+    ],
+  },
+  {
+    heading: "Cases",
+    items: [
+      { label: "All cases", href: "/cases", capabilities: ["case.view", "case.view_all"], phase: 9 },
+      { label: "Estate agent", href: "/cases/agent", capabilities: ["case.agent.run"], phase: 11 },
+      { label: "Templates", href: "/cases/templates", capabilities: ["template.view"], phase: 12 },
+    ],
+  },
+  {
+    heading: "Documents",
+    items: [{ label: "Document library", href: "/documents", capabilities: ["doc.view"], phase: 10 }],
+  },
+  {
+    heading: "Administration",
+    items: [
+      { label: "Users", href: "/admin/users", capabilities: ["admin.user.manage"] },
+      { label: "Roles & permissions", href: "/admin/roles", capabilities: ["admin.role.manage"] },
+      { label: "Settings", href: "/admin/settings", capabilities: ["admin.settings.manage"] },
+      { label: "Audit trail", href: "/admin/audit", capabilities: ["audit.view"] },
+    ],
+  },
+  {
+    heading: "Account",
+    items: [{ label: "My account", href: "/account", capabilities: [] }],
+  },
+];
+
+export function visibleNavigation(principal: Principal): NavSection[] {
+  return NAVIGATION.map((section) => ({
+    heading: section.heading,
+    items: section.items.filter(
+      (item) =>
+        item.capabilities.length === 0 ||
+        item.capabilities.some((c) => principal.capabilities.has(c)),
+    ),
+  })).filter((section) => section.items.length > 0);
+}

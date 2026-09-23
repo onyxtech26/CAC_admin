@@ -1,0 +1,31 @@
+{
+  "name": "@cac/staff",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "start": "next start -p 3100",
+    "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
+    "test": "echo \"(staff app tests run via @cac/core)\" && exit 0"
+  },
+  "dependencies": {
+    "@cac/core": "workspace:*",
+    "@cac/db": "workspace:*",
+    "next": "15.1.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "zod": "3.24.1",
+    "drizzle-orm": "0.38.4"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.17",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "tailwindcss": "4.1.17",
+    "@tailwindcss/postcss": "4.1.17",
+    "postcss": "8.4.49",
+    "typescript": "5.9.3"
+  }
+}

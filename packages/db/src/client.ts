@@ -1,3 +1,5 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import * as schema from "./schema/index.js";
@@ -21,7 +23,19 @@ export type Database = ReturnType<typeof drizzlePglite<typeof schema>>;
 let instance: Database | undefined;
 let pglite: PGlite | undefined;
 
-const LOCAL_DATA_DIR = process.env.PGLITE_DIR ?? ".data/cac";
+/**
+ * Resolved against this package, not the current working directory.
+ *
+ * Otherwise every process gets its own database depending on where it was
+ * launched from: the CLI seeds packages/db/.data while the Next.js app,
+ * running in apps/staff, silently creates an empty one of its own — and the
+ * administrator you just created does not exist.
+ */
+// Built from dirname rather than `new URL(..., import.meta.url)`: webpack
+// statically analyses that form and tries to resolve the target as a module,
+// which fails the Next.js build.
+const PACKAGE_DIR = dirname(fileURLToPath(import.meta.url));
+const LOCAL_DATA_DIR = process.env.PGLITE_DIR ?? join(PACKAGE_DIR, "..", ".data", "cac");
 
 export async function getDb(): Promise<Database> {
   if (instance) return instance;

@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
-import { createTestDb, runMigrations, seed, type Database } from "@cac/db";
+import { createTestDb, type Database } from "@cac/db";
+import { runMigrations } from "@cac/db/migrate";
+import { seed } from "@cac/db/seed";
 import {
   AuthorizationError,
   can,
