@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
 import { Counter, Eyebrow, Heading, Marquee, Reveal, Tag } from "../components/ui";
-import { HERO_STATS, MISSION, MISSION_POINTS, PRINCIPLES_HOME, PROCESS, SERVICES, VISION } from "../data";
+import { HERO_STATS, MISSION, PRINCIPLES_HOME, PROCESS, SERVICES, VISION } from "../data";
 import { Seo } from "../components/Seo";
 
 const TRUST = [

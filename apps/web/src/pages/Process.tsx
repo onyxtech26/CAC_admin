@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
 import { Heading, Reveal, Tag } from "../components/ui";
-import { PROCESS, waLink } from "../data";
+import { PROCESS } from "../data";
 import ProcessFlow from "../components/ProcessFlow";
 import { Redact } from "../components/Redact";
 import { Seo } from "../components/Seo";

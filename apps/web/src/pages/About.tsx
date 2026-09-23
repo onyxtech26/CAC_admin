@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Icon } from "../components/Icon";
-import { Counter, Heading, Marquee, Reveal, Tag } from "../components/ui";
-import { HERO_STATS, INDUSTRIES, PRINCIPLES_HOME, STRAPLINE, TAGLINES, waLink } from "../data";
+import { Counter, Heading, Marquee, Reveal } from "../components/ui";
+import { HERO_STATS, INDUSTRIES, PRINCIPLES_HOME, STRAPLINE, TAGLINES } from "../data";
 import { Seo } from "../components/Seo";
 
 const VALUES = [

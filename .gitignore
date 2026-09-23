@@ -16,3 +16,7 @@ docs/CHANGELOG.md
 
 # Generated knowledge-graph output (regenerate with `graphify update`)
 graphify-out/
+
+# Local PGlite data directory
+packages/db/.data/
+.next/
