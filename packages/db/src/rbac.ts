@@ -210,7 +210,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     ...readOnlyOf("hr."), "hr.employee.view_sensitive",
     "hr.overtime.approve", "hr.leave.approve", "hr.timeoff.approve",
     "hr.payroll.approve", "hr.payroll.finalise", "hr.payslip.view_all",
-    "hr.letter.approve", "hr.statutory.manage",
+    "hr.letter.approve", "hr.statutory.manage", "hr.appraisal.review",
     ...readOnlyOf("case."), "case.view_all", "case.agent.run",
     "case.document.approve", "case.rule.approve",
     "admin.settings.manage", "audit.view", "audit.export",
@@ -222,6 +222,9 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     "accounting.invoice.approve", "accounting.voucher.approve",
     "accounting.pettycash.approve", "accounting.claim.approve",
     ...readOnlyOf("hr."), "hr.overtime.approve", "hr.leave.approve", "hr.timeoff.approve",
+    // A line manager reviews the people who report to them. Without this the cycle
+    // opens and nobody can complete an appraisal.
+    "hr.appraisal.review",
     ...readOnlyOf("case."), "case.view_all",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],

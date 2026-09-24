@@ -203,7 +203,7 @@ export function Field({
   autoComplete?: string;
   defaultValue?: string;
   hint?: string;
-  inputMode?: "text" | "numeric";
+  inputMode?: "text" | "numeric" | "decimal";
 }) {
   const id = `f-${name}`;
   return (

@@ -373,6 +373,21 @@ export const attendance = hrSchema.table(
     isRestDay: boolean("is_rest_day").notNull().default(false),
     onLeaveType: text("on_leave_type"),
 
+    /**
+     * Approved paid overtime for the day, in minutes.
+     *
+     * NOT the same as `extraMinutes`. Extra time is what the clock says; this is
+     * what somebody authorised paying for. Conflating them pays overtime nobody
+     * asked for.
+     */
+    approvedOtMinutes: integer("approved_ot_minutes").notNull().default(0),
+    /** Approved short absences within the day — late in, early out, an errand. */
+    timeoffMinutes: integer("timeoff_minutes").notNull().default(0),
+    /** The approved leave request covering this day, where one does. */
+    leaveRequestId: uuid("leave_request_id"),
+    /** Null means the figures are stale or were never computed, and screens say so. */
+    calculatedAt: timestamp("calculated_at", { withTimezone: true }),
+
     /** draft | final. Payroll reads final only. */
     status: text("status").notNull().default("draft"),
     remarks: text("remarks"),

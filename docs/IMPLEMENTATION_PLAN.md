@@ -218,6 +218,53 @@ early-clock-out · claims · appraisals.
 > **Extra time ≠ payable overtime.** Extra time is calculated; payable OT is a separate
 > decision gated on eligibility, company rule, statute and approval.
 
+**Delivered.** The attendance calculation engine, leave, overtime, short absences and
+appraisals. 62 tests; 424 across the suite.
+
+**The engine is a pure function.** `computeDay` takes the schedule, the holidays, the
+approved leave and the approved absences as arguments and reads no database, so the awkward
+cases are testable directly: a night shift whose clock-out is on the next date, a public
+holiday somebody worked anyway, a day covered by half a day's leave, a missing clock-out.
+`recalculateAttendance` fetches everything once and hands it over.
+
+Three of its rules are worth stating:
+
+- **Extra time is never payable.** `extraMinutes` is what the clock says;
+  `approvedOtMinutes` is copied from an approved overtime request and from nowhere else. A
+  test proves 150 minutes on the clock against 120 approved, which is the whole point.
+- **An authorised absence is not lateness.** Approved time off reduces what was expected of
+  the day rather than counting against the person. Without that distinction, permission to
+  attend a hospital appointment looks exactly like turning up two hours late — and the test
+  suite proves the same clock times produce lateness for somebody without permission and
+  none for somebody with it.
+- **Half the evidence produces no figure.** A clock-in with no clock-out is reported, not
+  guessed at. Guessing would invent a number that becomes a payslip.
+
+**What the engine never touches:** a finalised day. Payroll may already have read it, and
+recomputing it would change a payslip's basis after the fact; those are counted and reported
+instead.
+
+**Leave** counts days against the working week and the holiday calendar, not against dates
+— Friday to Monday is two days, and a public holiday inside the span is not leave. The
+figure is stored on the request, so a later change to the schedule cannot silently restate
+how much leave somebody took. Balances are derived from approved requests by trigger: a
+balance that disagrees with the requests beneath it is worse than none, because somebody
+reads it and approves leave that is not there. Approving beyond the remaining balance is
+possible but deliberate, and recorded as an exception.
+
+**Nobody approves their own anything** — leave, overtime or time off — and that is enforced
+on the person rather than the role, so holding a senior capability does not help.
+
+**An acknowledged appraisal never changes.** Acknowledging is not agreeing: the employee's
+comment field exists so somebody can accept that they have read a review while recording
+that they disagree with it, which is the distinction that matters if it is ever produced in
+a dispute.
+
+**Not authored here.** Leave entitlements (Q-HR-3, new) and overtime rate multiples
+(Q-HR-1). Both are legal schedules; both are nullable, both require a source before a figure
+may be used, and nothing is seeded. An overtime claim can be approved with the hours agreed
+and no rate, which is the honest state while Q-HR-1 is open: payroll then refuses to pay it.
+
 ---
 
 ## Phase 7 — Payroll *(needs Q-HR-1 — will not proceed without official schedules)*

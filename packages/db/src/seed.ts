@@ -171,6 +171,9 @@ const SEQUENCES = [
   { key: "claim", prefix: "CLM" },
   { key: "reconciliation", prefix: "BR" },
   { key: "employee", prefix: "EMP" },
+  { key: "leave", prefix: "LV" },
+  { key: "overtime", prefix: "OT" },
+  { key: "timeoff", prefix: "TO" },
   { key: "case", prefix: "CASE" },
 ];
 

@@ -150,6 +150,25 @@ Drives OCR effort and cost in Phase 10.
 Make/model of the thumbprint machine and a **real sample export**. The importer is built
 around the actual file, with mapping for variants. A sample is needed before Phase 5.
 
+### Q-HR-3 — Leave entitlements *(new, raised by Phase 6)*
+How many days of each kind of leave is somebody entitled to, and from where?
+
+Annual and sick leave minimums are set by the Employment Act and depend on length of
+service. CAC's own policy may grant more. Neither figure is authored here: **no entitlement
+is seeded, and a leave type cannot hold a number without saying where the number came
+from.** For statutory leave this is the difference between granting somebody their minimum
+and guessing at it.
+
+> **Needed:** per leave type — the entitlement (and how it varies with service, if it
+> does), the citation or policy it comes from, how much may be carried forward, and whether
+> it may be claimed after the fact.
+
+**Status.** The leave module is built and works; the types table is empty of figures. A
+request against a type with no entitlement is refused with a message naming this question,
+and the leave screen lists which types are unusable and why. Everything else — counting
+days against the working week and the holiday calendar, balances derived from approved
+requests, approval by somebody other than the requester — is done and tested.
+
 ### Q-FIN-3 — Approval limits, and who may approve what *(referenced by Phases 2–3)*
 Three documents ask the same question and none of them can answer it from the code:
 
