@@ -175,6 +175,7 @@ const SEQUENCES = [
   { key: "overtime", prefix: "OT" },
   { key: "timeoff", prefix: "TO" },
   { key: "payroll", prefix: "PR" },
+  { key: "letter", prefix: "LTR" },
   { key: "case", prefix: "CASE" },
 ];
 

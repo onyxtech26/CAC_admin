@@ -8,3 +8,4 @@ export * from "./banking.js";
 export * from "./hr.js";
 export * from "./hr-workflows.js";
 export * from "./payroll.js";
+export * from "./hr-documents.js";

@@ -325,6 +325,44 @@ URL does not work — including on the PDF route.
 Template-driven appointment and confirmation letters, DOCX + PDF, versioned, approved,
 immutable once issued.
 
+**Exit:** a letter reproduces byte-identically from its own record, and revising the template
+it came from does not change it.
+
+**Delivered.** Templates, letters, both file formats, and the approval path. 33 tests; 487
+across the suite.
+
+**The letter is the record, not the template.** When a letter is generated, the template body
+of that moment, the variables it declared, the values typed in, and the rendered text are all
+copied onto the letter. Nothing re-renders afterwards — the screen, the PDF and the Word file
+all print the stored text, so the three cannot disagree, and a template revised next year
+leaves last year's letters alone. The final test in `letters.test.ts` proves exactly that:
+approve a v2 with different wording, then re-read the letter issued from v1.
+
+**Templates are versioned, not edited.** Code plus version is unique, one version per code may
+be approved at a time, and approving a new one retires its predecessor. Whoever wrote a
+version cannot approve it, and a draft cannot be used to write to anybody. A letter records
+`code` and `version`, so "which form of words was this person sent" has a fixed answer.
+
+**The template language is deliberately small.** Placeholders and `{{#if}}…{{else}}…{{/if}}`.
+No loops, no arithmetic, no expressions — a letter about somebody's employment is not a place
+for a computed clause nobody reviewed. A placeholder that was never declared is refused when
+the template is saved, including inside a branch that happens not to be taken, because the
+untaken branch is the one that surprises somebody later. A required variable left blank is
+refused at generation.
+
+**Issued means issued.** A trigger makes issued letters immutable — body, values, dates, all
+of it. A wrong letter is corrected by generating one that supersedes it; both stay on the
+record, which is what somebody holding a copy of the first deserves. The supersede chain is
+cycle-guarded in the database. Appointment letters are allowed to predate the joining date,
+because that is when appointment letters are written.
+
+**Word as well as PDF**, because these get signed, annotated and filed; without an editable
+form somebody retypes the letter, and a retyped letter differs from what the system says was
+sent. Both formats carry the template version as provenance and a DRAFT line until issued.
+
+**Not authored here.** No letter wording is seeded. Templates are CAC's own text, entered with
+the source reference for where the wording came from (Q-DOC-1).
+
 ---
 
 ## Phase 9 — Case management *(needs Q-LEGAL-1)*

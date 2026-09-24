@@ -163,11 +163,14 @@ export function Button({
   variant = "primary",
   type = "button",
   disabled,
+  onClick,
 }: {
   children: ReactNode;
   variant?: "primary" | "secondary" | "danger";
   type?: "button" | "submit";
   disabled?: boolean;
+  /** Only from a client component. A server component passing this is a build error, which is the right place to find out. */
+  onClick?: () => void;
 }) {
   const styles = {
     primary: "bg-[var(--color-navy)] text-white hover:bg-[var(--color-navy-2)]",
@@ -179,6 +182,7 @@ export function Button({
     <button
       type={type}
       disabled={disabled}
+      onClick={onClick}
       className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50 ${styles}`}
     >
       {children}

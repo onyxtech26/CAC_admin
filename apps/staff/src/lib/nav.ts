@@ -77,7 +77,7 @@ export const NAVIGATION: NavSection[] = [
       { label: "Payroll", href: "/hr/payroll", capabilities: ["hr.payroll.view"] },
       { label: "Payslips", href: "/hr/payslips", capabilities: ["hr.payslip.view_own", "hr.payslip.view_all"] },
       { label: "Statutory rules", href: "/hr/statutory", capabilities: ["hr.statutory.view"] },
-      { label: "Letters", href: "/hr/letters", capabilities: ["hr.letter.generate"], phase: 8 },
+      { label: "Letters", href: "/hr/letters", capabilities: ["hr.letter.generate"] },
     ],
   },
   {
