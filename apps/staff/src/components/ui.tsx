@@ -129,9 +129,11 @@ export function DataTable({
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr className="border-b border-[var(--color-line)]">
-            {columns.map((c) => (
+            {/* Keyed by position as well as label: a table may legitimately have
+                two blank column headings, and React needs the keys to differ. */}
+            {columns.map((c, index) => (
               <th
-                key={c}
+                key={`${c}-${index}`}
                 scope="col"
                 className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--color-faint)]"
               >
@@ -229,5 +231,131 @@ export function Alert({ tone, children }: { tone: Tone; children: ReactNode }) {
     <div className={`rounded-md border px-3 py-2 text-[13px] ${TONE[tone]}`} role="alert">
       {children}
     </div>
+  );
+}
+
+export function Select({
+  label,
+  name,
+  options,
+  defaultValue,
+  required,
+  hint,
+  placeholder,
+}: {
+  label: string;
+  name: string;
+  options: Array<{ value: string; label: string; disabled?: boolean }>;
+  defaultValue?: string;
+  required?: boolean;
+  hint?: string;
+  placeholder?: string;
+}) {
+  const id = `f-${name}`;
+  return (
+    <div>
+      <label htmlFor={id} className="block text-[12px] font-medium text-[var(--color-body)]">
+        {label}
+      </label>
+      <select
+        id={id}
+        name={name}
+        required={required}
+        defaultValue={defaultValue ?? ""}
+        className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px] outline-none focus:border-[var(--color-info)]"
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.disabled}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      {hint && <p className="mt-1 text-[11px] text-[var(--color-muted)]">{hint}</p>}
+    </div>
+  );
+}
+
+export function Textarea({
+  label,
+  name,
+  rows = 3,
+  defaultValue,
+  required,
+  hint,
+  maxLength,
+}: {
+  label: string;
+  name: string;
+  rows?: number;
+  defaultValue?: string;
+  required?: boolean;
+  hint?: string;
+  maxLength?: number;
+}) {
+  const id = `f-${name}`;
+  return (
+    <div>
+      <label htmlFor={id} className="block text-[12px] font-medium text-[var(--color-body)]">
+        {label}
+      </label>
+      <textarea
+        id={id}
+        name={name}
+        rows={rows}
+        required={required}
+        maxLength={maxLength}
+        defaultValue={defaultValue}
+        className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px] outline-none focus:border-[var(--color-info)]"
+      />
+      {hint && <p className="mt-1 text-[11px] text-[var(--color-muted)]">{hint}</p>}
+    </div>
+  );
+}
+
+/**
+ * A link styled as a button.
+ *
+ * An <a> rather than a <button> with an onClick: navigation should work with the
+ * middle mouse button, open in a new tab, and function before hydration.
+ */
+export function LinkButton({
+  href,
+  children,
+  variant = "secondary",
+}: {
+  href: string;
+  children: ReactNode;
+  variant?: "primary" | "secondary";
+}) {
+  const styles =
+    variant === "primary"
+      ? "bg-[var(--color-navy)] text-white hover:bg-[var(--color-navy-2)]"
+      : "border border-[var(--color-line-strong)] bg-[var(--color-surface)] text-[var(--color-body)] hover:bg-[var(--color-canvas)]";
+  return (
+    <a
+      href={href}
+      className={`inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-[13px] font-medium transition ${styles}`}
+    >
+      {children}
+    </a>
+  );
+}
+
+/** A table row of totals: heavier rule, no bottom border, tabular figures. */
+export function TotalRow({ children }: { children: ReactNode }) {
+  return (
+    <tr className="border-t-2 border-[var(--color-line-strong)] font-semibold">{children}</tr>
+  );
+}
+
+export function FieldSet({ legend, children }: { legend: string; children: ReactNode }) {
+  return (
+    <fieldset className="space-y-3">
+      <legend className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-faint)]">
+        {legend}
+      </legend>
+      {children}
+    </fieldset>
   );
 }

@@ -17,6 +17,10 @@ docs/CHANGELOG.md
 # Generated knowledge-graph output (regenerate with `graphify update`)
 graphify-out/
 
-# Local PGlite data directory
+# Local PGlite data directory, and the ownership marker beside it
 packages/db/.data/
+packages/db/.data.owner.json
 .next/
+
+# TypeScript incremental build state
+*.tsbuildinfo

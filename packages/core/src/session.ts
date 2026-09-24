@@ -258,9 +258,10 @@ export async function resolvePrincipal(
     status: string;
     mfa_satisfied_at: string | null;
     last_seen_at: string;
+    must_change_password: boolean;
   }>(sql`
     SELECT s.id AS session_id, s.user_id, u.email, u.full_name, u.employee_id,
-           u.status, s.mfa_satisfied_at, s.last_seen_at
+           u.status, s.mfa_satisfied_at, s.last_seen_at, u.must_change_password
     FROM auth.session s JOIN auth."user" u ON u.id = s.user_id
     WHERE s.token_hash = ${tokenHash} AND s.revoked_at IS NULL AND s.expires_at > now()
   `);
@@ -290,6 +291,7 @@ export async function resolvePrincipal(
     roles,
     capabilities,
     mfaSatisfied: row.mfa_satisfied_at !== null,
+    mustChangePassword: row.must_change_password,
   };
 }
 

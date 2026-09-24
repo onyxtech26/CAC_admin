@@ -33,7 +33,7 @@ Format: `<domain>.<entity>.<action>`.
 `quotation.{view,create,edit,approve,convert}` · `receipt.{view,create,allocate,approve}` ·
 `voucher.{view,create,approve,pay}` · `po.{view,create,approve,receive,close}` ·
 `pettycash.{view,create,approve,reconcile}` · `claim.{view,create,approve,reimburse}` ·
-`journal.{view,create,post,reverse}` · `period.{view,lock,close}` ·
+`journal.{view,create,post,reverse}` · `period.{view,manage,lock,close}` ·
 `tax.{view,manage}` · `bank.{view,import,reconcile}` · `report.{view,export}` ·
 `einvoice.{submit,cancel,view}` · `customer.{view,manage}` · `supplier.{view,manage}`
 
@@ -60,55 +60,64 @@ Format: `<domain>.<entity>.<action>`.
 
 `✓` granted · `○` own records only · `△` within configured threshold · blank = denied
 
+**`SUPER_ADMIN` is almost entirely blank, and that is the point.** It administers users,
+roles and settings, and it reads the audit trail. It cannot approve an invoice, post
+payroll or approve a legal document. A platform administrator who is also a business
+super-user makes maker/checker unenforceable and the audit trail unfalsifiable: every
+disputed entry has a second possible author who can do anything. Whoever administers the
+platform is given a business role *as well*, by somebody else, and the trail shows it.
+`packages/core/src/authz.test.ts` asserts this rather than trusting the table.
+
 | Capability | SUPER | DIR | MGMT | ACCT | AE | HR_ADM | HR_MGR | CASE_MGR | CASE_ST | LAWYER | EMP | AUDIT | RO |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
 | `accounting.coa.view` | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | ✓ | ✓ |
-| `accounting.coa.manage` | ✓ | | | ✓ | | | | | | | | | |
-| `invoice.view` | ✓ | ✓ | ✓ | ✓ | ✓ | | | ✓ | | | | ✓ | ✓ |
-| `invoice.create` | ✓ | | | ✓ | ✓ | | | | | | | | |
-| `invoice.approve` | ✓ | ✓ | △ | ✓ | | | | | | | | | |
-| `invoice.issue` | ✓ | | | ✓ | | | | | | | | | |
-| `invoice.void` | ✓ | ✓ | | ✓ | | | | | | | | | |
-| `receipt.create` | ✓ | | | ✓ | ✓ | | | | | | | | |
-| `receipt.approve` | ✓ | ✓ | | ✓ | | | | | | | | | |
-| `voucher.create` | ✓ | | | ✓ | ✓ | | | | | | | | |
-| `voucher.approve` | ✓ | ✓ | △ | ✓ | | | | | | | | | |
-| `pettycash.approve` | ✓ | ✓ | ✓ | ✓ | | | | | | | | | |
-| `claim.create` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | |
-| `claim.approve` | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | |
-| `journal.post` | ✓ | | | ✓ | | | | | | | | | |
-| `journal.reverse` | ✓ | ✓ | | ✓ | | | | | | | | | |
-| `period.close` | ✓ | ✓ | | ✓ | | | | | | | | | |
-| `tax.manage` | ✓ | | | ✓ | | | | | | | | | |
-| `einvoice.submit` | ✓ | | | ✓ | | | | | | | | | |
-| `accounting.report.view` | ✓ | ✓ | ✓ | ✓ | ✓ | | | | | | | ✓ | ✓ |
+| `accounting.coa.manage` |   | | | ✓ | | | | | | | | | |
+| `invoice.view` |   | ✓ | ✓ | ✓ | ✓ | | | ✓ | | | | ✓ | ✓ |
+| `invoice.create` |   | | | ✓ | ✓ | | | | | | | | |
+| `invoice.approve` |   | ✓ | △ | ✓ | | | | | | | | | |
+| `invoice.issue` |   | | | ✓ | | | | | | | | | |
+| `invoice.void` |   | ✓ | | ✓ | | | | | | | | | |
+| `receipt.create` |   | | | ✓ | ✓ | | | | | | | | |
+| `receipt.approve` |   | ✓ | | ✓ | | | | | | | | | |
+| `voucher.create` |   | | | ✓ | ✓ | | | | | | | | |
+| `voucher.approve` |   | ✓ | △ | ✓ | | | | | | | | | |
+| `pettycash.approve` |   | ✓ | ✓ | ✓ | | | | | | | | | |
+| `claim.create` |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | |
+| `claim.approve` |   | ✓ | ✓ | ✓ | | ✓ | ✓ | | | | | | |
+| `journal.post` |   | | | ✓ | | | | | | | | | |
+| `journal.reverse` |   | ✓ | | ✓ | | | | | | | | | |
+| `period.manage` |   | ✓ |   | ✓ | | | | | | | | | |
+| `period.close` |   | ✓ | | ✓ | | | | | | | | | |
+| `tax.manage` |   | | | ✓ | | | | | | | | | |
+| `einvoice.submit` |   | | | ✓ | | | | | | | | | |
+| `accounting.report.view` |   | ✓ | ✓ | ✓ | ✓ | | | | | | | ✓ | ✓ |
 | `hr.employee.view` | ✓ | ✓ | ✓ | | | ✓ | ✓ | | | | ○ | ✓ | |
-| `hr.employee.view_sensitive` | ✓ | ✓ | | | | ✓ | ✓ | | | | ○ | ✓ | |
-| `hr.employee.edit` | ✓ | | | | | ✓ | ✓ | | | | | | |
-| `attendance.import` | ✓ | | | | | ✓ | ✓ | | | | | | |
-| `attendance.finalise` | ✓ | | | | | | ✓ | | | | | | |
-| `overtime.approve` | ✓ | ✓ | ✓ | | | ✓ | ✓ | ✓ | | | | | |
-| `leave.approve` | ✓ | ✓ | ✓ | | | ✓ | ✓ | ✓ | | | | | |
-| `payroll.prepare` | ✓ | | | | | ✓ | ✓ | | | | | | |
-| `payroll.approve` | ✓ | ✓ | | | | | ✓ | | | | | | |
-| `payroll.finalise` | ✓ | ✓ | | | | | ✓ | | | | | | |
-| `payroll.post` | ✓ | | | ✓ | | | | | | | | | |
-| `payslip.view_own` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | |
-| `payslip.view_all` | ✓ | ✓ | | | | ✓ | ✓ | | | | | ✓ | |
-| `statutory.manage` | ✓ | ✓ | | ✓ | | | ✓ | | | | | | |
-| `letter.generate` | ✓ | | | | | ✓ | ✓ | | | | | | |
-| `letter.approve` | ✓ | ✓ | | | | | ✓ | | | | | | |
-| `case.view` | ✓ | ✓ | ✓ | | | | | ✓ | ○ | ✓ | | ✓ | |
+| `hr.employee.view_sensitive` |   | ✓ | | | | ✓ | ✓ | | | | ○ | ✓ | |
+| `hr.employee.edit` |   | | | | | ✓ | ✓ | | | | | | |
+| `attendance.import` |   | | | | | ✓ | ✓ | | | | | | |
+| `attendance.finalise` |   | | | | | | ✓ | | | | | | |
+| `overtime.approve` |   | ✓ | ✓ | | | ✓ | ✓ | ✓ | | | | | |
+| `leave.approve` |   | ✓ | ✓ | | | ✓ | ✓ | ✓ | | | | | |
+| `payroll.prepare` |   | | | | | ✓ | ✓ | | | | | | |
+| `payroll.approve` |   | ✓ | | | | | ✓ | | | | | | |
+| `payroll.finalise` |   | ✓ | | | | | ✓ | | | | | | |
+| `payroll.post` |   | | | ✓ | | | | | | | | | |
+| `payslip.view_own` |   | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | | |
+| `payslip.view_all` |   | ✓ | | | | ✓ | ✓ | | | | | ✓ | |
+| `statutory.manage` |   | ✓ | | ✓ | | | ✓ | | | | | | |
+| `letter.generate` |   | | | | | ✓ | ✓ | | | | | | |
+| `letter.approve` |   | ✓ | | | | | ✓ | | | | | | |
+| `case.view` |   | ✓ | ✓ | | | | | ✓ | ○ | ✓ | | ✓ | |
 | `case.view_all` | ✓ | ✓ | ✓ | | | | | ✓ | | ✓ | | ✓ | |
-| `case.create` | ✓ | | | | | | | ✓ | | | | | |
-| `case.edit` | ✓ | | | | | | | ✓ | ○ | | | | |
-| `case.document.upload` | ✓ | | | | | | | ✓ | ○ | | | | |
-| `case.agent.run` | ✓ | ✓ | | | | | | ✓ | ○ | ✓ | | | |
-| `case.document.generate` | ✓ | | | | | | | ✓ | ○ | ✓ | | | |
-| `case.document.approve` | ✓ | ✓ | | | | | | | | ✓ | | | |
-| `case.fact.verify` | ✓ | | | | | | | ✓ | | ✓ | | | |
-| `case.rule.propose` | ✓ | | | | | | | ✓ | | ✓ | | | |
-| `case.rule.approve` | ✓ | ✓ | | | | | | | | ✓ | | | |
+| `case.create` |   | | | | | | | ✓ | | | | | |
+| `case.edit` |   | | | | | | | ✓ | ○ | | | | |
+| `case.document.upload` |   | | | | | | | ✓ | ○ | | | | |
+| `case.agent.run` |   | ✓ | | | | | | ✓ | ○ | ✓ | | | |
+| `case.document.generate` |   | | | | | | | ✓ | ○ | ✓ | | | |
+| `case.document.approve` |   | ✓ | | | | | | | | ✓ | | | |
+| `case.fact.verify` |   | | | | | | | ✓ | | ✓ | | | |
+| `case.rule.propose` |   | | | | | | | ✓ | | ✓ | | | |
+| `case.rule.approve` |   | ✓ | | | | | | | | ✓ | | | |
 | `admin.user.manage` | ✓ | | | | | | | | | | | | |
 | `admin.role.manage` | ✓ | | | | | | | | | | | | |
 | `admin.settings.manage` | ✓ | ✓ | | | | | | | | | | | |

@@ -105,9 +105,11 @@ CREATE TABLE accounting.account (
   type          text NOT NULL,     -- ASSET|LIABILITY|EQUITY|REVENUE|EXPENSE
   subtype       text,
   parent_id     uuid REFERENCES accounting.account(id),
-  normal_side   text NOT NULL,     -- debit|credit
+  normal_side   text NOT NULL,     -- debit|credit, constrained against type + is_contra
   is_postable   boolean NOT NULL DEFAULT true,   -- headers are not postable
   is_active     boolean NOT NULL DEFAULT true,
+  is_system     boolean NOT NULL DEFAULT false,  -- resolved by code elsewhere; cannot be retired
+  is_contra     boolean NOT NULL DEFAULT false,  -- accumulated depreciation, fee rebates
   default_tax_code_id uuid REFERENCES accounting.tax_code(id),
   currency      char(3) NOT NULL DEFAULT 'MYR'
 );
@@ -185,6 +187,13 @@ CHECK (SUM(receipt_allocation.amount) <= receipt.amount)   -- enforced by trigge
 -- invoice numbers never recycled
 CREATE UNIQUE INDEX ON accounting.invoice (invoice_no) WHERE status <> 'draft';
 ```
+
+**As built.** Phase 2 delivered this schema in `migrations/0002_accounting.sql` with the
+guards in `0003_accounting_guards.sql`. Two things ended up stricter than sketched here.
+Journal totals are recomputed by trigger from the lines rather than written by the
+application, so the balance CHECK verifies arithmetic the database did itself. And the
+status graph is enforced one-way — `draft -> posted -> reversed`, with no path back — so
+"correct it by reversal" is a property of the schema, not a convention.
 
 **Tax is effective-dated, never a constant.** `tax_rate(tax_code_id, rate,
 effective_from, effective_to)`. Every invoice line stores the `tax_rate_id` actually

@@ -2,7 +2,8 @@ import { sql } from "drizzle-orm";
 import { getDb } from "@cac/db";
 import { requireCapability } from "@/lib/auth";
 import { Shell } from "@/components/Shell";
-import { Badge, DataTable, Panel, Td } from "@/components/ui";
+import { Alert, Badge, DataTable, Panel, Td } from "@/components/ui";
+import { SettingForm } from "./SettingForm";
 
 type SettingRow = {
   key: string;
@@ -24,6 +25,7 @@ export default async function SettingsPage() {
   `);
 
   const rows = settings.rows ?? [];
+  const unconfirmed = rows.filter((row) => row.needs_review);
   const byCategory = new Map<string, SettingRow[]>();
   for (const row of rows) {
     const list = byCategory.get(row.category) ?? [];
@@ -38,6 +40,19 @@ export default async function SettingsPage() {
       breadcrumbs={[{ label: "Administration" }, { label: "Settings" }]}
     >
       <div className="space-y-4">
+        {unconfirmed.length > 0 && (
+          <Alert tone="warn">
+            <strong>
+              {unconfirmed.length} setting{unconfirmed.length === 1 ? " has" : "s have"} not been
+              confirmed.
+            </strong>{" "}
+            Several are deliberately unset rather than guessed: an overtime multiplier or a tax rate
+            that looks plausible and is wrong appears on a payslip or an invoice as though it were
+            checked. Features that depend on them stay switched off until somebody confirms the real
+            value here. See docs/OPEN_QUESTIONS.md.
+          </Alert>
+        )}
+
         {[...byCategory.entries()].map(([category, items]) => (
           <Panel key={category} title={category.toUpperCase()}>
             <DataTable columns={["Setting", "Value", "Status"]} caption={`${category} settings`}>
@@ -53,9 +68,12 @@ export default async function SettingsPage() {
                     )}
                   </Td>
                   <Td>
-                    <code className="font-mono text-[12px]">
-                      {s.value === null ? "unset" : JSON.stringify(s.value)}
-                    </code>
+                    <SettingForm
+                      settingKey={s.key}
+                      value={s.value}
+                      requiresApproval={s.requires_approval}
+                      needsReview={s.needs_review}
+                    />
                   </Td>
                   <Td>
                     <div className="flex flex-wrap gap-1">

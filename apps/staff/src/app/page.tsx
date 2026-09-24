@@ -89,8 +89,12 @@ export default async function DashboardPage() {
                 <Badge tone="ok">Live</Badge>
               </li>
               <li className="flex items-center justify-between">
-                <span>Accounting ledger</span>
-                <Badge>Phase 2</Badge>
+                <span>Accounting ledger and posting engine</span>
+                <Badge tone="ok">Live</Badge>
+              </li>
+              <li className="flex items-center justify-between">
+                <span>Invoicing, receipts and vouchers</span>
+                <Badge>Phase 3</Badge>
               </li>
               <li className="flex items-center justify-between">
                 <span>HR and payroll</span>

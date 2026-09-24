@@ -1,8 +1,9 @@
 import { pathToFileURL } from "node:url";
 import { sql } from "drizzle-orm";
-import { getDb, type Database } from "./client.js";
+import { closeDb, getDb, type Database } from "./client.js";
 import { runMigrations } from "./migrate.js";
 import { ALL_PERMISSIONS, ROLES, ROLE_PERMISSIONS } from "./rbac.js";
+import { CHART_OF_ACCOUNTS, SYSTEM_ACCOUNTS, TAX_CODES, type AccountSeed } from "./coa.js";
 
 /**
  * Idempotent seed: roles, the capability catalogue, role bundles, and the
@@ -39,6 +40,15 @@ const SETTINGS: SettingSeed[] = [
   { key: "accounting.invoice_terms_days", value: 30, category: "accounting", label: "Default invoice payment terms (days)" },
   { key: "accounting.quotation_validity_days", value: 30, category: "accounting", label: "Default quotation validity (days)" },
   { key: "accounting.aging_buckets", value: [30, 60, 90], category: "accounting", label: "AR aging bucket boundaries (days)" },
+  {
+    key: "accounting.journal_requires_second_person",
+    value: true,
+    category: "accounting",
+    label: "Manual journals must be posted by a second person",
+    description:
+      "The standard maker/checker control. Leave it on where two people hold accounting.journal.post. Where only one does, it prevents manual journals being posted at all - switch it off deliberately and every self-posted journal is then flagged as such in the audit trail. See Q-FIN-5.",
+    requiresApproval: true,
+  },
   {
     key: "accounting.approval_threshold_myr",
     value: null,
@@ -201,6 +211,81 @@ export async function seed(db?: Database): Promise<void> {
       ON CONFLICT (key) DO NOTHING
     `);
   }
+
+  await seedTaxCodes(database);
+  await seedChartOfAccounts(database);
+}
+
+/**
+ * Tax codes only — never rates. A rate is a statutory assertion and needs a
+ * citation, which only a person can supply. See the comment on TAX_CODES.
+ */
+async function seedTaxCodes(database: Database): Promise<void> {
+  for (const t of TAX_CODES) {
+    // SST codes stay inactive until someone enters a rate for them, so they
+    // cannot be picked on an invoice and silently charge nothing.
+    const isActive = t.kind === "none" || t.kind === "exempt";
+    await database.execute(sql`
+      INSERT INTO accounting.tax_code (code, name, kind, is_active)
+      VALUES (${t.code}, ${t.name}, ${t.kind}, ${isActive})
+      ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, kind = EXCLUDED.kind
+    `);
+  }
+}
+
+/**
+ * The chart of accounts.
+ *
+ * Idempotent, and deliberately conservative on re-run: an existing account's
+ * name and description are refreshed, but its parent, type, side and active
+ * state are left alone. Once there are postings, changing an account's type
+ * would silently restate reports that have already been filed.
+ */
+async function seedChartOfAccounts(database: Database): Promise<void> {
+  for (const a of CHART_OF_ACCOUNTS) {
+    const normalSide = normalSideFor(a);
+    await database.execute(sql`
+      INSERT INTO accounting.account
+        (code, name, type, subtype, parent_id, normal_side, is_postable, is_system, is_contra, description)
+      VALUES (
+        ${a.code}, ${a.name}, ${a.type}, ${a.subtype ?? null},
+        (SELECT id FROM accounting.account WHERE code = ${a.parent ?? null}),
+        ${normalSide}, ${!a.header}, ${a.system ?? false}, ${a.contra ?? false},
+        ${a.description ?? null}
+      )
+      ON CONFLICT (code) DO UPDATE SET
+        name = EXCLUDED.name,
+        description = EXCLUDED.description,
+        subtype = EXCLUDED.subtype
+    `);
+  }
+
+  // A mismatch here means coa.ts was edited in one place and not the other:
+  // a module would resolve an account by code that the seed has not protected.
+  for (const [key, code] of Object.entries(SYSTEM_ACCOUNTS)) {
+    const row = await database.execute<{ is_system: boolean }>(sql`
+      SELECT is_system FROM accounting.account WHERE code = ${code}
+    `);
+    const found = row.rows?.[0];
+    if (!found) {
+      throw new Error(`SYSTEM_ACCOUNTS.${key} points at account ${code}, which is not in the chart.`);
+    }
+    if (!found.is_system) {
+      throw new Error(`Account ${code} is used as SYSTEM_ACCOUNTS.${key} but is not marked system.`);
+    }
+  }
+}
+
+/**
+ * Assets and expenses are debit-normal, the rest credit-normal, and a contra
+ * account is the reverse. Derived rather than stored in coa.ts so the two can
+ * never disagree.
+ */
+function normalSideFor(a: AccountSeed): "debit" | "credit" {
+  const debitNormal = a.type === "ASSET" || a.type === "EXPENSE";
+  const positive = debitNormal ? "debit" : "credit";
+  const negative = debitNormal ? "credit" : "debit";
+  return a.contra ? negative : positive;
 }
 
 const isEntrypoint =
@@ -212,7 +297,10 @@ if (isEntrypoint) {
     const applied = await runMigrations();
     if (applied.length) console.log(`Applied ${applied.length} migration(s).`);
     await seed();
-    console.log("Seed complete: roles, capabilities, settings and sequences.");
+    console.log(
+      "Seed complete: roles, capabilities, settings, sequences, tax codes and chart of accounts.",
+    );
+    await closeDb();
     process.exit(0);
   })().catch((error) => {
     console.error("Seed failed:", error);

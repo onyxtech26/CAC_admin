@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { Database } from "@cac/db";
+import type { Executor } from "@cac/db";
 
 /**
  * The audit trail.
@@ -121,7 +121,7 @@ export interface AuditEntry extends AuditContext {
  * above — so it is only appropriate for events that have no transaction, such
  * as a failed login.
  */
-export async function writeAudit(db: Database, entry: AuditEntry): Promise<void> {
+export async function writeAudit(db: Executor, entry: AuditEntry): Promise<void> {
   const oldValues = entry.oldValues === undefined ? null : JSON.stringify(redact(entry.oldValues));
   const newValues = entry.newValues === undefined ? null : JSON.stringify(redact(entry.newValues));
 
@@ -168,4 +168,26 @@ export const AUDIT = {
   SETTING_CHANGED: "SETTING_CHANGED",
   SESSION_REVOKED: "SESSION_REVOKED",
   EXPORT_SENSITIVE: "EXPORT_SENSITIVE",
+
+  // Accounting
+  ACCOUNT_CREATED: "ACCOUNT_CREATED",
+  ACCOUNT_UPDATED: "ACCOUNT_UPDATED",
+  ACCOUNT_DEACTIVATED: "ACCOUNT_DEACTIVATED",
+  ACCOUNT_REACTIVATED: "ACCOUNT_REACTIVATED",
+  FISCAL_YEAR_CREATED: "FISCAL_YEAR_CREATED",
+  FISCAL_YEAR_CLOSED: "FISCAL_YEAR_CLOSED",
+  PERIOD_LOCKED: "PERIOD_LOCKED",
+  PERIOD_UNLOCKED: "PERIOD_UNLOCKED",
+  PERIOD_CLOSED: "PERIOD_CLOSED",
+  PERIOD_REOPENED: "PERIOD_REOPENED",
+  JOURNAL_DRAFTED: "JOURNAL_DRAFTED",
+  JOURNAL_UPDATED: "JOURNAL_UPDATED",
+  JOURNAL_DELETED: "JOURNAL_DELETED",
+  JOURNAL_POSTED: "JOURNAL_POSTED",
+  JOURNAL_REVERSED: "JOURNAL_REVERSED",
+  CUSTOMER_CREATED: "CUSTOMER_CREATED",
+  CUSTOMER_UPDATED: "CUSTOMER_UPDATED",
+  SUPPLIER_CREATED: "SUPPLIER_CREATED",
+  SUPPLIER_UPDATED: "SUPPLIER_UPDATED",
+  TAX_RATE_ADDED: "TAX_RATE_ADDED",
 } as const;

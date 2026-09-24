@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { getDb, type Database } from "./client.js";
+import { closeDb, getDb, type Database } from "./client.js";
 
 // fileURLToPath handles Windows drive letters and percent-encoding; slicing
 // URL.pathname by hand does not.
@@ -105,7 +105,7 @@ if (isEntrypoint) {
     .then((applied) => {
       if (applied.length === 0) console.log("Database is up to date.");
       else console.log(`Applied ${applied.length} migration(s):`, applied.join(", "));
-      process.exit(0);
+      closeDb().then(() => process.exit(0));
     })
     .catch((error) => {
       console.error("Migration failed:", error);

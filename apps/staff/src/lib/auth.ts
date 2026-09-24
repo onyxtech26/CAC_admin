@@ -71,6 +71,12 @@ export async function requirePrincipal(): Promise<Principal> {
  */
 export async function requireCapability(capability: string): Promise<Principal> {
   const principal = await requirePrincipal();
+
+  // A password an administrator generated is a password somebody else has seen.
+  // Nothing else in the platform opens until it has been replaced; /account is
+  // reached through requirePrincipal, so it stays available.
+  if (principal.mustChangePassword) redirect("/account?change-password=1");
+
   try {
     assertCapability(principal, capability);
   } catch (error) {

@@ -10,4 +10,5 @@
  */
 export * from "./client.js";
 export * from "./rbac.js";
+export * from "./coa.js";
 export * as schema from "./schema/index.js";

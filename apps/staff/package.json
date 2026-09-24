@@ -13,19 +13,21 @@
   "dependencies": {
     "@cac/core": "workspace:*",
     "@cac/db": "workspace:*",
-    "next": "15.1.6",
+    "drizzle-orm": "0.38.4",
+    "next": "15.5.26",
+    "qrcode": "1.5.4",
     "react": "19.2.6",
     "react-dom": "19.2.6",
-    "zod": "3.24.1",
-    "drizzle-orm": "0.38.4"
+    "zod": "3.24.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "4.1.17",
     "@types/node": "22.19.17",
+    "@types/qrcode": "1.5.5",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
-    "tailwindcss": "4.1.17",
-    "@tailwindcss/postcss": "4.1.17",
     "postcss": "8.4.49",
+    "tailwindcss": "4.1.17",
     "typescript": "5.9.3"
   }
 }

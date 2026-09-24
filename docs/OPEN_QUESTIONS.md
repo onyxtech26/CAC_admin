@@ -7,7 +7,7 @@ is built as a setting with a documented default and does not stop anything.
 
 ## BLOCKING
 
-### Q-INFRA-1 — Vercel plan and data residency *(blocks Phase 1)*
+### Q-INFRA-1 — Hosting plan, database and data residency *(blocks Phase 1)*
 
 The Vercel team `Onyxx Tech Hub` is on the **Hobby** plan. This is already causing real
 failures: three production deploys were rejected with state `BLOCKED` after the repo went
@@ -24,6 +24,18 @@ default.
 
 > **Needed:** confirmed hosting plan, database provider, and the region personal data may
 > be stored in.
+
+**Sharper after Phase 2.** The interim local database is PGlite — real PostgreSQL compiled
+to WebAssembly, persisted to a file. Same dialect, same migrations, same constraints, one
+connection string away from a hosted server; it was the right way to get the ledger built
+without waiting for this answer.
+
+It is also an *embedded* database, so exactly one process may own its data directory.
+Concretely: a command-line task cannot run while the application is running, and the
+application itself has to be careful to hold a single instance
+(`packages/db/src/client.ts` explains how, and `lock.ts` recovers the directory after an
+unclean shutdown). Those are workarounds for something a hosted PostgreSQL does not have.
+Before real users and real data, this needs a server.
 
 ### Q-SEC-1 — PDPA data residency and retention *(blocks Phase 1 schema)*
 
@@ -117,6 +129,32 @@ around the actual file, with mapping for variants. A sample is needed before Pha
 
 ### Q-FIN-4 — Existing chart of accounts
 If one exists, it should be imported rather than invented.
+
+**Status after Phase 2.** A default chart of 119 accounts is now seeded, built for what
+CAC actually does — forensic investigation, land and title work, estate administration,
+valuation, advisory — with Malaysian statutory payables split per contribution type. It is
+a starting point, not a decision: accounts can be added, renamed and retired from the
+application. If CAC already has a chart, send it and it will be mapped across. Doing that
+*before* the first posting is far cheaper than afterwards, because an account that has
+been posted to can no longer change its type or its parent.
+
+### Q-FIN-5 — Who posts manual journals *(new, raised by Phase 2)*
+Maker/checker pairs `accounting.journal.create` with `accounting.journal.post`, so the
+person who prepares a manual journal cannot be the person who posts it. That is the right
+control and it is on by default.
+
+It also means that **if only one person at CAC holds `accounting.journal.post`, no manual
+journal can ever be posted.** Two ways forward, and CAC picks:
+
+1. **Two people hold it** — the accountant and one other (a director, or a second
+   accountant). This is the recommendation; it is the control working as intended.
+2. **Turn it off** — the setting `accounting.journal_requires_second_person`. Manual
+   journals may then be self-posted, and every one of them is flagged `selfPosted: true`
+   in the audit trail so the exception is visible rather than assumed.
+
+There is no third option where the control is claimed and not enforced. Note this affects
+manual journals only: an invoice or a payroll run is approved as a *document*, and its
+ledger entry follows from that approval.
 
 ### Q-DOC-1 — Existing templates
 Current Word templates for appointment letters, confirmation letters and case documents,

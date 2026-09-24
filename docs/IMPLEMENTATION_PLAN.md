@@ -16,7 +16,7 @@ JS 338 kB (102 kB gz) · **`tsc --noEmit` fails with 4 `TS6133` errors** · **no
 
 ---
 
-## Phase 1 — Foundation and security *(needs Q-INFRA-1, Q-SEC-1, Q-ORG-1)*
+## Phase 1 — Foundation and security ✅ *complete*
 
 Groundwork with no business features. Nothing here is user-visible except a login page.
 
@@ -36,21 +36,57 @@ Groundwork with no business features. Nothing here is user-visible except a logi
 9. **Public site gesture** — HOME double-click → staff login. One component, one file.
 
 **Exit:** a user can log in with MFA, see a role-aware empty dashboard, and every action
-is audited. Permission tests prove server-side denial with the UI bypassed.
+is audited. Permission tests prove server-side denial with the UI bypassed. ✅
+
+**Delivered:** commits `e4596a4`, `3b535fd`, `c07de01`, plus the administration and
+self-service work that closed the gaps Phase 2 exposed — account creation with a one-time
+password, role assignment with a no-self-escalation rule, suspension, password and
+authenticator reset, TOTP enrolment with QR and recovery codes, a forced change of an
+administrator-issued password, and an editable settings screen.
+
+**Still open from this phase:** the public-site HOME double-click gesture (item 9), which
+is a change to `apps/web` and is being held until the staff app has a stable URL. Item 4
+reads "Postgres provisioned"; it is PGlite against a local file until Q-INFRA-1 is
+answered, with the same dialect and one connection string between the two.
 
 ---
 
-## Phase 2 — Accounting foundation
+## Phase 2 — Accounting foundation ✅ *complete*
 
 Chart of accounts · fiscal years · periods · **journals and the posting engine** ·
 customers · suppliers · document sequences.
 
 **Exit:** a manual journal can be drafted, balanced, posted and reversed; an unbalanced
 journal cannot post; a closed period rejects posting; the trial balance totals to zero.
-All proven by tests before any invoice UI exists.
+All proven by tests before any invoice UI exists. ✅
 
 > The posting engine is the spine. Everything financial posts through it. Built and
 > tested first, deliberately.
+
+**Delivered**
+
+| Piece | Where |
+| --- | --- |
+| Money as integer ten-thousandths, never float | `packages/core/src/money.ts` |
+| Calendar dates, UTC, no timestamps for periods | `packages/core/src/dates.ts` |
+| Chart of accounts — 119 accounts, contra support, system accounts | `packages/db/src/coa.ts` |
+| Fiscal years and periods, gapless, non-overlapping | `packages/core/src/periods.ts` |
+| **The posting engine** | `packages/core/src/posting.ts` |
+| Trial balance and account ledger | `packages/core/src/ledger.ts` |
+| Gapless document numbering | `packages/core/src/sequence.ts` |
+| Customers and suppliers | `packages/core/src/parties.ts` |
+| Schema and database guards | `migrations/0002_accounting.sql`, `0003_accounting_guards.sql` |
+| Screens | `apps/staff/src/app/accounting/**` |
+
+**Proof.** 152 tests, of which 67 cover the ledger, run against real PostgreSQL through
+real migrations — so the CHECK constraints and triggers are exercised, not mocked. Each
+exit criterion has a test named after it. Verified again by hand end to end: two
+accountants, one prepares `JV-2026-00001`, cannot post their own, the second posts it, a
+director-grade reversal produces `JV-2026-00002`, and the trial balance reads nil.
+
+**Not in this phase, deliberately:** no tax rate is seeded. `tax_code` rows exist,
+`tax_rate` is empty, and `tax_rate.source_ref` is `NOT NULL`, so no rate can enter the
+system without a citation. See Q-FIN-1.
 
 ---
 

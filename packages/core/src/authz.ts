@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { Database } from "@cac/db";
+import type { Executor } from "@cac/db";
 import { MAKER_CHECKER_PAIRS } from "@cac/db";
 
 /**
@@ -43,6 +43,14 @@ export interface Principal {
   employeeId: string | null;
   sessionId: string;
   mfaSatisfied: boolean;
+  /**
+   * The password was set by an administrator and has to be replaced.
+   *
+   * Carried on the principal so the route guard can act on it: while it is true
+   * somebody other than the account holder knows the password, and letting them
+   * carry on working with it is how a handover password becomes a permanent one.
+   */
+  mustChangePassword: boolean;
 }
 
 /**
@@ -53,7 +61,7 @@ export interface Principal {
  * from one person without unpicking their roles, which is what actually
  * happens when someone changes duties.
  */
-export async function resolveCapabilities(db: Database, userId: string): Promise<Set<string>> {
+export async function resolveCapabilities(db: Executor, userId: string): Promise<Set<string>> {
   const rows = await db.execute<{ key: string; effect: string }>(sql`
     WITH role_grants AS (
       SELECT p.key, 'allow'::text AS effect
@@ -83,7 +91,7 @@ export async function resolveCapabilities(db: Database, userId: string): Promise
   return allowed;
 }
 
-export async function resolveRoles(db: Database, userId: string): Promise<string[]> {
+export async function resolveRoles(db: Executor, userId: string): Promise<string[]> {
   const rows = await db.execute<{ key: string }>(sql`
     SELECT r.key FROM auth.user_role ur
     JOIN auth.role r ON r.id = ur.role_id

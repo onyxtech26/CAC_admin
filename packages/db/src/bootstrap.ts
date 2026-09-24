@@ -1,7 +1,7 @@
 import { pathToFileURL } from "node:url";
 import { randomBytes } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { getDb } from "./client.js";
+import { closeDb, getDb } from "./client.js";
 import { runMigrations } from "./migrate.js";
 import { seed } from "./seed.js";
 
@@ -68,6 +68,7 @@ async function main() {
   console.log("Note: SUPER_ADMIN administers the platform. It deliberately cannot approve");
   console.log("invoices, post payroll or approve legal documents — that would defeat");
   console.log("maker/checker. Assign business roles separately.\n");
+  await closeDb();
   process.exit(0);
 }
 
