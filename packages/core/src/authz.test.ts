@@ -166,8 +166,23 @@ describe("maker/checker", () => {
 });
 
 describe("own-record scope", () => {
-  const EMP_A = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-  const EMP_B = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+  // Real employee rows rather than invented uuids: `auth.user.employee_id` has been
+  // a foreign key since Phase 5, and a fixture that fabricates an id is a fixture
+  // that stops proving anything the moment the schema is honest about the link.
+  let EMP_A: string;
+  let EMP_B: string;
+
+  beforeAll(async () => {
+    const author = await makeUser("scope-fixture@cac.test", ["HR_MANAGER"]);
+    const created = await db.execute<{ id: string }>(sql`
+      INSERT INTO hr.employee (employee_no, full_name, joined_on, created_by)
+      VALUES ('EMP-SCOPE-A', 'Scope A', '2026-01-01', ${author}),
+             ('EMP-SCOPE-B', 'Scope B', '2026-01-01', ${author})
+      RETURNING id
+    `);
+    EMP_A = created.rows![0]!.id;
+    EMP_B = created.rows![1]!.id;
+  });
 
   it("lets an employee see only their own payslip", async () => {
     const employee = await principalFor(await makeUser("scoped@cac.test", ["EMPLOYEE"], EMP_A), {

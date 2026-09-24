@@ -172,6 +172,41 @@ staging, column mapping, validation, preview, error report and explicit confirma
 **Exit:** a real export from CAC's device imports, with bad rows rejected and reported,
 and nothing reaching final attendance without HR confirmation.
 
+**Delivered, with the sample still outstanding.** Departments, positions, work schedules,
+public holidays, employees, append-only employment history, and the staged attendance
+importer. 60 tests; 362 across the suite.
+
+The importer is deliberately **not** written against a particular device, because Q-HR-2's
+sample has not arrived. It reads any delimited export, handles both shapes real readers
+produce — one row per scan, or one row per day — and the column mapping is guessed, shown,
+and only then used. Scans are grouped per person per day: earliest is the arrival, latest
+the departure, so lunch is not a second working day, and two scans seconds apart are one
+event rather than a two-minute day. A date that could be read either way is refused instead
+of guessed. When a real export arrives, the mapping is remembered against the device.
+
+**Identity comes from the device number, never the name.** Two people called Tan is a real
+situation, and the importer sets such rows aside rather than putting one person's attendance
+on the other's record. Employees with no mapped number are listed on three screens, because
+otherwise their attendance simply never appears.
+
+**Three things enforced in the database rather than trusted.** Employment history refuses
+UPDATE and DELETE outright — the salary in force on a past date is what makes a payroll
+rerun reproducible, and Phase 7 cannot be built without it. Finalised attendance cannot be
+edited, and nothing new can be inserted into a finalised period. Confirming an import never
+overwrites a day already recorded, so a correction made by hand survives a re-import.
+
+**Personal data.** The identity card number and bank account number are encrypted at rest
+with the key outside the database; the last four digits live in their own column so lists
+and search never decrypt anything. `Employee` and `EmployeeSensitive` are separate types, so
+a screen cannot render what it did not ask for — the mistake is a compile error rather than
+a disclosure. Reading the sensitive fields needs a capability *and* a stated reason, and
+writes an audit row.
+
+**Not seeded, deliberately:** no public holidays. Malaysian holidays are partly federal and
+partly by state, several move with the lunar calendar, and which states CAC's staff work in
+has not been stated. A wrong holiday makes a present employee absent and an absent one
+present. Each holiday requires the gazette or circular it came from.
+
 ---
 
 ## Phase 6 — HR workflows

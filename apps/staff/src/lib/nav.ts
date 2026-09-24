@@ -67,8 +67,10 @@ export const NAVIGATION: NavSection[] = [
   {
     heading: "Human resources",
     items: [
-      { label: "Employees", href: "/hr/employees", capabilities: ["hr.employee.view"], phase: 5 },
-      { label: "Attendance", href: "/hr/attendance", capabilities: ["hr.attendance.view"], phase: 5 },
+      { label: "Employees", href: "/hr/employees", capabilities: ["hr.employee.view"] },
+      { label: "Organisation", href: "/hr/organisation", capabilities: ["hr.org.view"] },
+      { label: "Attendance", href: "/hr/attendance", capabilities: ["hr.attendance.view"] },
+      { label: "Public holidays", href: "/hr/holidays", capabilities: ["hr.org.view"] },
       { label: "Leave", href: "/hr/leave", capabilities: ["hr.leave.view", "hr.leave.request"], phase: 6 },
       { label: "Overtime", href: "/hr/overtime", capabilities: ["hr.overtime.view", "hr.overtime.request"], phase: 6 },
       { label: "Payroll", href: "/hr/payroll", capabilities: ["hr.payroll.view"], phase: 7 },

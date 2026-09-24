@@ -170,6 +170,7 @@ const SEQUENCES = [
   { key: "petty_cash", prefix: "PC" },
   { key: "claim", prefix: "CLM" },
   { key: "reconciliation", prefix: "BR" },
+  { key: "employee", prefix: "EMP" },
   { key: "case", prefix: "CASE" },
 ];
 

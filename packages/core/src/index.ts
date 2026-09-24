@@ -26,3 +26,5 @@ export * from "./expenses.js";
 export * from "./delimited.js";
 export * from "./banking.js";
 export * from "./einvoice.js";
+export * from "./people.js";
+export * from "./attendance.js";
