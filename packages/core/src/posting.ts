@@ -749,7 +749,18 @@ export async function postSourceJournal(
   db: Executor,
   principal: Principal,
   input: DraftJournalInput & {
-    sourceType: "invoice" | "receipt" | "voucher" | "petty_cash" | "claim" | "payroll" | "opening";
+    sourceType:
+      | "invoice"
+      | "receipt"
+      | "voucher"
+      | "petty_cash"
+      | "claim"
+      | "payroll"
+      | "opening"
+      // A charge or credit the bank applied that the ledger had not recorded. The
+      // source is the statement line, so the entry can always be traced back to
+      // the bank's own assertion rather than to somebody's recollection.
+      | "bank";
     sourceId?: string | null;
     authorisedBy: string;
   },

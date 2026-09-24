@@ -126,6 +126,42 @@ Bank/cash reconciliation with CSV import · `EInvoiceProvider` abstraction +
 sandbox and is **clearly marked awaiting production credentials**. Nothing fake is
 presented as working.
 
+**Bank reconciliation is delivered.** Statement import from whatever CSV the bank
+exports — delimiter detected, RFC 4180 quoting, a byte order mark stripped, preamble rows
+skipped, and the column mapping guessed but always shown before it is used. Matching a
+statement line to a ledger line is a judgement and is audited as one, individually.
+Candidates are offered and never applied automatically; a wrong automatic match is worse
+than none, because nobody looks at it again. 50 tests.
+
+Two refusals carry most of the value. An import whose rows do not account for the movement
+between the stated opening and closing balances is refused, which catches a truncated or
+filtered download on the day rather than six weeks later. And the same file cannot be
+imported twice, which is the commonest import error and duplicates every transaction on it.
+Both can be overridden, and both record that they were, against a name.
+
+Signing off needs two conditions, because either alone proves nothing. The **difference**
+is arithmetic on where the two records start from — it catches a ledger whose opening
+balance was never right, or a statement imported over a gap. The **unmatched line count**
+is the human part: every line the bank reported has to have been matched, posted, or set
+aside with a reason. A completed reconciliation is then immutable, by trigger: a journal
+back-dated into a reconciled period cannot rewrite what was signed.
+
+**e-Invoicing is a boundary, not an integration, and says so.** `EInvoiceProvider` is the
+interface; `NotConfiguredProvider` is what is installed, and it *raises* rather than
+returning a failure that could be mistaken for a rejection by LHDN. The MyInvois adapter is
+written against the published API but has never been exercised, because no sandbox account
+exists — so the screen says exactly that. **There is deliberately no mock that reports
+success**: an invoice that looks validated when it was never sent is worse than one that
+plainly was not.
+
+What the screen does offer is the work that can start today and takes longer than the
+integration: CAC's own TIN, a TIN for every customer already invoiced, and a classification
+code per service. The adapter refuses to send a line without a code rather than guessing
+one, because a wrong code is a rejection whose cause is buried in LHDN's response.
+
+**Not in this phase.** Statutory reporting beyond the three statements, which needs Q-FIN-1
+answered before an SST return means anything.
+
 ---
 
 ## Phase 5 — HR foundation *(needs Q-HR-2 sample file)*

@@ -34,8 +34,15 @@ Format: `<domain>.<entity>.<action>`.
 `voucher.{view,create,approve,pay}` · `po.{view,create,approve,receive,close}` ·
 `pettycash.{view,create,approve,reconcile}` · `claim.{view,create,approve,reimburse}` ·
 `journal.{view,create,post,reverse}` · `period.{view,manage,lock,close}` ·
-`tax.{view,manage}` · `bank.{view,import,reconcile}` · `report.{view,export}` ·
+`tax.{view,manage}` · `bank.{view,manage,import,match,reconcile}` · `report.{view,export}` ·
 `einvoice.{submit,cancel,view}` · `customer.{view,manage}` · `supplier.{view,manage}`
+
+> **Bank, split four ways on purpose.** Importing a statement and matching what is obvious
+> is day-to-day work and sits with `ACCOUNTS_EXECUTIVE` as well as the accountant. Saying
+> the account *is* reconciled is a conclusion about the firm's books, and `bank.reconcile`
+> stays with whoever owns the ledger. `bank.manage` — attaching a real account to a ledger
+> account — is separate again, because it decides what every future reconciliation is
+> measured against.
 
 **HR** — `hr.employee.{view,view_sensitive,create,edit,terminate}` ·
 `attendance.{view,import,edit,finalise}` · `schedule.{view,manage}` ·

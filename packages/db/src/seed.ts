@@ -80,6 +80,15 @@ const SETTINGS: SettingSeed[] = [
   },
   { key: "tax.sst_registration_no", value: null, category: "tax", label: "SST registration number", needsReview: true, requiresApproval: true },
   {
+    key: "tax.tin",
+    value: null,
+    category: "tax",
+    label: "Tax identification number (TIN)",
+    description:
+      "The company's LHDN TIN. Needed before anything can be submitted to MyInvois, and printed on invoices. Not a secret; the API credentials are, and they live in the environment rather than here. See Q-FIN-2.",
+    needsReview: true,
+  },
+  {
     key: "einvoice.enabled",
     value: false,
     category: "tax",
@@ -160,6 +169,7 @@ const SEQUENCES = [
   { key: "journal", prefix: "JV" },
   { key: "petty_cash", prefix: "PC" },
   { key: "claim", prefix: "CLM" },
+  { key: "reconciliation", prefix: "BR" },
   { key: "case", prefix: "CASE" },
 ];
 

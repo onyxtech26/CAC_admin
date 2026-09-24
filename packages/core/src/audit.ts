@@ -248,4 +248,22 @@ export const AUDIT = {
   CLAIM_REJECTED: "CLAIM_REJECTED",
   CLAIM_POSTED: "CLAIM_POSTED",
   CLAIM_REIMBURSED: "CLAIM_REIMBURSED",
+
+  // Phase 4 — the bank.
+  //
+  // Matching and unmatching are audited individually rather than only at
+  // completion. A reconciliation that balances is only as good as the matches
+  // beneath it, and "who decided these two were the same payment" is the
+  // question asked when one of them turns out to be wrong.
+  BANK_ACCOUNT_CREATED: "BANK_ACCOUNT_CREATED",
+  BANK_ACCOUNT_UPDATED: "BANK_ACCOUNT_UPDATED",
+  STATEMENT_IMPORTED: "STATEMENT_IMPORTED",
+  STATEMENT_DELETED: "STATEMENT_DELETED",
+  STATEMENT_LINE_MATCHED: "STATEMENT_LINE_MATCHED",
+  STATEMENT_LINE_UNMATCHED: "STATEMENT_LINE_UNMATCHED",
+  STATEMENT_LINE_IGNORED: "STATEMENT_LINE_IGNORED",
+  STATEMENT_LINE_POSTED: "STATEMENT_LINE_POSTED",
+  RECONCILIATION_OPENED: "RECONCILIATION_OPENED",
+  RECONCILIATION_COMPLETED: "RECONCILIATION_COMPLETED",
+  RECONCILIATION_ABANDONED: "RECONCILIATION_ABANDONED",
 } as const;

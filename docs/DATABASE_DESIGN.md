@@ -195,6 +195,32 @@ application, so the balance CHECK verifies arithmetic the database did itself. A
 status graph is enforced one-way — `draft -> posted -> reversed`, with no path back — so
 "correct it by reversal" is a property of the schema, not a convention.
 
+**The bank, as built (Phase 4).** `migrations/0009_banking.sql` with guards in `0010`.
+`bank_account` extends a ledger account rather than duplicating it — one row per ledger
+account, enforced by a unique constraint, because two real accounts sharing one ledger
+account could never be reconciled. `bank_statement` carries the opening *and* closing
+balance, which is what makes an import provably complete: the lines have to account for the
+movement between them.
+
+`bank_statement_line.paid_in` / `paid_out` are stated from the firm's point of view, the
+opposite of the bank's own statement. Money in increases the firm's asset and is a ledger
+**debit**. A CHECK keeps a line one-directional, and a trigger refuses any edit to a line's
+date, description or amounts after import — what the bank said is the bank's assertion, and
+correcting an import means deleting the statement and importing it again, visibly.
+
+`reconciliation_match` has a unique constraint on *both* sides. A journal line cannot
+explain two statement lines and a statement line cannot be explained twice; without both, a
+reconciliation can be made to balance by matching the same ledger entry repeatedly, which is
+exactly the error the control exists to find. A trigger checks each match is between the
+same movement of money — same ledger account, journal posted, amount equal, direction
+opposite — so the application cannot claim a match the data does not support.
+
+`reconciliation` stores its figures rather than recomputing them. The claim being made is
+about what was true when it was signed, so a journal back-dated into a reconciled period
+must not rewrite a sign-off into agreement; a trigger refuses any change to a completed row
+except its notes, and a CHECK refuses to hold a completed reconciliation whose difference is
+not nil.
+
 **Tax is effective-dated, never a constant.** `tax_rate(tax_code_id, rate,
 effective_from, effective_to)`. Every invoice line stores the `tax_rate_id` actually
 applied, so historical documents stay reproducible when rates change.

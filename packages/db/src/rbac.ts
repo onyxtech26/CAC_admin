@@ -58,8 +58,10 @@ export const PERMISSIONS = {
     ["accounting.tax.view", "View tax configuration"],
     ["accounting.tax.manage", "Amend tax codes and rates"],
     ["accounting.bank.view", "View bank accounts"],
+    ["accounting.bank.manage", "Add and amend bank accounts"],
     ["accounting.bank.import", "Import bank statements"],
-    ["accounting.bank.reconcile", "Reconcile bank accounts"],
+    ["accounting.bank.match", "Match statement lines against the ledger"],
+    ["accounting.bank.reconcile", "Complete a bank reconciliation"],
     ["accounting.report.view", "View financial reports"],
     ["accounting.report.export", "Export financial reports"],
     ["accounting.einvoice.submit", "Submit e-Invoices"],
@@ -237,6 +239,9 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     "accounting.voucher.create", "accounting.po.create",
     "accounting.pettycash.create", "accounting.claim.create",
     "accounting.customer.manage", "accounting.supplier.manage",
+    // Importing a statement and matching what is obvious is the work; saying the
+    // account is reconciled is a conclusion, and stays with the accountant.
+    "accounting.bank.import", "accounting.bank.match",
     "hr.leave.request", "hr.payslip.view_own",
   ],
 

@@ -83,6 +83,29 @@ Sandbox credentials are needed before anything beyond an adapter is built.
 > Until then: production-grade adapter + sandbox mock, clearly marked *awaiting credentials*.
 > **No fake integration will be presented as working.**
 
+**Status after Phase 4.** The boundary exists and refuses. `resolveProvider` returns a
+provider that raises on every call, with a message naming what is missing; the MyInvois
+adapter cannot even be constructed without a TIN, a client id, a client secret and an
+explicit environment, so it cannot become active by accident or point at production by
+default. Credentials are read from the server environment, never the settings table — a
+client secret in a settings table is a client secret in every database backup.
+
+One departure from the line above, and it is deliberate: **there is no sandbox mock.** A
+stub that answers "validated" makes an invoice look compliant when nothing was sent, and
+nobody finds out until LHDN asks. Exercising the flow needs a sandbox account, which
+answers real validation errors; that is what the credentials in this question are for.
+
+Three things CAC can settle now, none of which needs credentials and all of which take
+longer than the integration:
+
+1. **The company TIN** — a setting, `tax.tin`, currently empty.
+2. **A TIN for every customer already invoiced** — MyInvois rejects an invoice without the
+   buyer's. The e-Invoice screen lists which customers are missing one and how many
+   invoices each has, so the collecting can start now rather than on the deadline.
+3. **A classification code per service** — LHDN's own taxonomy, mapped onto CAC's six
+   services. This is a judgement about what the firm does and is not guessed at; the
+   adapter refuses to submit a line without one.
+
 ### Q-HR-1 — Statutory payroll sources *(blocks Phase 7)*
 
 EPF is a **contribution schedule across wage bands**, not a percentage multiply, and the
