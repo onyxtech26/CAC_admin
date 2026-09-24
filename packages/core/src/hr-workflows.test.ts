@@ -886,8 +886,16 @@ describe("overtime, kept separate from extra time", () => {
   });
 
   it("refuses to change overtime a payroll run has taken", async () => {
+    // A real run row: `payroll_run_id` has been a foreign key since Phase 7, and a
+    // made-up uuid would only prove the fixture can invent one.
+    const run = await db.execute<{ id: string }>(sql`
+      INSERT INTO hr.payroll_run (period_from, period_to, pay_date, created_by)
+      VALUES ('2026-06-01', '2026-06-30', '2026-06-30', ${hrManager.userId})
+      RETURNING id
+    `);
+
     await db.execute(sql`
-      UPDATE hr.overtime_request SET payroll_run_id = gen_random_uuid() WHERE id = ${overtimeId}
+      UPDATE hr.overtime_request SET payroll_run_id = ${run.rows![0]!.id} WHERE id = ${overtimeId}
     `);
 
     await expect(

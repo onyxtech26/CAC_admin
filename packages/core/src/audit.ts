@@ -313,4 +313,22 @@ export const AUDIT = {
   APPRAISAL_SELF_ASSESSED: "APPRAISAL_SELF_ASSESSED",
   APPRAISAL_REVIEWED: "APPRAISAL_REVIEWED",
   APPRAISAL_ACKNOWLEDGED: "APPRAISAL_ACKNOWLEDGED",
+
+  // Phase 7 — payroll.
+  //
+  // The statutory rule actions are audited separately from the runs that use them,
+  // because "who entered this EPF table, and who confirmed it" is a different
+  // question from "who approved March's payroll" and is asked far less often — which
+  // is exactly why it has to be answerable.
+  STATUTORY_RULE_SAVED: "STATUTORY_RULE_SAVED",
+  STATUTORY_RULE_APPROVED: "STATUTORY_RULE_APPROVED",
+  PAY_ELEMENT_SAVED: "PAY_ELEMENT_SAVED",
+  PAYROLL_RUN_CREATED: "PAYROLL_RUN_CREATED",
+  PAYROLL_RUN_PREPARED: "PAYROLL_RUN_PREPARED",
+  PAYROLL_RUN_APPROVED: "PAYROLL_RUN_APPROVED",
+  PAYROLL_RUN_FINALISED: "PAYROLL_RUN_FINALISED",
+  PAYROLL_RUN_POSTED: "PAYROLL_RUN_POSTED",
+  PAYROLL_RUN_ABANDONED: "PAYROLL_RUN_ABANDONED",
+  PAYROLL_POSTING_REVERSED: "PAYROLL_POSTING_REVERSED",
+  PAYSLIP_VIEWED: "PAYSLIP_VIEWED",
 } as const;

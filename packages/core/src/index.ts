@@ -32,3 +32,5 @@ export * from "./attendance-engine.js";
 export * from "./leave.js";
 export * from "./overtime.js";
 export * from "./appraisals.js";
+export * from "./statutory.js";
+export * from "./payroll.js";

@@ -115,6 +115,31 @@ same care applies to SOCSO, EIS and PCB. These must come from official current s
 > plus confirmation of employer/employee rates for CAC's staff categories.
 > Payroll will not go live on approximated tables.
 
+**Status after Phase 7.** Payroll is built and refuses to run. Everything around the
+statutory figures works and is tested — the run lifecycle, reproducibility across rate
+changes, the payslip PDF, the ledger posting, the return summary — and the figures
+themselves are absent.
+
+What is needed, per contribution, is the **table** rather than a rate:
+
+1. **EPF** — the employee and employer schedules, which differ by age and wage band. Two
+   separate rules, because the two shares are set independently.
+2. **SOCSO and EIS** — the contribution tables. These are read by band: the amount is what
+   the table says, not the wage multiplied by anything.
+3. **PCB** — the deduction schedule, and how reliefs and categories are applied.
+4. **HRD levy** — the rate and whether CAC is above the employee threshold at all.
+5. **Overtime multiples** — for a normal day, a rest day and a public holiday (also needed
+   by Phase 6, which can approve hours without a rate and leaves them unpaid).
+6. **Which allowances count as wages** for each of the above. Not every allowance does, and
+   the platform asks per element rather than assuming.
+
+Each is entered with the document it came from and approved by a second person; after that
+it is immutable, which is what makes a past payslip reproducible. A rate change is a new
+version effective from the change date, and it does not disturb any earlier month.
+
+> **Needed:** the official tables, per contribution, with the gazette or circular reference
+> for each.
+
 ### Q-AI-1 — Approved AI provider for confidential data *(blocks Phase 10–11)*
 
 Case files contain deceased persons' estates, NRICs and beneficiary details. Sending that

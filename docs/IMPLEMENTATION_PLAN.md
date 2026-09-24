@@ -275,6 +275,49 @@ Payroll run lifecycle · EPF/SOCSO/EIS/PCB via **versioned, effective-dated**
 **Exit:** payroll is reproducible — rerunning a past period with its recorded rule version
 produces identical output after rules change. Payslips are private to the employee.
 
+**Delivered, and it stops at the boundary.** The run lifecycle, the effective-dated rule
+versions, the payslip PDF and the ledger posting are all built and tested. 30 tests; 454
+across the suite. **No statutory rule is seeded, and payroll refuses to run without them.**
+
+The exit criterion is proven directly. A test changes the EPF rate from April and gives
+somebody a raise from April, then re-runs March: March's salary, March's rate, March's
+figures. Three things make that work — the salary is read from dated employment history
+rather than the employee row; the rules come from the version whose effective dates cover
+the pay date; and each payslip line records the rule *version* that produced it. An approved
+rule version is immutable by trigger, so none of it can drift.
+
+**Why the rules are data.** EPF is not a percentage — it varies by age and wage band. SOCSO
+and EIS are contribution *tables*: the amount is read from the band, not the band multiplied
+by anything. PCB is a schedule with reliefs. Writing `wages * 0.11` anywhere would be the
+platform asserting Malaysian law it has not been told. So each is a band table entered with
+the document it was copied from, approved by somebody other than whoever typed it, and fixed
+from then on. `StatutoryRulesMissingError` names exactly which are absent, and the payroll
+screen says so in plain words rather than failing obscurely.
+
+**The lifecycle is four people's work.** Computed, approved by somebody else, finalised
+(payslips become documents; the overtime paid is marked paid so it cannot be claimed twice),
+posted. A run with any payslip that could not be computed cannot be approved at all — a run
+that quietly paid twenty-nine of thirty people is the worst available outcome.
+
+**The posting.** Debit the costs — salaries, overtime, allowances, and the employer's own
+contributions — credit what is owed to each agency, and credit net pay to *salaries
+payable* rather than to the bank. Paying the staff is a separate voucher against that
+account, so the ledger shows the obligation between the two. Reversing the journal returns
+the run to finalised without disturbing the payslips: the accounting was wrong, the payroll
+was not.
+
+**Two bugs the tests found.** PCB was being credited to the employer's side of the payslip
+rather than deducted from the employee — it silently moved money across the payslip without
+changing any total. And the employer's contributions were debited as an expense with nothing
+credited as a liability, which the balanced-journal assertion caught: the ledger knew the
+cost and not the obligation. Employer lines now carry a contra account and post both sides.
+
+**The payslip** prints how every figure was arrived at and, for each statutory deduction, the
+document its rate came from. The employer's contributions are shown separately and marked as
+not part of net pay. A payslip from a run that is not yet finalised says DRAFT on the page and
+on the PDF. Payslips are scoped by the session in the data layer, so changing the id in the
+URL does not work — including on the PDF route.
+
 ---
 
 ## Phase 8 — HR documents
