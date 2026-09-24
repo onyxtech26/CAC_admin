@@ -4,7 +4,10 @@ const config: NextConfig = {
   reactStrictMode: true,
   // The workspace packages ship TypeScript source, not build output.
   transpilePackages: ["@cac/core", "@cac/db"],
-  serverExternalPackages: ["@electric-sql/pglite", "@node-rs/argon2", "pg"],
+  // pdfkit reads its built-in font metrics (.afm) from disk at runtime, relative
+  // to its own package directory. Bundled, that path points inside .next and the
+  // files are not there, so every PDF fails with ENOENT on Helvetica.afm.
+  serverExternalPackages: ["@electric-sql/pglite", "@node-rs/argon2", "pg", "pdfkit"],
   poweredByHeader: false,
   webpack(config, { isServer }) {
     if (isServer) {
@@ -17,6 +20,7 @@ const config: NextConfig = {
         "@node-rs/argon2",
         "@electric-sql/pglite",
         "pg",
+        "pdfkit",
       ];
     }
     // The workspace packages are valid Node ESM, so their relative imports

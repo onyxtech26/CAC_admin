@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getDb } from "@cac/db";
 import { formatAmount, listCustomers } from "@cac/core";
 import { requireCapability } from "@/lib/auth";
@@ -78,7 +79,12 @@ export default async function CustomersPage({
                     <span className="font-mono text-[12px]">{customer.code}</span>
                   </Td>
                   <Td>
-                    <p className="font-medium">{customer.name}</p>
+                    <Link
+                      href={`/accounting/customers/${customer.id}`}
+                      className="font-medium text-[var(--color-info)] hover:underline"
+                    >
+                      {customer.name}
+                    </Link>
                     {customer.registrationNo && (
                       <p className="text-[11px] text-[var(--color-muted)]">{customer.registrationNo}</p>
                     )}

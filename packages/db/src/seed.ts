@@ -31,6 +31,15 @@ const SETTINGS: SettingSeed[] = [
   { key: "company.email", value: "admin@conglomerate4u.com", category: "company", label: "Company email" },
   { key: "company.phone", value: "+60 11-5960 1300", category: "company", label: "Company phone" },
   { key: "company.address", value: "85-01, Jalan Wira 2, Taman Tan Sri Yaacob, 81300 Skudai, Johor, Malaysia", category: "company", label: "Registered address" },
+  {
+    key: "company.registration_no",
+    value: null,
+    category: "company",
+    label: "Company registration number",
+    description:
+      "The SSM number, printed on invoices. UNSET - a made-up number on a tax invoice is a real problem, so the line is omitted until someone enters it.",
+    needsReview: true,
+  },
   { key: "company.timezone", value: "Asia/Kuala_Lumpur", category: "company", label: "Timezone" },
   { key: "company.currency", value: "MYR", category: "company", label: "Operating currency" },
 
@@ -144,6 +153,7 @@ const SETTINGS: SettingSeed[] = [
 const SEQUENCES = [
   { key: "invoice", prefix: "INV" },
   { key: "quotation", prefix: "QT" },
+  { key: "credit_note", prefix: "CN" },
   { key: "receipt", prefix: "RCP" },
   { key: "voucher", prefix: "PV" },
   { key: "purchase_order", prefix: "PO" },

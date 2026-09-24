@@ -35,20 +35,31 @@ export const NAVIGATION: NavSection[] = [
     heading: "Accounting",
     items: [
       { label: "Overview", href: "/accounting", capabilities: ["accounting.journal.view"] },
-      { label: "Journals", href: "/accounting/journals", capabilities: ["accounting.journal.view"] },
-      { label: "Chart of accounts", href: "/accounting/accounts", capabilities: ["accounting.coa.view"] },
-      { label: "Trial balance", href: "/accounting/reports/trial-balance", capabilities: ["accounting.report.view"] },
-      { label: "Fiscal calendar", href: "/accounting/periods", capabilities: ["accounting.period.view"] },
-      { label: "Customers", href: "/accounting/customers", capabilities: ["accounting.customer.view"] },
-      { label: "Suppliers", href: "/accounting/suppliers", capabilities: ["accounting.supplier.view"] },
-      { label: "Quotations", href: "/accounting/quotations", capabilities: ["accounting.quotation.view"], phase: 3 },
-      { label: "Invoices", href: "/accounting/invoices", capabilities: ["accounting.invoice.view"], phase: 3 },
-      { label: "Receipts", href: "/accounting/receipts", capabilities: ["accounting.receipt.view"], phase: 3 },
+
+      // Day to day, in the order the work happens.
+      { label: "Quotations", href: "/accounting/quotations", capabilities: ["accounting.quotation.view"] },
+      { label: "Invoices", href: "/accounting/invoices", capabilities: ["accounting.invoice.view"] },
+      { label: "Receipts", href: "/accounting/receipts", capabilities: ["accounting.receipt.view"] },
       { label: "Payment vouchers", href: "/accounting/vouchers", capabilities: ["accounting.voucher.view"], phase: 3 },
       { label: "Purchase orders", href: "/accounting/purchase-orders", capabilities: ["accounting.po.view"], phase: 3 },
       { label: "Petty cash", href: "/accounting/petty-cash", capabilities: ["accounting.pettycash.view"], phase: 3 },
       { label: "Claims", href: "/accounting/claims", capabilities: ["accounting.claim.view"], phase: 3 },
-      { label: "More reports", href: "/accounting/reports", capabilities: ["accounting.report.view"], phase: 3 },
+
+      { label: "Customers", href: "/accounting/customers", capabilities: ["accounting.customer.view"] },
+      { label: "Suppliers", href: "/accounting/suppliers", capabilities: ["accounting.supplier.view"] },
+
+      // The ledger itself.
+      { label: "Journals", href: "/accounting/journals", capabilities: ["accounting.journal.view"] },
+      { label: "Chart of accounts", href: "/accounting/accounts", capabilities: ["accounting.coa.view"] },
+      { label: "Fiscal calendar", href: "/accounting/periods", capabilities: ["accounting.period.view"] },
+      { label: "Tax", href: "/accounting/tax", capabilities: ["accounting.tax.view"] },
+
+      // Reports.
+      { label: "Trial balance", href: "/accounting/reports/trial-balance", capabilities: ["accounting.report.view"] },
+      { label: "Profit and loss", href: "/accounting/reports/profit-and-loss", capabilities: ["accounting.report.view"] },
+      { label: "Balance sheet", href: "/accounting/reports/balance-sheet", capabilities: ["accounting.report.view"] },
+      { label: "Receivables aging", href: "/accounting/reports/aging", capabilities: ["accounting.report.view"] },
+
       { label: "Bank reconciliation", href: "/accounting/bank", capabilities: ["accounting.bank.view"], phase: 4 },
     ],
   },

@@ -175,15 +175,21 @@ export default async function AccountingPage() {
 
         <Panel
           title="Where to go"
-          description="What exists in the ledger today. Documents that post through it arrive in phase 3."
+          description="Purchasing, petty cash and claims are the remaining part of this phase."
         >
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <LinkButton href="/accounting/quotations">Quotations</LinkButton>
+            <LinkButton href="/accounting/invoices">Invoices</LinkButton>
+            <LinkButton href="/accounting/receipts">Receipts</LinkButton>
+            <LinkButton href="/accounting/customers">Customers</LinkButton>
             <LinkButton href="/accounting/journals">Journals</LinkButton>
             <LinkButton href="/accounting/accounts">Chart of accounts</LinkButton>
             <LinkButton href="/accounting/reports/trial-balance">Trial balance</LinkButton>
+            <LinkButton href="/accounting/reports/profit-and-loss">Profit and loss</LinkButton>
+            <LinkButton href="/accounting/reports/balance-sheet">Balance sheet</LinkButton>
+            <LinkButton href="/accounting/reports/aging">Receivables aging</LinkButton>
             <LinkButton href="/accounting/periods">Fiscal calendar</LinkButton>
-            <LinkButton href="/accounting/customers">Customers</LinkButton>
-            <LinkButton href="/accounting/suppliers">Suppliers</LinkButton>
+            <LinkButton href="/accounting/tax">Tax</LinkButton>
           </div>
         </Panel>
       </div>

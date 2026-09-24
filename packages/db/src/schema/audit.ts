@@ -21,7 +21,16 @@ export const event = auditSchema.table(
     actorLabel: text("actor_label"),
     action: text("action").notNull(),
     entityType: text("entity_type").notNull(),
-    entityId: uuid("entity_id"),
+    /**
+     * The record's key, as text.
+     *
+     * Text rather than uuid because not everything auditable is uuid-keyed: a
+     * setting is keyed by its name and a document sequence by its key, and a
+     * change to either is worth more scrutiny than most. `entityType` says what
+     * kind of thing this refers to; there is deliberately no foreign key, because
+     * an audit row must outlive the record it describes.
+     */
+    entityId: text("entity_id"),
     /** Redacted before write — see `redact()` in @cac/core/audit. */
     oldValues: jsonb("old_values"),
     newValues: jsonb("new_values"),

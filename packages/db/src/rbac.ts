@@ -17,7 +17,8 @@ export const PERMISSIONS = {
     ["accounting.coa.manage", "Create and amend accounts"],
     ["accounting.invoice.view", "View invoices"],
     ["accounting.invoice.create", "Create and edit draft invoices"],
-    ["accounting.invoice.approve", "Approve invoices"],
+    ["accounting.invoice.approve", "Approve invoices within the configured limit"],
+    ["accounting.invoice.approve_high_value", "Approve invoices above the configured limit"],
     ["accounting.invoice.issue", "Issue approved invoices"],
     ["accounting.invoice.void", "Void or credit an issued invoice"],
     ["accounting.quotation.view", "View quotations"],
@@ -30,7 +31,8 @@ export const PERMISSIONS = {
     ["accounting.receipt.approve", "Approve receipts"],
     ["accounting.voucher.view", "View payment vouchers"],
     ["accounting.voucher.create", "Create payment vouchers"],
-    ["accounting.voucher.approve", "Approve payment vouchers"],
+    ["accounting.voucher.approve", "Approve payment vouchers within the configured limit"],
+    ["accounting.voucher.approve_high_value", "Approve payment vouchers above the configured limit"],
     ["accounting.voucher.pay", "Mark a voucher paid"],
     ["accounting.po.view", "View purchase orders"],
     ["accounting.po.create", "Create purchase orders"],
@@ -193,8 +195,10 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
 
   DIRECTOR: [
     ...readOnlyOf("accounting."),
-    "accounting.invoice.approve", "accounting.invoice.void",
-    "accounting.receipt.approve", "accounting.voucher.approve",
+    "accounting.invoice.approve", "accounting.invoice.approve_high_value",
+    "accounting.invoice.void",
+    "accounting.receipt.approve",
+    "accounting.voucher.approve", "accounting.voucher.approve_high_value",
     "accounting.po.approve", "accounting.pettycash.approve",
     "accounting.claim.approve", "accounting.journal.reverse",
     "accounting.period.manage", "accounting.period.close", "accounting.report.export",
@@ -218,7 +222,10 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
   ],
 
   ACCOUNTANT: [
-    ...has("accounting."),
+    // Everything in accounting except the high-value approvals. Owning the ledger
+    // is not the same as being the final word on a large customer invoice or a
+    // large payment out, and `has()` would hand over both.
+    ...has("accounting.").filter((key) => !key.endsWith(".approve_high_value")),
     "hr.payroll.post", "hr.statutory.view",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],
