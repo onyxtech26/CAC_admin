@@ -98,6 +98,23 @@ drill-down · PDF/Excel export.
 
 **Exit:** the full Definition of Done example below passes end to end.
 
+**Delivered in two parts.** 3a is the money coming in: quotation, invoice, credit note,
+receipt, allocation, the SST configuration screen, AR aging with a reconciliation line
+against account 1210, and the three statements with drill-down. Real PDF invoices and
+RFC 4180 CSV export. The worked example passes end to end, and 51 tests follow exactly
+that sequence.
+
+3b is the money going out: purchase orders, payment vouchers (buying something, paying on
+account, settling a supplier account), the petty cash float with a physical count, and
+expense claims. 39 tests. A purchase order deliberately reaches no ledger account — a
+commitment is not a cost — and the cost appears when a voucher is raised against what
+actually arrived. A petty cash count that disagrees posts the difference as an attributed
+expense rather than adjusting the balance to fit.
+
+**Still open.** Approval thresholds for documents depend on Q-FIN-3, and who may post a
+manual journal on Q-FIN-5. Until each is answered the conservative reading applies and the
+screen says which question it is waiting on.
+
 ---
 
 ## Phase 4 — Compliance and integration *(needs Q-FIN-2)*

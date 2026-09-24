@@ -21,3 +21,5 @@ export * from "./documents.js";
 export * from "./sales.js";
 export * from "./receipts.js";
 export * from "./reports.js";
+export * from "./purchasing.js";
+export * from "./expenses.js";

@@ -45,10 +45,15 @@ export interface DocumentLineInput {
   discountPercent?: string | number | null;
   discountAmount?: string | number | null;
   taxCodeId?: string | null;
-  /** The revenue or recovery account this line credits. Id or code. */
+  /** The account this line posts to. Id or code. */
   accountId?: string | null;
   accountCode?: string | null;
   caseId?: string | null;
+  costCentreId?: string | null;
+  /** Expense claims only: when the money was actually spent. */
+  spentOn?: string | null;
+  /** Where the paper receipt is filed. */
+  receiptRef?: string | null;
 }
 
 export interface ComputedLine {
@@ -67,6 +72,9 @@ export interface ComputedLine {
   accountCode: string;
   accountName: string;
   caseId: string | null;
+  costCentreId: string | null;
+  spentOn: string | null;
+  receiptRef: string | null;
 }
 
 export interface DocumentTotals {
@@ -192,6 +200,9 @@ export async function computeDocumentLines(
       accountCode: account.code,
       accountName: account.name,
       caseId: raw.caseId || null,
+      costCentreId: raw.costCentreId || null,
+      spentOn: raw.spentOn || null,
+      receiptRef: raw.receiptRef?.trim() || null,
     });
   }
 
@@ -278,7 +289,8 @@ export async function writeDocumentLines(
   }
 }
 
-export interface StoredLine extends Omit<ComputedLine, "accountCode" | "accountName"> {
+export interface StoredLine
+  extends Omit<ComputedLine, "accountCode" | "accountName" | "costCentreId" | "spentOn" | "receiptRef"> {
   id: string;
   lineNo: number;
   accountCode: string;
@@ -336,4 +348,144 @@ export async function readDocumentLines(
     accountName: row.account_name,
     caseId: row.case_id,
   }));
+}
+
+/**
+ * The money-out line tables.
+ *
+ * Purchase orders, vouchers and claims have no discount columns: a supplier's
+ * discount is already in the price they quoted, and inventing a discount field
+ * for it would be a second place to record the same thing. They do carry a cost
+ * centre, which the sales documents do not, and claims additionally record when
+ * the money was actually spent.
+ */
+export type PurchaseLineTable =
+  | "purchase_order_line"
+  | "payment_voucher_line"
+  | "expense_claim_line";
+
+export async function writePurchaseLines(
+  db: Executor,
+  table: PurchaseLineTable,
+  parentColumn: "order_id" | "voucher_id" | "claim_id",
+  parentId: string,
+  lines: ComputedLine[],
+  /** Claims need a spend date per line; it falls back to the document date. */
+  defaultSpentOn?: string,
+): Promise<void> {
+  const isClaim = table === "expense_claim_line";
+
+  for (const [index, line] of lines.entries()) {
+    const columns = [
+      sql.raw(parentColumn),
+      sql.raw("line_no"),
+      sql.raw("description"),
+      sql.raw("quantity"),
+      sql.raw("unit"),
+      sql.raw("unit_price"),
+      sql.raw("tax_code_id"),
+      sql.raw("tax_rate_id"),
+      sql.raw("tax_amount"),
+      sql.raw("line_subtotal"),
+      sql.raw("line_total"),
+      sql.raw("account_id"),
+      sql.raw("cost_centre_id"),
+      sql.raw("case_id"),
+      ...(isClaim ? [sql.raw("spent_on"), sql.raw("receipt_ref")] : []),
+    ];
+
+    const values = [
+      sql`${parentId}`,
+      sql`${index + 1}`,
+      sql`${line.description}`,
+      sql`${line.quantity}`,
+      sql`${line.unit}`,
+      sql`${amountToSql(line.unitPrice)}`,
+      sql`${line.taxCodeId}`,
+      sql`${line.taxRateId}`,
+      sql`${amountToSql(line.taxAmount)}`,
+      // The purchase-side tables have no discount column, so anything discounted
+      // is folded into the price before it gets here.
+      sql`${amountToSql(line.lineSubtotal - line.discountAmount)}`,
+      sql`${amountToSql(line.lineTotal)}`,
+      sql`${line.accountId}`,
+      sql`${line.costCentreId}`,
+      sql`${line.caseId}`,
+      ...(isClaim
+        ? [sql`${line.spentOn ?? defaultSpentOn ?? null}`, sql`${line.receiptRef}`]
+        : []),
+    ];
+
+    await db.execute(sql`
+      INSERT INTO ${sql.raw(`accounting.${table}`)} (${sql.join(columns, sql`, `)})
+      VALUES (${sql.join(values, sql`, `)})
+    `);
+  }
+}
+
+export interface PurchaseLine {
+  id: string;
+  lineNo: number;
+  description: string;
+  quantity: string;
+  unit: string | null;
+  unitPrice: Amount;
+  taxCodeId: string | null;
+  taxRateId: string | null;
+  taxAmount: Amount;
+  lineSubtotal: Amount;
+  lineTotal: Amount;
+  accountId: string;
+  accountCode: string;
+  accountName: string;
+  costCentreId: string | null;
+  costCentreCode: string | null;
+  caseId: string | null;
+  /** Purchase orders only. */
+  quantityReceived: string | null;
+  /** Claims only. */
+  spentOn: string | null;
+  receiptRef: string | null;
+}
+
+export async function readPurchaseLines(
+  db: Executor,
+  table: PurchaseLineTable,
+  parentColumn: "order_id" | "voucher_id" | "claim_id",
+  parentId: string,
+): Promise<PurchaseLine[]> {
+  const result = await db.execute<Record<string, never>>(sql`
+    SELECT l.*, a.code AS account_code, a.name AS account_name, cc.code AS cost_centre_code
+      FROM ${sql.raw(`accounting.${table}`)} l
+      JOIN accounting.account a ON a.id = l.account_id
+      LEFT JOIN org.cost_centre cc ON cc.id = l.cost_centre_id
+     WHERE l.${sql.raw(parentColumn)} = ${parentId}
+     ORDER BY l.line_no
+  `);
+
+  return (result.rows ?? []).map((raw) => {
+    const row = raw as Record<string, unknown>;
+    return {
+      id: String(row.id),
+      lineNo: Number(row.line_no),
+      description: String(row.description),
+      quantity: String(row.quantity),
+      unit: (row.unit as string) ?? null,
+      unitPrice: parseAmount(String(row.unit_price)),
+      taxCodeId: (row.tax_code_id as string) ?? null,
+      taxRateId: (row.tax_rate_id as string) ?? null,
+      taxAmount: parseAmount(String(row.tax_amount)),
+      lineSubtotal: parseAmount(String(row.line_subtotal)),
+      lineTotal: parseAmount(String(row.line_total)),
+      accountId: String(row.account_id),
+      accountCode: String(row.account_code),
+      accountName: String(row.account_name),
+      costCentreId: (row.cost_centre_id as string) ?? null,
+      costCentreCode: (row.cost_centre_code as string) ?? null,
+      caseId: (row.case_id as string) ?? null,
+      quantityReceived: row.quantity_received === undefined ? null : String(row.quantity_received),
+      spentOn: row.spent_on ? String(row.spent_on).slice(0, 10) : null,
+      receiptRef: (row.receipt_ref as string) ?? null,
+    };
+  });
 }

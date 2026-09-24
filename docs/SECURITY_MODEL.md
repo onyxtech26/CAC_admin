@@ -49,6 +49,21 @@ IP/device raises a notification and an audit event.
 **Password reset** — single-use, short-lived, hashed token; invalidates all sessions on
 completion; audited. No user enumeration: identical response whether or not the email exists.
 
+**Lost authenticator** — an administrator with `admin.user.manage` removes somebody's
+device, with a reason recorded against their own name. Recovery codes are deleted with the
+device (a code issued alongside a seed that is now gone proves nothing about who holds it)
+and every session for the account ends.
+
+> **Gap, deliberately left open.** That path needs a *second* administrator. If the only
+> person holding `admin.user.manage` loses their handset and has spent their recovery codes,
+> nobody can re-enrol them: the break-glass console (`packages/db/src/console.ts`) can reset
+> a password but not an authenticator. Adding `reset-mfa` there is a small change, and the
+> right one, but it makes MFA removable by anyone with filesystem access to the database —
+> which is already true of `reset-password`, yet is a decision for CAC to take knowingly
+> rather than one to slip in. Either it is added, or the operating rule is that at least two
+> people hold `admin.user.manage` and keep their recovery codes. One of the two is required
+> before real users exist.
+
 ---
 
 ## 3. Authorisation

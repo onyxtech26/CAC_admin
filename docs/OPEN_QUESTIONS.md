@@ -127,6 +127,31 @@ Drives OCR effort and cost in Phase 10.
 Make/model of the thumbprint machine and a **real sample export**. The importer is built
 around the actual file, with mapping for variants. A sample is needed before Phase 5.
 
+### Q-FIN-3 — Approval limits, and who may approve what *(referenced by Phases 2–3)*
+Three documents ask the same question and none of them can answer it from the code:
+
+- an **invoice** above some value should need a director rather than an accountant;
+- a **payment voucher** above some value likewise, and money leaving is the more dangerous
+  direction;
+- a **purchase order** commits the firm before any money moves at all.
+
+> **Needed:** the ringgit value at which each of those three needs the higher authority,
+> and which role holds it.
+
+**Status.** Invoices and payment vouchers each have a threshold setting, and both are
+unset. While a threshold is unset the platform requires the *higher* authority for every
+document of that kind — the conservative reading, so an unanswered question cannot quietly
+let a large payment through on a junior approval. The refusal names the capability it
+wanted and this question, rather than reading as a bare denial. Setting a value is an
+administrator's change and is audited; it is not a code change.
+
+Purchase orders have **no threshold at all** at present: one capability,
+`accounting.po.approve`, covers any value, with maker/checker enforced so the person who
+raised the order cannot approve it. That is deliberate rather than an oversight — inventing
+a limit would be inventing a policy — but it does mean a large commitment and a small one
+currently take the same signature. If CAC wants a director on orders above a value, say
+what the value is and it becomes a setting like the other two.
+
 ### Q-FIN-4 — Existing chart of accounts
 If one exists, it should be imported rather than invented.
 
