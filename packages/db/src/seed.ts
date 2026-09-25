@@ -197,6 +197,7 @@ const SEQUENCES = [
   { key: "letter", prefix: "LTR" },
   { key: "case", prefix: "CASE" },
   { key: "document", prefix: "DOC" },
+  { key: "case_document", prefix: "CDOC" },
 ];
 
 export async function seed(db?: Database): Promise<void> {

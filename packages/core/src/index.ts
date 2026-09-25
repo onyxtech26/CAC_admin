@@ -47,3 +47,4 @@ export * from "./embeddings.js";
 export * from "./library.js";
 export * from "./assistant.js";
 export * from "./case-agent.js";
+export * from "./case-documents.js";

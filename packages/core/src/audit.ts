@@ -409,4 +409,16 @@ export const AUDIT = {
   DOCUMENT_DOWNLOADED: "DOCUMENT_DOWNLOADED",
   DOCUMENT_ARCHIVED: "DOCUMENT_ARCHIVED",
   DOCUMENT_DELETED: "DOCUMENT_DELETED",
+
+  // Phase 12 — documents generated for a matter.
+  //
+  // CASE_DOCUMENT_APPROVED is the legal act in this group, and CASE_DOCUMENT_FINALISED is
+  // the moment the file becomes fixed: the row carries the checksum of the PDF that was
+  // stored, so "is this the document that was approved" is answerable from the trail alone.
+  CASE_TEMPLATE_SAVED: "CASE_TEMPLATE_SAVED",
+  CASE_TEMPLATE_APPROVED: "CASE_TEMPLATE_APPROVED",
+  CASE_DOCUMENT_GENERATED: "CASE_DOCUMENT_GENERATED",
+  CASE_DOCUMENT_APPROVED: "CASE_DOCUMENT_APPROVED",
+  CASE_DOCUMENT_FINALISED: "CASE_DOCUMENT_FINALISED",
+  CASE_DOCUMENT_CANCELLED: "CASE_DOCUMENT_CANCELLED",
 } as const;

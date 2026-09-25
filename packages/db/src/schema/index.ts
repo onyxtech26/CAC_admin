@@ -11,3 +11,4 @@ export * from "./payroll.js";
 export * from "./hr-documents.js";
 export * from "./estate.js";
 export * from "./library.js";
+export * from "./case-documents.js";

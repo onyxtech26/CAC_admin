@@ -620,6 +620,65 @@ Template engine with conditional clauses and validated variables · DOCX first, 
 finalisation · full provenance (template version, case version, model version, reviewer,
 approval).
 
+**Exit:** a finalised document is the file that was approved, byte for byte, and can show
+what produced it and what the matter looked like at the time.
+
+**Delivered.** 26 tests; 680 across the suite.
+
+**The same engine as the employment letters, and the same central property** — a generated
+document keeps its own copy of the template body, the declared variables, the values typed
+in and the rendered text — **with one addition that matters more here.** A letter is about
+one person on one date; an application is about an estate that is still moving. So the
+document snapshots the *matter* too: the counts, the totals, the checklist's state and the
+fact answers. A test proves both halves — the document is unchanged after an asset is added
+to the inventory, and unchanged after the template is revised and a v2 approved.
+
+**DOCX while it is worked on; PDF once it is finalised.** Word is what gets signed and
+annotated, and forcing somebody to retype an application is how a filed document ends up
+differing from the one on the record. Finalising renders the PDF *once*, stores those exact
+bytes in the Phase 10 library where originals cannot be altered, and records their checksum
+on the document. Every later request serves the stored file — not a fresh rendering that
+might differ by a hair from the one whose checksum is on the record.
+
+The stored file is marked as **produced internally rather than scanned**: nothing was
+ingested from outside, so there is nothing for a scanner to have an opinion about, and the
+row says exactly that instead of borrowing the word "clean". Its text is stored with method
+`manual`, because the text is the document's own rendered text rather than a reading of the
+PDF — which makes a finalised application searchable with no OCR engine, honestly labelled.
+
+**Approval is gated on there being somebody qualified to give it.** `case.document.approve`
+sits with the authorised reviewer and the director, and on top of that nothing of a legal
+kind — application, affidavit, schedule — can be approved until an administrator has
+confirmed that a named, qualified person has been appointed. A test proves the refusal
+applies to the director as much as to anybody. That is Q-LEGAL-1 enforced rather than
+noted: a legal document approved by nobody in particular is worse than one that is plainly
+unapproved. The same gate covers approving a *template* of those kinds, because the wording
+of an application is the legal content.
+
+**A legal template cites the form it follows**, by CHECK and by trigger as well as in the
+application. Without one it is somebody's recollection of a court form, and it will be
+produced to a registry.
+
+**Whether a model was involved is a column, not a footnote.** `model_name`, `model_version`
+and `assistant_used`, with a CHECK that a claimed model is named. Every row this platform
+can currently produce has nulls there, and the null is itself the claim — printed on the
+Word file and the PDF as "no model was involved in producing this text".
+
+**Finalised means finalised.** Triggers refuse to change the text, the values, the snapshot
+or the provenance of an approved document; refuse to unfinalise; refuse to revive a
+cancelled one; refuse to supersede the same document twice; refuse a supersession that would
+loop; and refuse to destroy the stored PDF out from under a finalised document. A correction
+is a new document that supersedes the old one, and both stay on the record.
+
+**Storing the finalised PDF deliberately does not go through `registerUpload`.** That
+function is the door for files arriving from outside and it checks `doc.upload`, which the
+authorised reviewer neither holds nor should need. Finalising is not an upload: its authority
+is `case.document.approve`, already checked, and storing the file the platform just produced
+is part of that one act.
+
+**Not authored here.** Every template's wording, and the form or precedent it follows
+(Q-LEGAL-2). Nothing about Malaysian court forms is seeded.
+
 ---
 
 ## Phase 13 — Hardening
