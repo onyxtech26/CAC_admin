@@ -148,6 +148,25 @@ const SETTINGS: SettingSeed[] = [
     requiresApproval: true,
   },
   {
+    key: "cases.age_of_majority",
+    value: null,
+    category: "cases",
+    label: "Age of majority",
+    description:
+      "UNSET. The agent's consistency check compares a party's date of birth with the minor flag, and cannot without this. A figure here is a statement about Malaysian law, so it takes a source as well - see cases.age_of_majority_source. Nothing is guessed.",
+    needsReview: true,
+    requiresApproval: true,
+  },
+  {
+    key: "cases.age_of_majority_source",
+    value: null,
+    category: "cases",
+    label: "Source for the age of majority",
+    description:
+      "The authority the figure above was taken from. The check stays off until both are set, for the same reason a statutory payroll rate needs a citation.",
+    needsReview: true,
+  },
+  {
     key: "cases.legal_reviewer_confirmed",
     value: false,
     category: "cases",

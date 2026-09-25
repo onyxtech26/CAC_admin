@@ -70,17 +70,54 @@ export async function allocateDocumentNumber(
   const padding = Number.parseInt(row.padding, 10);
   const width = Number.isFinite(padding) && padding > 0 ? padding : 5;
 
-  // A format that carries the year or month restarts at 1 each time that
-  // component changes. The stored period_key is what tells us it has.
-  const restarting = periodKey !== null && row.period_key !== periodKey;
-  const next = restarting ? 1n : BigInt(row.next_value);
+  let next: bigint;
 
-  await db.execute(sql`
-    UPDATE org.document_sequence
-       SET next_value = ${(next + 1n).toString()},
-           period_key = ${periodKey}
-     WHERE key = ${key}
-  `);
+  if (periodKey === null) {
+    // No year or month in the format, so one counter for all time.
+    next = BigInt(row.next_value);
+    await db.execute(sql`
+      UPDATE org.document_sequence
+         SET next_value = ${(next + 1n).toString()}, updated_at = now()
+       WHERE key = ${key}
+    `);
+  } else {
+    // A counter per period, in its own row.
+    //
+    // One counter plus "the last period seen" only works while documents are numbered in
+    // date order, and they are not: number a case dated May 2026, then one dated December
+    // 2025, then another dated June 2026, and a single counter restarts each time the
+    // period changes and reissues CASE-2026-00001. Backdating across a year boundary is
+    // ordinary work, so the counter belongs to the period rather than to the sequence.
+    //
+    // The parent row is already locked FOR UPDATE above, which serialises every allocation
+    // for this key — so the upsert below cannot race, and a rolled-back transaction still
+    // returns its number to the pool.
+    await db.execute(sql`
+      INSERT INTO org.document_sequence_period (key, period_key, next_value)
+      VALUES (${key}, ${periodKey}, 1)
+      ON CONFLICT (key, period_key) DO NOTHING
+    `);
+
+    const current = await db.execute<{ next_value: string }>(sql`
+      SELECT next_value FROM org.document_sequence_period
+       WHERE key = ${key} AND period_key = ${periodKey}
+    `);
+    next = BigInt(current.rows![0]!.next_value);
+
+    await db.execute(sql`
+      UPDATE org.document_sequence_period
+         SET next_value = ${(next + 1n).toString()}, updated_at = now()
+       WHERE key = ${key} AND period_key = ${periodKey}
+    `);
+
+    // Kept up to date for the admin screen, which shows where a sequence has reached.
+    // Nothing decides anything from it any more.
+    await db.execute(sql`
+      UPDATE org.document_sequence
+         SET period_key = ${periodKey}, updated_at = now()
+       WHERE key = ${key}
+    `);
+  }
 
   return render(row.format, {
     prefix: row.prefix,
@@ -117,10 +154,22 @@ export async function peekDocumentNumber(
 
   const periodKey = periodKeyFor(row.format, date);
   const padding = Number.parseInt(row.padding, 10);
+
+  // The counter for the period the date falls in, which is the one an allocation would
+  // take. A period nobody has numbered in yet starts at 1.
+  let sequence = BigInt(row.next_value);
+  if (periodKey !== null) {
+    const period = await db.execute<{ next_value: string }>(sql`
+      SELECT next_value FROM org.document_sequence_period
+       WHERE key = ${key} AND period_key = ${periodKey}
+    `);
+    sequence = period.rows?.[0] ? BigInt(period.rows[0].next_value) : 1n;
+  }
+
   return render(row.format, {
     prefix: row.prefix,
     date,
-    sequence: row.period_key !== periodKey && periodKey !== null ? 1n : BigInt(row.next_value),
+    sequence,
     width: Number.isFinite(padding) && padding > 0 ? padding : 5,
   });
 }

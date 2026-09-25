@@ -538,6 +538,80 @@ the case preparation pack.
 > The rule engine decides requirements. The model assists, cites and drafts. It never
 > determines a legal requirement alone, and never submits anything.
 
+**Exit:** the agent is useful with no model configured, and the drafting half refuses
+rather than inventing.
+
+**Delivered.** 27 tests; 654 across the suite. The deterministic half is complete and is
+what the screen runs; the drafting seam exists and refuses.
+
+**The useful parts of the agent turned out not to need a model.** Asked what "an agent
+that helps with a probate matter" should actually do, the answer is largely questions of
+completeness and consistency — and those have exact answers:
+
+*What to ask next.* The unanswered intake questions, ordered by how many undecided
+requirements each answer would settle, with the requirements named. A question that
+unblocks four rules comes before one that unblocks none; a question no rule reads is still
+listed, because hiding it would be the platform deciding what matters to CAC.
+
+*What is missing.* Gaps in the record, and `blocking` is reserved for something an approved
+rule is genuinely waiting on, so the word means something. Everything else is `incomplete`
+or `worth_checking`. Nothing in the list says the matter *needs* anything — what a matter
+needs comes from approved rules, and a test asserts the wording never claims otherwise.
+
+*What contradicts itself.* Comparisons between two recorded fields: two people sharing one
+identification, somebody carrying the deceased's, a duplicated asset reference, a figure
+dated before the death, a fact marked verified with no source, a satisfied document
+requirement naming no document. Every one is phrased as *confirm which is right*, because
+the platform does not know.
+
+The age-of-majority check is the one that would otherwise smuggle in a legal fact, so it
+stays off until CAC sets `cases.age_of_majority` **and** the source it came from — the
+statutory-rules pattern again. A test walks all three states: unset, figure without a
+source, and both present, and the check only runs in the third.
+
+*Similar matters.* Jaccard overlap of shared fact answers, scoped by case access. The
+shared answers are returned with the score, so the reason a matter is offered is
+inspectable rather than a number to be trusted. Called *similar matters*, not precedent:
+precedent is case law, and a consultancy's own past files are experience, which is worth a
+great deal and is not the same thing.
+
+*Passages worth reading.* The Phase 10 library search, on terms taken from the matter's own
+fields. This surfaced a real defect in that search: `plainto_tsquery` ANDs every word, so a
+query assembled from a name, a matter type and a few asset categories matched nothing and
+looked like an empty library. `matchAny` now joins the terms with OR through
+`websearch_to_tsquery`, and stays off for a phrase somebody typed.
+
+*The preparation pack.* A PDF assembling the matter, the people, the inventory with its
+totals and its gaps, the checklist with every authority, the open questions, the gaps and
+the contradictions. The gaps are in the body, not an appendix: a pack that showed only the
+complete parts would read as a finished matter and somebody would act on it. The caveats
+are printed on the document rather than put in a covering email — including that a short
+checklist means no approved rule covers the point, not that nothing is required.
+
+**The drafting seam is structural, not a promise.** A `CaseAssistant` returns a draft and
+its citations and nothing else: the type has no field that could set a requirement, answer
+a fact, verify anything or send anything, and there is no code path from a reply into a
+write. Every reply carries `reviewed: false`. `checkCitations` discards a reply outright if
+it cites a passage that was not in the context it was given — a fabricated citation makes
+the whole draft unusable, because somebody would read the prose and not the footnotes.
+
+**And there is no stub.** This is the one absence where a fake would be most dangerous:
+everything else missing in this platform fails visibly, but a fabricated legal draft looks
+exactly like a real one and the reader has no way to tell.
+
+**One real bug found, in Phase 0's numbering.** `org.document_sequence` held one counter
+plus the last period seen, which restarts the counter when the period changes — so
+numbering a case dated May 2026, then one dated December 2025, then another dated June
+2026 reissues `CASE-2026-00001`. Backdating across a year boundary is ordinary work, and
+Phases 9 and 10 made it routine because a case and a document are both dated by whoever
+enters them. Migration 0023 moves the counter to one row per period, backfilling what each
+sequence had reached; the parent row is still locked first, so concurrent allocations still
+serialise and a rolled-back transaction still returns its number.
+
+**Not authored here.** The model, and the authorities it would be allowed to cite
+(Q-AI-1, Q-LEGAL-2). A named legal reviewer must hold `case.document.approve` before
+anything drafted could be approved at all (Q-LEGAL-1).
+
 ---
 
 ## Phase 12 — Document automation

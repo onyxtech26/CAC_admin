@@ -85,7 +85,6 @@ export const NAVIGATION: NavSection[] = [
     items: [
       { label: "All cases", href: "/cases", capabilities: ["case.view", "case.view_all"] },
       { label: "Questions and rules", href: "/cases/rules", capabilities: ["case.rule.view"] },
-      { label: "Estate agent", href: "/cases/agent", capabilities: ["case.agent.run"], phase: 11 },
       { label: "Templates", href: "/cases/templates", capabilities: ["template.view"], phase: 12 },
     ],
   },

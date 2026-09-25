@@ -45,3 +45,5 @@ export * from "./extraction.js";
 export * from "./chunking.js";
 export * from "./embeddings.js";
 export * from "./library.js";
+export * from "./assistant.js";
+export * from "./case-agent.js";

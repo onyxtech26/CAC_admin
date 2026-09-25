@@ -1,4 +1,13 @@
-import { boolean, jsonb, pgSchema, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  boolean,
+  jsonb,
+  pgSchema,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 export const orgSchema = pgSchema("org");
 
@@ -46,7 +55,36 @@ export const documentSequence = orgSchema.table("document_sequence", {
   /** Tokens: {YYYY} {YY} {MM} {SEQ}. */
   format: text("format").notNull().default("{PREFIX}-{YYYY}-{SEQ}"),
   padding: text("padding").notNull().default("5"),
+  /** The counter, for a format with no year or month in it. */
   nextValue: text("next_value").notNull().default("1"),
+  /**
+   * The period most recently numbered in. Shown on the admin screen; nothing decides
+   * from it any more — see `documentSequencePeriod`.
+   */
   periodKey: text("period_key"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * One counter per period.
+ *
+ * A format carrying {YYYY} restarts at 1 each year, and a single counter plus "the last
+ * period seen" only works while documents are numbered in date order. They are not:
+ * backdating a case or a document across a year boundary makes a single counter restart and
+ * reissue a number that already exists. The counter therefore belongs to the period.
+ */
+export const documentSequencePeriod = orgSchema.table(
+  "document_sequence_period",
+  {
+    key: text("key")
+      .notNull()
+      .references(() => documentSequence.key, { onDelete: "cascade" }),
+    /** '2026' for a yearly format, '2026-06' for a monthly one. */
+    periodKey: text("period_key").notNull(),
+    nextValue: bigint("next_value", { mode: "bigint" }).notNull().default(1n),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.key, table.periodKey] }),
+  }),
+);

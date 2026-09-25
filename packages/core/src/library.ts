@@ -935,6 +935,15 @@ export interface SearchOptions {
   limit?: number;
   /** Include documents that were released without a scan. Off by default. */
   includeUnscanned?: boolean;
+  /**
+   * Match any of the words rather than all of them.
+   *
+   * Off by default, because somebody typing "death certificate" means both words. On for
+   * a query assembled from a case's own fields — a name, a matter type, the kinds of
+   * asset — where requiring every term to appear in one passage would match nothing and
+   * look like an empty library.
+   */
+  matchAny?: boolean;
 }
 
 export interface SearchResult {
@@ -981,10 +990,19 @@ export async function searchLibrary(
     ? sql`d.scan_status IN ('clean', 'released_unscanned')`
     : sql`d.scan_status = 'clean'`;
 
+  // `plainto_tsquery` ANDs every word, which is what somebody typing a phrase means.
+  // `matchAny` joins them with OR through `websearch_to_tsquery` instead.
+  const anyText = terms.split(/\s+/).filter(Boolean).join(" or ");
+  const english = options.matchAny
+    ? sql`websearch_to_tsquery('english', ${anyText})`
+    : sql`plainto_tsquery('english', ${terms})`;
+  const simple = options.matchAny
+    ? sql`websearch_to_tsquery('simple', ${anyText})`
+    : sql`plainto_tsquery('simple', ${terms})`;
+
   const result = await db.execute<Record<string, unknown>>(sql`
     WITH q AS (
-      SELECT plainto_tsquery('english', ${terms}) AS en,
-             plainto_tsquery('simple', ${terms}) AS simple
+      SELECT ${english} AS en, ${simple} AS simple
     )
     SELECT c.id, c.document_id, c.ordinal, c.page_from, c.page_to, c.char_from, c.char_to,
            c.method, c.confidence,
