@@ -270,7 +270,11 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
   ],
 
   CASE_MANAGER: [
-    ...has("case."),
+    // Everything in case management except the two approvals that are legal acts.
+    // A case manager runs the matter; saying "this is what Malaysian law requires"
+    // and signing off a legal document belong to the authorised reviewer and the
+    // director (Q-LEGAL-1). `has()` alone would hand both over.
+    ...has("case.").filter((key) => key !== "case.rule.approve" && key !== "case.document.approve"),
     "doc.view", "doc.upload", "doc.download", "template.view",
     "accounting.invoice.view", "hr.overtime.approve", "hr.leave.approve",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
@@ -322,4 +326,7 @@ export const MAKER_CHECKER_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["accounting.journal.create", "accounting.journal.post"],
   ["hr.payroll.prepare", "hr.payroll.approve"],
   ["case.document.generate", "case.document.approve"],
+  // Writing down a legal requirement and attesting that it is the law are two acts,
+  // and never the same person's on the same rule.
+  ["case.rule.propose", "case.rule.approve"],
 ];

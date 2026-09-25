@@ -88,6 +88,24 @@ export async function requireCapability(capability: string): Promise<Principal> 
   return principal;
 }
 
+/**
+ * The gate for a page reachable by either of two capabilities.
+ *
+ * Cases need this: `case.view` means the matters somebody is assigned to and
+ * `case.view_all` means all of them, and a role may hold one without the other —
+ * SUPER_ADMIN holds only `case.view_all`. Gating on one of them alone would send
+ * somebody who is entitled to the page to /denied.
+ */
+export async function requireAnyCapability(capabilities: string[]): Promise<Principal> {
+  const principal = await requirePrincipal();
+  if (principal.mustChangePassword) redirect("/account?change-password=1");
+
+  if (!capabilities.some((capability) => principal.capabilities.has(capability))) {
+    redirect(`/denied?capability=${encodeURIComponent(capabilities[0])}`);
+  }
+  return principal;
+}
+
 /** Request context for audit rows. */
 export async function getRequestContext(): Promise<{
   ip: string | null;

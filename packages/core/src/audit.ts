@@ -62,6 +62,18 @@ const MASKED_KEYS = new Set([
   "net_pay",
   "grosspay",
   "gross_pay",
+  // Phase 9. An estate case holds identifying numbers for people who are not
+  // employees — the deceased, the beneficiaries — and for their holdings. The
+  // estate module additionally keeps names, descriptions and figures out of audit
+  // payloads altogether; these entries are the backstop for anything that slips.
+  "deceasedid",
+  "deceased_id",
+  "idnumber",
+  "id_number",
+  "policyno",
+  "policy_number",
+  "titleno",
+  "title_number",
 ]);
 
 function maskValue(value: unknown): unknown {
@@ -339,4 +351,47 @@ export const AUDIT = {
   LETTER_APPROVED: "LETTER_APPROVED",
   LETTER_ISSUED: "LETTER_ISSUED",
   LETTER_CANCELLED: "LETTER_CANCELLED",
+
+  // Phase 9 — estate cases.
+  //
+  // CASE_RULE_APPROVED is the one to watch in this group. It is the moment a legal
+  // requirement enters the platform, and the row records who said so. Every checklist
+  // item generated afterwards points back at it.
+  CASE_OPENED: "CASE_OPENED",
+  CASE_UPDATED: "CASE_UPDATED",
+  CASE_CLOSED: "CASE_CLOSED",
+  CASE_WITHDRAWN: "CASE_WITHDRAWN",
+  CASE_REOPENED: "CASE_REOPENED",
+  CASE_ASSIGNED: "CASE_ASSIGNED",
+  CASE_UNASSIGNED: "CASE_UNASSIGNED",
+  CASE_PARTY_RECORDED: "CASE_PARTY_RECORDED",
+  CASE_PARTY_UPDATED: "CASE_PARTY_UPDATED",
+  CASE_PARTY_REMOVED: "CASE_PARTY_REMOVED",
+  CASE_ASSET_RECORDED: "CASE_ASSET_RECORDED",
+  CASE_ASSET_UPDATED: "CASE_ASSET_UPDATED",
+  CASE_ASSET_REMOVED: "CASE_ASSET_REMOVED",
+  CASE_LIABILITY_RECORDED: "CASE_LIABILITY_RECORDED",
+  CASE_LIABILITY_UPDATED: "CASE_LIABILITY_UPDATED",
+  CASE_LIABILITY_REMOVED: "CASE_LIABILITY_REMOVED",
+  /** A party, asset, liability or fact was marked verified. One action, so that
+      "what has actually been checked on this matter" is a single query. */
+  CASE_FACT_VERIFIED: "CASE_FACT_VERIFIED",
+  CASE_FACT_DEFINED: "CASE_FACT_DEFINED",
+  CASE_FACT_ANSWERED: "CASE_FACT_ANSWERED",
+  CASE_RULE_SAVED: "CASE_RULE_SAVED",
+  CASE_RULE_APPROVED: "CASE_RULE_APPROVED",
+  CASE_RULE_RETIRED: "CASE_RULE_RETIRED",
+  CASE_CHECKLIST_GENERATED: "CASE_CHECKLIST_GENERATED",
+  CASE_REQUIREMENT_ADDED: "CASE_REQUIREMENT_ADDED",
+  CASE_REQUIREMENT_SATISFIED: "CASE_REQUIREMENT_SATISFIED",
+  CASE_REQUIREMENT_WAIVED: "CASE_REQUIREMENT_WAIVED",
+  CASE_REQUIREMENT_REOPENED: "CASE_REQUIREMENT_REOPENED",
+  CASE_TASK_CREATED: "CASE_TASK_CREATED",
+  CASE_TASK_UPDATED: "CASE_TASK_UPDATED",
+  CASE_TASK_COMPLETED: "CASE_TASK_COMPLETED",
+  CASE_TASK_CANCELLED: "CASE_TASK_CANCELLED",
+  CASE_DOCUMENT_REGISTERED: "CASE_DOCUMENT_REGISTERED",
+  CASE_DOCUMENT_UPDATED: "CASE_DOCUMENT_UPDATED",
+  CASE_DOCUMENT_REMOVED: "CASE_DOCUMENT_REMOVED",
+  CASE_EVENT_RECORDED: "CASE_EVENT_RECORDED",
 } as const;

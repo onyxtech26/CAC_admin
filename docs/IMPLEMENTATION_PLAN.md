@@ -370,6 +370,85 @@ the source reference for where the wording came from (Q-DOC-1).
 Probate and LA case records · parties, assets, liabilities · tasks · timeline ·
 **dynamic checklists** (scenario-driven, never a fixed list per case type) · documents.
 
+**Exit:** two matters with different facts get different checklists from the same rules,
+and a short checklist never means "nobody asked".
+
+**Delivered, and it stops at the boundary.** The case record, the inventory, the
+parties, the document register, tasks, the timeline and the checklist engine are all
+built and tested. 79 tests; 566 across the suite. **No Malaysian probate rule is seeded,
+and a matter's checklist is empty until CAC's named reviewer enters and approves them.**
+
+**Facts are recorded; requirements are derived.** This is the whole design. A case holds
+facts about the estate — was there a will, is a beneficiary a minor, what does the estate
+consist of. What each fact *requires* is not in the schema and not in the code: it lives
+in `estate.requirement_rule` as data, entered with the authority it came from and
+approved by somebody other than its author holding `case.rule.approve`. A checklist is
+then computed from one matter's facts against the rules in force. The first test in
+`cases.test.ts` proves the shipped state: a case, no rules, an empty checklist, and a
+reason for it (Q-LEGAL-1, Q-LEGAL-2).
+
+**The engine is three-valued, and that is the most important decision in the phase.** A
+condition over a question nobody has answered evaluates to *undecided*, not false. Two
+valued logic would quietly drop a requirement because a question had not been asked
+yet — and a checklist that is short because of missing information looks exactly like a
+checklist that is short because nothing is required. An undecided rule keeps its item on
+the list, flagged with the questions it needs, and the intake screen is where somebody
+clears it. "Not known" is itself a recordable answer, distinct from an empty one.
+
+A definite false still settles an `all`, and a definite true still settles an `any`, so a
+single missing answer does not make every rule undecided. `not` over undecided stays
+undecided: negating "we do not know" does not produce knowledge.
+
+**The condition language is deliberately small.** Boolean combinations of comparisons
+against declared facts — no arithmetic, no expressions, no dates computed from other
+dates. Anything more expressive becomes a language in which somebody can write a legal
+rule nobody reviewed. Facts are *declared* before rules can reference them (a rule
+waiting on a fact nobody records never resolves), a question's type is fixed once answers
+exist, and a condition naming an undeclared question is refused when the rule is saved
+rather than puzzling somebody later.
+
+**Recomputation never deletes.** An item that stops applying becomes `not_applicable`
+with the reason it fell away, because "this used to be on the list" is a question that
+gets asked. An item already satisfied or waived is left entirely alone — a change of
+facts does not erase work. An item from a rule that has been withdrawn says so, and
+keeps the code, version, title and authority it carried when it was on the list, exactly
+as a letter keeps its template.
+
+**A figure cannot exist without its basis and its source**, by CHECK in both directions:
+a basis recorded against a figure that does not exist is also refused, because it means
+somebody stopped halfway. The estate position sums what it has, counts what it does not,
+and says in words when a total is not the estate's total.
+
+**Reported is not verified.** `case.fact.verify` is a separate capability from
+`case.edit`; the database stamps who attested and when, and un-verifying clears the
+stamp rather than leaving a stale name against a claim somebody no longer makes.
+
+**Access is a join, not a filter.** `case.view` means the matters somebody is assigned
+to and `case.view_all` means all of them; every read goes through `caseAccessClause`, so
+changing an id in a URL gets a 404 rather than another family's file. A matter cannot be
+left with nobody assigned to it. The timeline is append-only by trigger, a closed file
+refuses writes at the database rather than only in the application, and closing is
+refused while any requirement is outstanding or any task is open — withdrawing is the
+honest route for a matter that stopped.
+
+**Audit rows here do not carry the contents of the file.** A party's row says a
+beneficiary was recorded; it does not say who, or what they are said to be entitled to.
+Reading a full identification number is a separate capability-gated call that writes
+`EXPORT_SENSITIVE` with a reason, as it is for an employee's NRIC. A test asserts that no
+beneficiary name or stated share reaches the audit trail.
+
+**One bug the code review found, in the RBAC bundles rather than this phase.**
+`CASE_MANAGER` was built with `has("case.")`, which handed it `case.rule.approve` and
+`case.document.approve` — the two approvals `docs/RBAC_MATRIX.md` says sit only with the
+authorised reviewer and the director. The code and the documented matrix disagreed, and
+the code was wrong. Narrowed, with `case.rule.propose` / `case.rule.approve` added to the
+maker/checker pairs.
+
+**Not authored here.** Every requirement rule, every intake question and every authority
+behind them. The document *register* is built; the files themselves are Phase 10, and
+`storage_key` is where ingestion attaches — an upload button with nowhere to put the bytes
+and no scanning would not be honest.
+
 ---
 
 ## Phase 10 — Knowledge ingestion *(needs Q-AI-1, Q-DATA-2)*
