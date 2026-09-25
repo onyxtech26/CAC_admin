@@ -9,17 +9,17 @@ documented refusals (payroll without statutory tables, an empty checklist withou
 an unconfigured scanner leaving a file in quarantine) are **not** listed as defects — they are
 correct behaviour recorded in `docs/OPEN_QUESTIONS.md`.
 
-Status: **audit complete for the slices marked ✅ below; findings not yet fixed.**
+Status: **five of six slices audited. Three defects fixed (§9); the rest are reported, not fixed.**
 
 | Slice | Auditor | Status |
 |---|---|---|
 | Browser end-to-end (auth, every screen) | driven directly | ✅ |
 | Accounting (Phases 2, 3a, 3b, 4) | agent | ✅ |
 | Cross-cutting: auth, RBAC, audit, nav | agent | ✅ |
-| HR and payroll (Phases 5–7) | agent | in progress |
-| Estate cases and the agent (9, 11) | agent | in progress |
-| Documents (8, 10, 12) | agent | in progress |
-| Public site (`apps/web`) | agent | in progress |
+| HR and payroll (Phases 5–7) | agent | ✅ |
+| Documents (8, 10, 12) | agent | ✅ |
+| Public site (`apps/web`) | agent | ✅ |
+| Estate cases and the agent (9, 11) | agent | **not done** — cut twice by the usage limit |
 
 ---
 
@@ -207,3 +207,313 @@ high-value capability; `cases.age_of_majority` → null disables the age check;
 - The browser pass exercised reads on all 52 screens and the full authentication chain. It did not
   complete a business transaction end to end through the UI — the write paths are covered by 711
   tests, but not yet by use.
+
+
+---
+
+# Part two — the remaining slices
+
+## 9. Fixed in this pass
+
+Three defects in the template engine, which both employment letters and case documents render
+through. Fixed, with regression tests (`packages/core/src/letters.test.ts`, final describe). 715
+tests pass.
+
+### 9.1 A variable whose name began with a keyword was parsed as a keyword
+
+`packages/core/src/templates.ts:58` — `BLOCK` used `\s*` between the keyword and its key, so the
+keyword ran straight into an ordinary name. Verified by running the regex: `{{elsewhere}}` →
+`['else', 'where']`, `{{else_note}}` → `['else', '_note']`, `{{#ifactive}}` → `['#if', 'active']`.
+
+A declared variable called `elsewhere` therefore behaved as a branch marker, and — worse — an
+*undeclared* placeholder sitting beside one was consumed before the undeclared-placeholder check
+could see it. That check is the single thing the module exists to do. **Fixed** with a negative
+lookahead so a keyword must be followed by something that cannot continue a name.
+
+### 9.2 A malformed tag was rendered literally into a signed document
+
+`{{#ifactive}}` (a missing space) matched neither a placeholder nor a block, so it passed validation,
+passed the undeclared check, was never resolved, and was printed verbatim into the stored
+`body_rendered` — and from there into the DOCX and PDF that reach an employee or a registry.
+**Fixed:** `validateTemplateBody` now refuses any `{{…}}` that is neither shape, and does so
+*first*, so the message names the typo rather than complaining about the unmatched `{{/if}}` it
+caused.
+
+### 9.3 A figure the letter did not contain was demanded before it could be
+
+`packages/core/src/templates.ts:160` — the required-value check ran *before* `resolveConditionals`,
+so a variable used only inside a conditional was demanded even when the branch was false. The
+comment two lines below claimed the opposite ordering.
+
+This made the module's own shipped example unusable: the appointment-letter body in
+`LetterForms.tsx` declares `car_allowance` inside `{{#if has_car_allowance}}`, so generation was
+refused whenever the allowance did not apply. Marking it optional only moved the failure — the
+clause then rendered as "a car allowance of RM  per month", the exact outcome the module's header
+disclaims. **Fixed:** conditionals resolve first, and a value is required only if its placeholder
+survives into the document.
+
+---
+
+## 10. Further blocking defects — documents (Phases 8, 10, 12)
+
+### 10.1 Reading a finalised document destroys its text, irrecoverably
+
+`packages/core/src/library.ts:722` — "Read and index it" appears whenever a document is `readable`,
+which a finalised case-document PDF is. Pressing it runs `extractAndIndex`, which sees
+`application/pdf`, returns `needs_ocr`, and then **deletes the page text and chunks that
+finalisation had supplied** and nulls `extraction_method`, `page_count`, `text_chars` and
+`extracted_at`.
+
+The text cannot be restored: `finaliseCaseDocument` refuses a second run, the generated document is
+immutable by trigger, and no other path re-supplies page text. One path refuses to read a PDF;
+another silently erases text that was already there.
+
+### 10.2 `storeFinalisedPdf` writes `scan_status = 'clean'`
+
+`packages/core/src/case-documents.ts:895` — it sets `clean` with `scanner = 'internal:generated'`,
+while the library's own migration comment, `scanning.ts`, and **this function's own docstring** all
+say the word `clean` is never borrowed. The docstring claims the row says something "much more
+honest than borrowing the word 'clean'". It borrows the word.
+
+This is my own design, and the auditor is right: the intent was a distinct state, and what shipped
+reuses `clean` because that is what the downstream gates check. It is also what makes 10.1
+reachable. A `produced_internally` status, accepted by the same gates, is the honest fix.
+
+### 10.3 A boolean means three different things
+
+`letters.ts:551` coerces anything that is not `"false"`, `"0"` or `""` to **true**;
+`case-documents.ts:717` uses an allow-list (`true|yes|y|1|on`); `templates.ts:241` treats `"no"` as
+false. So the value `"no"` produces a letter whose `{{#if flag}}` clause is **included** and whose
+`{{flag}}` prints `"yes"`, and a case document where both are negative.
+
+### 10.4 A DOCX deflate bomb can exhaust the server
+
+`packages/core/src/extraction.ts:330` — `inflateRawSync(data)` with no `maxOutputLength`. Node's
+default is ~4 GiB, so a few megabytes of zeros inside the 25 MB upload limit (deflate reaches
+~1032:1) allocates gigabytes inside the request, then runs six global regex passes over the result.
+The central directory's *uncompressed* size is never read, so nothing bounds the output.
+
+### 10.5 A lying ZIP entry reports a successful read of nothing
+
+`packages/core/src/extraction.ts:327` — `subarray(dataAt, dataAt + compressedSize)` trusts the
+declared size. A stored entry that overstates it yields whatever bytes follow; `decodeText` produces
+text with no `<w:t>` elements, and `extractText` reports `status: "extracted"`, `confidence: 1`, and
+"Read from the document's own text runs" over an **empty string**. `NotConfiguredOcrEngine` refuses
+precisely because "an empty page is indistinguishable from a blank document"; this path does exactly
+what that refuses to do.
+
+### 10.6 `matterTypes` is interpolated into a Postgres array literal
+
+`packages/core/src/case-documents.ts:177` — built by string concatenation from
+`form.getAll("matterTypes")` with no allow-list. A posted value `probate","la` becomes two elements;
+a value containing a quote or backslash produces a malformed literal and an opaque 500. It is a
+bound parameter, so this is array-literal injection rather than SQL injection — but it lets a
+template claim matter types the UI never offered, and an unrecognised value makes that template
+permanently unusable, since the trigger then refuses every generation.
+
+### 10.7 The letters half of the approver-cannot-read defect
+
+Extends §2.6. **Every** screen and route in the letters and case-document slice is gated on the
+*generate* capability, while the approve buttons are gated on *approve*. DIRECTOR holds
+`hr.letter.approve` and `case.document.approve` and neither `.generate`, so a director is redirected
+to `/denied` and can never read, approve, or open the PDF of a letter or a case document.
+`requireAnyCapability` exists for exactly this and is used on the case pages but not here.
+
+---
+
+## 11. Further blocking defects — HR and payroll (Phases 5–7)
+
+### 11.1 A supplementary payroll run pays the whole month a second time
+
+`packages/core/src/payroll.ts:237` — `preparePayrollRun` never reads `run.kind` or
+`corrects_run_id`; both are written and read nowhere. The duplicate-period guard applies to
+`kind = 'regular'` only.
+
+`PayrollForms.tsx:47` calls a supplementary run "how a correction is made". Finalise March, create a
+supplementary run naming it, and prepare produces a fresh **full** payslip for everyone employed in
+March — full basic, full allowances, full statutory deductions. Posting debits salaries again. The
+advertised correction mechanism is a double payment.
+
+### 11.2 Finalising claims overtime the run never paid
+
+`packages/core/src/payroll.ts:788` — the `UPDATE hr.overtime_request SET payroll_run_id = …` matches
+every approved, rated, unclaimed claim in the period **at finalise time**, not the claims that were
+on a payslip. A claim rated after the run was prepared is stamped with that run's id, becomes
+invisible to every future run's `payroll_run_id IS NULL` filter, and is never paid. The hours are
+silently lost and no screen shows it.
+
+### 11.3 An approved overtime claim can never be given a rate
+
+`packages/core/src/overtime.ts:243` — `rate_multiple` is written in exactly one place,
+`decideOvertime`, which refuses unless the status is `submitted`. There is no cancel, no re-decide,
+and no other writer. The overtime screen renders a standing queue — "The hours are agreed; only the
+rate is missing" — that **nothing in the codebase can drain**.
+
+This is not the documented Q-HR-1 refusal. Approving hours without a rate is correct; having no exit
+once CAC supplies the multiples is not. Every claim approved before the answer arrives is
+permanently unpayable.
+
+### 11.4 Unpaid leave across a month boundary is deducted twice
+
+`packages/core/src/payroll.ts:343` — the query sums `r.days`, the whole request's count, for any
+request merely *overlapping* the period. Leave of 27 Feb–4 Mar with `days = 5` is deducted as five
+days from February **and** five from March.
+
+Two further inconsistencies in the same arithmetic: `r.days` counts *working* days while the
+proration denominator counts *calendar* days, so numerator and denominator are different units; and
+one unpaid day costs 1/31 of a month in a 31-day month and 1/28 in February.
+
+### 11.5 Reproducibility is broken by four undated fields
+
+`packages/core/src/payroll.ts:268` — salary correctly comes from dated history and rules correctly
+come from the version in force, but `epf_applicable`, `socso_applicable`, `eis_applicable` and
+`pcb_applicable` are read from `hr.employee` **as it stands today**, and they decide which
+contributions are computed and which rule tables are demanded. `hr.employment_event` has no column
+for them, so a change is undated and retroactive: re-prepare March after switching someone's PCB on
+and March gains a deduction it never had. `department_name`, `position_title` and the bank fields are
+snapshotted from the current row too.
+
+This is the one promise Phase 7 was built to keep, and it holds only for the salary and the rates.
+
+### 11.6 A period can be finalised before the engine has ever run
+
+`packages/core/src/attendance.ts:1051` — `finaliseAttendancePeriod` checks only for a clock-in with
+no clock-out. Import writes `worked_minutes` NULL; `recalculateAttendance` skips final rows by
+design. Import March, finalise without pressing Recalculate, and `attendanceSummary` reports 0
+worked, 0 late, 0 extra minutes for a fully attended month. The only remedy is reopening the period.
+
+### 11.7 A rejected overtime claim blocks that date forever
+
+`packages/core/src/overtime.ts:138` — the duplicate check matches any row for the employee-day
+regardless of status, and there is no cancel, withdraw or delete. A claim rejected for a wrong figure
+cannot be re-submitted: "There is already a rejected overtime request for that day." Leave has
+`cancelLeave`; overtime has no equivalent.
+
+### 11.8 Attendance feeds nothing into payroll
+
+`packages/core/src/payroll.ts:186` — `hr.attendance` is read once in the whole module, to count draft
+days, and the count is used only in an audit payload. So: an `is_absent` day does not reduce pay,
+lateness and short days do not, and `approved_ot_minutes` on the attendance row is ignored — only the
+separately approved overtime request is paid. Finalising attendance is, as far as payroll is
+concerned, ceremonial. Both modules' comments claim otherwise.
+
+### 11.9 Incomplete, HR
+
+- **An appraisal cycle cannot be closed.** `'closed'` is in the type and the CHECK constraint, and
+  nothing writes it. There is also no way to send a review back for revision.
+- **`statutorySummary` is on no screen** — called only from its test. The monthly EPF/SOCSO/EIS/PCB
+  return figures cannot be produced by a user, though `OPEN_QUESTIONS.md` lists the summary as
+  working.
+- **Inconsistent refusal on the overtime rate.** The module refuses to guess the Employment Act
+  multiple and silently picks the 208-hour divisor that converts monthly salary to hourly. Both
+  halves of the product are equally unsourced; one refuses and one guesses, and the guess is stamped
+  into the payslip basis line as though established.
+- **A staged import cannot be re-resolved** after an unmapped device number is fixed: the staged rows
+  keep `employee_id = NULL`, and confirm writes only matched rows. The file must be discarded and
+  re-uploaded, and no screen says so.
+- **`attendanceToday` and `leaveForEmployee`** have no callers and are not exported from the barrel.
+
+### 11.10 Privacy
+
+`payroll.ts:756`, `:812`, `:955` — `netTotal` reaches the audit table unmasked. `redact()` masks
+`net_pay` and `gross_pay`, not `nettotal`. On a single-employee run — which is the documented
+correction path — the audit row is that person's net pay in the clear.
+
+Everything else in HR checks out and was verified: the NRIC and bank account are truncated *and*
+masked, `getEmployeeSensitive` records the field names and the stated reason and never the values,
+and the payslip path receives only the last four digits.
+
+---
+
+## 12. The public site (`apps/web`)
+
+### 12.1 There is no enquiry form anywhere on the site
+
+`apps/web/src/pages/Contact.tsx` renders a consultant roster and four contact cards. There is no
+name, email or message field and no submit button. **Every primary call to action on the site points
+here** — "Start Investigation", "Book Consultation", "Engage this discipline", and every Contact
+link. A visitor who clicks the main CTA arrives somewhere they can only leave the site for WhatsApp
+or open a mail client.
+
+`apps/web/src/data.ts:322` — `SERVICE_OPTIONS`, the six service titles, is exported and referenced by
+**zero** components. It is the dropdown source for the form that was never built, which is what makes
+this outstanding work rather than a deliberate omission.
+
+Confirmed by sweep: zero `<form>`, zero `onSubmit`, zero `fetch`, zero `FormData` in the whole site.
+So nothing a visitor types is silently discarded — because there is nowhere to type anything. The
+only data-out channels are `mailto:`, `tel:` and `wa.me`.
+
+### 12.2 A soft 404 on every unknown URL
+
+`apps/web/src/App.tsx:59` — `<Route path="*" element={<Home />} />`, and `vercel.json` rewrites
+everything to `index.html`. So any nonexistent URL returns **HTTP 200 with homepage content** and a
+canonical pointing at the site root. Search engines will index arbitrary URLs as the homepage. There
+is no 404 page. The "Discipline not found" panel for a bad service id renders no `<Seo>` either, so
+the tab keeps whatever title the previous route left.
+
+### 12.3 Accessibility barriers that stop people
+
+- **The mobile drawer and the "Book Consultation" dropdown stay in the tab order while closed**
+  (`Navbar.tsx:143`, `:101`) — hidden with `max-h-0 opacity-0` and `pointer-events-none`, neither of
+  which removes focus. A keyboard or screen-reader user tabbing past the brand lands on seven
+  invisible links, on every page. Neither control has `aria-expanded` or `aria-controls`, and the
+  panels have no `aria-hidden`, so a screen reader is never told the menu opened.
+- **The address dialog is not a dialog** (`AddressModal.tsx:31`): no `role`, no `aria-modal`, no
+  accessible name, and focus is never moved into it or trapped. Escape closes it, but Tab walks the
+  page underneath an opaque overlay.
+- **The splash screen runs ~5.2 seconds on every page load**, full-screen at `z-[100]`, with no skip
+  and no click or key dismissal (`SplashScreen.tsx:163`). Reduced motion shortens it to ~1.6 s, which
+  is the right instinct; nobody else can get past it. It also emits a second `<h1>` that coexists
+  with each page's real one.
+- **The four footer social links contain only an icon** with `aria-hidden="true"` and no label, so a
+  screen reader announces four unnamed links on every page. The services search input has no label
+  either, and its clear button has no accessible name.
+
+### 12.4 Content
+
+- **The LinkedIn button is `href="#"`** with `target="_blank"` — it opens a second tab of the current
+  page. Visible site-wide.
+- **The search hint suggests a term that matches nothing.** `Services.tsx:61` suggests "ROI"; the word
+  appears nowhere in `data.ts`.
+- **Mr Shiva's role contradicts his own blurb** — `data.ts:52` says "Managing Director", the blurb two
+  lines later says "as a Senior Consultant". Both show on the same card.
+- **A CTA paragraph is parked in the wrong section** (`WhyCAC.tsx:106`) with no link attached.
+- **`group-hover: glow-gold`** (`Navbar.tsx:51`) — a stray space breaks the variant, so the brand halo
+  is always on.
+- **Per-consultant contact details are declared and never built** — `TeamMember` has optional phone
+  and email fields with a documented fallback; `Contact.tsx` renders neither.
+- **Four unused assets**, including `property.lottie` — an animation that was cut.
+- **`sitemap.xml` has a hand-written `lastmod` of 2026-08-20** and is not regenerated by the build.
+
+Verified good: all 26 asset paths resolve, all routes and internal links resolve, every icon name
+exists, WhatsApp/tel/mailto links are well-formed, the build is clean with zero warnings, all 12
+routes prerender with unique complete metadata, and the six services and seven process stages are
+internally consistent everywhere they appear.
+
+---
+
+## 13. What remains unaudited
+
+**Estate cases and the case agent (Phases 9 and 11).** The auditor for this slice was cut by the
+usage limit twice before producing anything. Not audited: the three-valued rule engine's edge cases,
+the recomputation invariants, whether every read of `estate.case` and its children is scoped by
+`caseAccessClause`, and the preparation-pack PDF's layout limits.
+
+What is known about it: 79 tests cover the rule engine's three-valued logic, the recomputation
+invariants and the access scoping, and all pass. The browser pass rendered every case screen
+cleanly. That is not the same as an adversarial read, and the accounting and auth slices are the
+proof — both were fully tested and both had defects that only a read found.
+
+## 14. Honest summary of severity
+
+The platform's **deliberate refusals all hold**: nothing fabricates a statutory rate, a legal
+requirement, a malware verdict or an embedding. Those were the hard parts and they are sound.
+
+What the audit found instead is a consistent pattern: **the gaps are between correct pieces.** A cap
+enforced in one function and not on the path that edits the same row. A maker/checker pair declared
+in one file and not honoured in another. A capability granted to the one role that needs it, on a
+route gated by a different one. Attendance finalised for a payroll that never reads it. Four fields
+read from today's row in a module built to be reproducible.
+
+Every one of those is invisible to a unit test of either piece, and every one of them is the kind of
+defect that reaches production in a system this size.

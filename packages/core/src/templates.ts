@@ -45,7 +45,32 @@ export interface TemplateAnalysis {
 }
 
 const PLACEHOLDER = /\{\{\s*([A-Za-z0-9_.]+)\s*\}\}/g;
-const BLOCK = /\{\{\s*(#if|\/if|else)\s*([A-Za-z0-9_.]*)\s*\}\}/g;
+
+/**
+ * A conditional marker.
+ *
+ * The negative lookahead is load-bearing. Without it `\s*` let the keyword run straight into an
+ * ordinary name: `{{elsewhere}}` parsed as `{{else}}` followed by `where`, `{{else_note}}` as
+ * `{{else}}` plus `_note`, and `{{#ifactive}}` as a conditional on `active`. The consequences were
+ * all silent — a declared variable called `elsewhere` was treated as a branch marker, and an
+ * undeclared placeholder next to one was swallowed before the undeclared check could see it, which
+ * is the single failure this module exists to prevent.
+ */
+const BLOCK = /\{\{\s*(#if|\/if|else)(?![A-Za-z0-9_.])\s*([A-Za-z0-9_.]*)\s*\}\}/g;
+
+/** Anything in double braces at all, so a construct that is neither can be refused by name. */
+const ANY_TAG = /\{\{[^}]*\}\}/g;
+
+/**
+ * The same two shapes, anchored and without the global flag.
+ *
+ * Separate patterns rather than reusing the two above, because `.test()` on a global regex advances
+ * its `lastIndex` — and `String.prototype.matchAll` copies `lastIndex` from the regex it is given,
+ * so testing with PLACEHOLDER or BLOCK here would silently make the structural walk below start
+ * part-way through the body.
+ */
+const ONE_PLACEHOLDER = /^\{\{\s*[A-Za-z0-9_.]+\s*\}\}$/;
+const ONE_BLOCK = /^\{\{\s*(?:#if\s+[A-Za-z0-9_.]+|else|\/if)\s*\}\}$/;
 
 /**
  * Reads a template without rendering it.
@@ -90,6 +115,19 @@ export function analyseTemplate(body: string, declared: TemplateVariable[]): Tem
  * is exactly the kind of failure that reaches a recipient.
  */
 export function validateTemplateBody(body: string): void {
+  // Malformed tags first, so the error names the real problem. `{{#ifactive}}` — a missing space —
+  // matches neither a placeholder nor a block, and if the structural check ran first it would
+  // complain about an unmatched {{/if}} instead of the typo that caused it. Before this existed the
+  // tag survived every stage and was rendered literally into a document somebody signed.
+  for (const [tag] of body.matchAll(ANY_TAG)) {
+    if (ONE_PLACEHOLDER.test(tag) || ONE_BLOCK.test(tag)) continue;
+    throw new ValidationError(
+      `"${tag}" is not something this engine understands. A placeholder is {{name}}; a conditional ` +
+        "is {{#if name}} … {{else}} … {{/if}}, and the space after #if is required.",
+      "body",
+    );
+  }
+
   let depth = 0;
   let seenElseAtDepth: number[] = [];
 
@@ -125,6 +163,7 @@ export function validateTemplateBody(body: string): void {
       "body",
     );
   }
+
 }
 
 export interface RenderOptions {
@@ -160,8 +199,23 @@ export function renderTemplate(
 
   const byKey = new Map(declared.map((variable) => [variable.key, variable]));
 
+  // Conditionals first, innermost outwards, so a placeholder inside a branch that was not taken is
+  // gone before anything asks whether it has a value.
+  //
+  // The order matters and used to be the other way round, which made the module's own shipped
+  // example unusable: an appointment letter declaring `car_allowance` inside
+  // `{{#if has_car_allowance}}` refused to generate whenever the allowance did not apply, because
+  // a figure that is not in the letter was being demanded. Marking it optional only moved the
+  // failure — the clause then rendered as "a car allowance of RM  per month".
+  let rendered = resolveConditionals(body, values);
+
+  // What the document will actually say, so "required" means required *here*.
+  const surviving = new Set<string>();
+  for (const [, key] of rendered.matchAll(PLACEHOLDER)) surviving.add(key);
+
   const missing = declared
     .filter((variable) => variable.required !== false)
+    .filter((variable) => surviving.has(variable.key))
     .filter((variable) => {
       // A boolean's falsity is a value; everything else has to be present.
       if (variable.type === "boolean") return values[variable.key] === undefined;
@@ -177,10 +231,6 @@ export function renderTemplate(
       "values",
     );
   }
-
-  // Conditionals first, innermost outwards, so a placeholder inside a false branch is
-  // removed before it is ever looked up.
-  let rendered = resolveConditionals(body, values);
 
   rendered = rendered.replace(PLACEHOLDER, (_whole, key: string) => {
     const variable = byKey.get(key);

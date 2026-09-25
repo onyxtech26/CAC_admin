@@ -587,3 +587,52 @@ describe("the property the phase exists for", () => {
     ).rejects.toThrow(/cannot be deleted/);
   });
 });
+
+// ---------------------------------------------------------------------------
+describe("the template engine's tag parsing, after the audit", () => {
+  const declared: TemplateVariable[] = [
+    { key: "name", label: "Name", type: "text" },
+    { key: "elsewhere", label: "Elsewhere", type: "text" },
+    { key: "active", label: "Active", type: "boolean", required: false },
+    { key: "amount", label: "Amount", type: "money" },
+  ];
+
+  it("treats a variable whose name begins with a keyword as a variable", () => {
+    // `{{elsewhere}}` used to parse as `{{else}}` followed by the text "where", which made a
+    // declared variable behave as a branch marker and swallowed whatever sat beside it.
+    expect(renderTemplate("Dear {{name}}, see {{elsewhere}}.", declared, {
+      name: "Aishah",
+      elsewhere: "the schedule",
+      amount: "1",
+    })).toBe("Dear Aishah, see the schedule.");
+  });
+
+  it("refuses a conditional with no space after #if, rather than printing it", () => {
+    // This matched neither a placeholder nor a block, so it survived every check and was
+    // rendered literally into a signed document.
+    expect(() => validateTemplateBody("{{#ifactive}}x{{/if}}")).toThrow(
+      /not something this engine understands/,
+    );
+    expect(() => validateTemplateBody("{{ #if active }}x{{/if}}")).not.toThrow();
+  });
+
+  it("does not demand a value for a figure the letter does not contain", () => {
+    const body = "Dear {{name}}.{{#if active}} Allowance RM {{amount}}.{{/if}}";
+
+    // The branch is not taken, so the figure is not in the letter and is not asked for.
+    expect(renderTemplate(body, declared, { name: "Aishah", active: false })).toBe("Dear Aishah.");
+
+    // Taken, and now it is required — which is the whole point of the flag.
+    expect(() => renderTemplate(body, declared, { name: "Aishah", active: true })).toThrow(
+      /Amount has no value/,
+    );
+  });
+
+  it("still refuses an undeclared placeholder inside a branch that is not taken", () => {
+    // The check that the parsing bug was defeating. It runs over the whole body on purpose:
+    // the untaken branch is the one that surprises somebody later.
+    expect(() =>
+      renderTemplate("{{#if active}}{{mystery}}{{/if}}", declared, { name: "x", amount: "1" }),
+    ).toThrow(/not declared/);
+  });
+});
