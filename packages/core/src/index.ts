@@ -40,3 +40,8 @@ export * from "./case-rules.js";
 export * from "./cases.js";
 export * from "./case-file.js";
 export * from "./case-checklist.js";
+export * from "./scanning.js";
+export * from "./extraction.js";
+export * from "./chunking.js";
+export * from "./embeddings.js";
+export * from "./library.js";

@@ -91,7 +91,7 @@ export const NAVIGATION: NavSection[] = [
   },
   {
     heading: "Documents",
-    items: [{ label: "Document library", href: "/documents", capabilities: ["doc.view"], phase: 10 }],
+    items: [{ label: "Document library", href: "/documents", capabilities: ["doc.view"] }],
   },
   {
     heading: "Administration",

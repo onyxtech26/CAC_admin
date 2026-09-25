@@ -9,6 +9,13 @@ const config: NextConfig = {
   // files are not there, so every PDF fails with ENOENT on Helvetica.afm.
   serverExternalPackages: ["@electric-sql/pglite", "@node-rs/argon2", "pg", "pdfkit"],
   poweredByHeader: false,
+  experimental: {
+    // A document upload goes through a server action, and the default limit on an
+    // action's body is 1 MB — so without this every scanned certificate over that size
+    // fails with an error that says nothing about size. Matched to MAX_UPLOAD_BYTES in
+    // @cac/core, which is where the limit is actually enforced and explained.
+    serverActions: { bodySizeLimit: "26mb" },
+  },
   webpack(config, { isServer }) {
     if (isServer) {
       // These carry native .node binaries or WASM. transpilePackages makes

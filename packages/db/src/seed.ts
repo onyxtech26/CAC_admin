@@ -177,6 +177,7 @@ const SEQUENCES = [
   { key: "payroll", prefix: "PR" },
   { key: "letter", prefix: "LTR" },
   { key: "case", prefix: "CASE" },
+  { key: "document", prefix: "DOC" },
 ];
 
 export async function seed(db?: Database): Promise<void> {

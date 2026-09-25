@@ -394,4 +394,19 @@ export const AUDIT = {
   CASE_DOCUMENT_UPDATED: "CASE_DOCUMENT_UPDATED",
   CASE_DOCUMENT_REMOVED: "CASE_DOCUMENT_REMOVED",
   CASE_EVENT_RECORDED: "CASE_EVENT_RECORDED",
+
+  // Phase 10 — the document library.
+  //
+  // DOCUMENT_SCANNED and DOCUMENT_RELEASED are deliberately different actions. The first
+  // records a scanner's verdict; the second records a person deciding to proceed without
+  // one. Conflating them would lose exactly the distinction the pipeline exists to keep.
+  DOCUMENT_REGISTERED: "DOCUMENT_REGISTERED",
+  DOCUMENT_SCANNED: "DOCUMENT_SCANNED",
+  DOCUMENT_RELEASED: "DOCUMENT_RELEASED",
+  DOCUMENT_CLASSIFIED: "DOCUMENT_CLASSIFIED",
+  DOCUMENT_EXTRACTED: "DOCUMENT_EXTRACTED",
+  /** A document left the platform. The moment worth recording. */
+  DOCUMENT_DOWNLOADED: "DOCUMENT_DOWNLOADED",
+  DOCUMENT_ARCHIVED: "DOCUMENT_ARCHIVED",
+  DOCUMENT_DELETED: "DOCUMENT_DELETED",
 } as const;

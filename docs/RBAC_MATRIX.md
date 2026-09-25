@@ -149,6 +149,12 @@ platform is given a business role *as well*, by somebody else, and the trail sho
 6. **Legal approval cannot be delegated.** `case.document.approve` and
    `case.rule.approve` sit only with `LAWYER_OR_AUTHORISED_REVIEWER` (and `DIRECTOR`).
    **Who holds this in reality is unresolved — Q-LEGAL-1.**
+7. **Releasing a file from quarantine is not an upload.** `doc.archive` is what releases a
+   document no scanner has looked at, and it sits with `CASE_MANAGER` and `DIRECTOR` — not
+   with everybody who holds `doc.upload`. A released document is recorded as *released
+   unscanned*, never as clean.
+8. **`doc.delete` destroys an original.** It sits with `DIRECTOR` alone. Everybody else
+   archives, which keeps the bytes and only removes the document from search.
 
 ---
 

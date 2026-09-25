@@ -457,6 +457,76 @@ Upload → malware scan → checksum → classify → OCR where needed → extra
 embed → index. Provenance on every chunk (document, page, method, confidence). Originals
 retained immutably. Hybrid retrieval, permission-filtered in SQL.
 
+**Exit:** a document's route through the pipeline is visible and explains itself, every
+retrieved passage says where it came from and how the text was obtained, and nothing
+claims to have done a step it did not do.
+
+**Delivered, and three of its dependencies are absent by design.** The pipeline, the
+immutable originals, the chunking, the provenance and full-text retrieval are built and
+tested. 61 tests; 627 across the suite.
+
+**Nothing says a file is clean unless a scanner said so.** An uploaded file is
+checksummed from the bytes received and stored in quarantine, where it cannot be
+downloaded, read, extracted or indexed — enforced by trigger as well as in the pipeline.
+`ClamAvScanner` is real and speaks clamd's INSTREAM protocol; `NotConfiguredScanner` is
+what is installed, and it refuses. A scanner that cannot answer produces `scan_failed`,
+which is not clean. An infected verdict is final: the database refuses to move that row
+to any other status, and no capability releases it.
+
+The escape hatch for a firm with no scanner is a deliberate *release*, which takes
+`doc.archive`, takes a reason of at least a sentence, is audited, and marks the document
+`released_unscanned` permanently. Nothing afterwards ever calls it clean, search excludes
+it unless asked, and the screens say so. **There is no stub that reports clean**, for the
+same reason there is no e-Invoice mock that reports validated.
+
+**Extraction either reads the file or declines.** Plain text, CSV, Markdown, JSON, XML and
+HTML are read directly; DOCX is read from its own `<w:t>` text runs, which is exact rather
+than heuristic. **PDF is refused.** Parsing a PDF text layer correctly means resolving
+font encodings including CID fonts, and done imperfectly it produces text that is
+*plausible and wrong* — transposed characters, lost diacritics — on a document that may be
+produced in evidence. Many of these files are scans with no text layer at all. So a PDF or
+an image is `needs_ocr`, the reason is on the document, and `NotConfiguredOcrEngine`
+refuses rather than returning a blank page that would be indexed as a blank document.
+
+**Provenance on every passage.** A chunk carries its document, page range, character span
+into the extracted text, the method that produced the text and that method's confidence.
+A chunk spanning a certain page and an OCR'd one takes the *weaker* claim, because a
+passage is only as reliable as its least reliable part. Chunk text and provenance are
+immutable by trigger: rechunking deletes and rewrites, which is visible.
+
+**Search works, and says what it is.** Two generated tsvectors per chunk — `english`,
+which stems, and `simple`, which does not. PostgreSQL ships no Malay configuration, so
+Malay is matched on exact tokens by the `simple` vector while English also benefits from
+stemming; a query runs against both, and a test proves a Malay phrase is found. Results
+are permission-filtered *in the query*: a case document is invisible to somebody not
+assigned to that matter, including through search. Every result reports `strategy:
+"lexical"` and a note saying semantic search is unavailable, because a search that implied
+otherwise would make an empty result look like an answer.
+
+Alongside the hits, search returns the documents whose text **nobody can search**, with
+the reason for each. "Not found" and "never read" are different answers, and a library
+that conflates them loses documents quietly.
+
+**Embeddings are wired and absent.** `NotConfiguredEmbeddingProvider` refuses, and the
+document records `not_configured` rather than `failed` — nothing is broken, something is
+absent. A fabricated vector would produce a search that returns ranked, plausible,
+unrelated results, which is worse than one that returns nothing.
+
+**Two bugs and one real gap the work found.** The trigger that keeps a chunk's evidence on
+the same case as the chunk was written as one function parameterised by `TG_ARGV`;
+plpgsql plans the whole expression, so it failed at runtime on whichever table lacked the
+other column. Split in two. The ingestion log's no-delete trigger blocked the cascade when
+a document is destroyed — the log describes a document and does not outlive it, so DELETE
+is allowed and `audit.event` is the record that survives. And **`doc.archive` and
+`doc.delete` were capabilities held by no role at all**: nobody could archive a document
+or destroy an original. `doc.archive` now sits with `CASE_MANAGER` and `DIRECTOR`,
+`doc.delete` with `DIRECTOR` alone, and `docs/RBAC_MATRIX.md` says why.
+
+**Not authored here.** The scanner, the OCR engine and the embedding model. Each is a
+configured dependency with a refusing default, and choosing the last two is not only
+technical: these documents hold identifiable people's data, and whether it may be sent to
+a third party or leave the country is Q-AI-1 and Q-DATA-2.
+
 ---
 
 ## Phase 11 — AI case agent *(needs Q-LEGAL-2)*

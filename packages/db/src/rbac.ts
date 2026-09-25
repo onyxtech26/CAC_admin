@@ -213,6 +213,9 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     "hr.letter.approve", "hr.statutory.manage", "hr.appraisal.review",
     ...readOnlyOf("case."), "case.view_all", "case.agent.run",
     "case.document.approve", "case.rule.approve",
+    // The library. `doc.delete` destroys an original and sits here alone: it is the one
+    // operation in the document pipeline that cannot be undone.
+    "doc.view", "doc.download", "doc.archive", "doc.delete",
     "admin.settings.manage", "audit.view", "audit.export",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],
@@ -275,7 +278,10 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     // and signing off a legal document belong to the authorised reviewer and the
     // director (Q-LEGAL-1). `has()` alone would hand both over.
     ...has("case.").filter((key) => key !== "case.rule.approve" && key !== "case.document.approve"),
-    "doc.view", "doc.upload", "doc.download", "template.view",
+    // Runs the library day to day, including archiving and releasing a file from
+    // quarantine when no scanner is configured — which is deliberately not held by
+    // everybody who can upload.
+    "doc.view", "doc.upload", "doc.download", "doc.archive", "template.view",
     "accounting.invoice.view", "hr.overtime.approve", "hr.leave.approve",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],
