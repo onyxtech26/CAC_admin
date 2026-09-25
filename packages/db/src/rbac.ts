@@ -140,9 +140,6 @@ export const PERMISSIONS = {
     ["doc.download", "Download documents"],
     ["doc.delete", "Delete documents"],
     ["doc.archive", "Archive documents"],
-    ["template.view", "View templates"],
-    ["template.manage", "Create and amend templates"],
-    ["template.approve", "Approve a template version"],
   ],
   admin: [
     ["admin.user.manage", "Create, suspend and amend user accounts"],
@@ -281,7 +278,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     // Runs the library day to day, including archiving and releasing a file from
     // quarantine when no scanner is configured — which is deliberately not held by
     // everybody who can upload.
-    "doc.view", "doc.upload", "doc.download", "doc.archive", "template.view",
+    "doc.view", "doc.upload", "doc.download", "doc.archive",
     "accounting.invoice.view", "hr.overtime.approve", "hr.leave.approve",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],
@@ -290,7 +287,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     "case.view", "case.edit", "case.document.upload", "case.document.view",
     "case.document.download", "case.document.generate", "case.task.view",
     "case.agent.run", "case.checklist.manage", "case.rule.view",
-    "doc.view", "doc.upload", "doc.download", "template.view",
+    "doc.view", "doc.upload", "doc.download",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],
 
@@ -298,7 +295,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     ...readOnlyOf("case."), "case.view_all", "case.agent.run",
     "case.document.generate", "case.document.approve",
     "case.fact.verify", "case.rule.propose", "case.rule.approve",
-    "doc.view", "doc.download", "template.view", "template.approve",
+    "doc.view", "doc.download",
   ],
 
   EMPLOYEE: [
@@ -335,4 +332,12 @@ export const MAKER_CHECKER_PAIRS: ReadonlyArray<readonly [string, string]> = [
   // Writing down a legal requirement and attesting that it is the law are two acts,
   // and never the same person's on the same rule.
   ["case.rule.propose", "case.rule.approve"],
+  // Completed in Phase 13. Each of these pairs already existed in the catalogue and was
+  // enforced per record by requireDifferentApprover; what was missing was the declaration, so
+  // the pairing lived in the code that happened to call it and nowhere else.
+  ["accounting.quotation.create", "accounting.quotation.approve"],
+  ["accounting.receipt.create", "accounting.receipt.approve"],
+  ["accounting.po.create", "accounting.po.approve"],
+  ["accounting.pettycash.create", "accounting.pettycash.approve"],
+  ["hr.letter.generate", "hr.letter.approve"],
 ];

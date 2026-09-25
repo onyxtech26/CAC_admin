@@ -56,7 +56,13 @@ Format: `<domain>.<entity>.<action>`.
 `case.task.{view,manage}` · `case.agent.run` · `case.document.{generate,approve}` ·
 `case.fact.verify` · `case.rule.{view,propose,approve}`
 
-**Documents** — `doc.{view,upload,download,delete,archive}` · `template.{view,manage,approve}`
+**Documents** — `doc.{view,upload,download,delete,archive}`
+
+> The `template.*` family was removed in Phase 13. It gated nothing: employment letter
+> templates are governed by `hr.letter.{generate,approve}` and case document templates by
+> `case.document.{generate,approve}`, which is what the code checks. A capability that grants
+> access to nothing is a false statement in this matrix — somebody reading it would think
+> template access were controlled separately.
 
 **Admin / audit** — `admin.user.manage` · `admin.role.manage` · `admin.settings.manage` ·
 `admin.integration.manage` · `audit.view` · `audit.export`

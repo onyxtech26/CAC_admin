@@ -24,3 +24,6 @@ packages/db/.data.owner.json
 
 # TypeScript incremental build state
 *.tsbuildinfo
+
+# Local backups taken by `pnpm --filter @cac/db backup`
+.backups/

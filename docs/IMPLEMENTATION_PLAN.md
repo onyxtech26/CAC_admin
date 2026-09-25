@@ -687,6 +687,89 @@ Penetration-style permission testing · performance · backup and **tested resto
 monitoring · UAT · production cutover. `docs/BACKUP_AND_RECOVERY.md` is written here and
 the restore is actually performed, not just documented.
 
+**Exit:** the restore has been performed, every route is guarded, and what is not ready for
+cutover is written down rather than glossed.
+
+**Delivered.** 31 tests; 711 across the suite. `docs/BACKUP_AND_RECOVERY.md` and
+`docs/HARDENING.md`.
+
+**The restore was actually performed, and is performed again on every test run.**
+`backup.test.ts` backs up a populated database — an employee with an encrypted NRIC, a case
+with parties and a valued asset, an audit trail, live sequence counters — restores it into a
+separate instance, and checks what came back. Three of its checks are the ones a naive
+restore test omits, and each exists because a restore can return data and still leave a
+broken database: **the triggers** (a restore without them is a restore into a database that
+will let somebody edit the audit trail), **the numbering counters** (or the next case
+reissues a number that already exists), and **the ciphertext** (byte-identical, or the key
+stops matching what is stored and nobody notices until a statutory filing needs the number).
+
+`pnpm db:backup` and `pnpm db:backup:verify` do it by hand; `verify` restores into a
+temporary database, compares against the manifest, and throws the copy away — it cannot
+touch the live one, which is what makes rehearsing it routine rather than frightening. Both
+have been run against the development database; the output is in the document.
+
+Every backup carries a manifest — when, which migration, the archive's SHA-256, and row
+counts — and a restore verifies the checksum before it starts. A truncated archive that
+half-restores is worse than one that refuses, because half a database is indistinguishable
+from a whole one until somebody looks for a row that is not there. The document also states
+plainly that **the encryption key is not in the backup**, and that a restore without it
+produces a database whose identity fields cannot be read.
+
+**Permission testing in three halves**, because no one of them is sufficient. The runtime
+half is per module and already existed: a holder succeeds, a non-holder is refused by the
+server, scope is honoured, maker and checker cannot be the same person on the same record.
+
+The structural half is new, and it is where the defects were. `hardening.test.ts` asks
+questions no single module can, and **found four real ones — all in the permission model
+rather than in a feature**:
+
+- `doc.archive` and `doc.delete` were defined, checked in code, and granted to no role at
+  all, so nobody could archive a document or destroy an original.
+- Five maker/checker relationships existed in the catalogue and were undeclared —
+  quotation, receipt, purchase order, petty cash and employment letters. The pairing lived
+  in whichever function happened to call `requireDifferentApprover` and nowhere else.
+- `CASE_MANAGER` held both legal approvals, contradicting `docs/RBAC_MATRIX.md`.
+- A `template.*` family of three capabilities gated nothing at all. Removed in migration
+  0026: a capability that grants access to nothing is a false statement in the matrix
+  somebody reads to decide who may do what.
+
+The route half is `scripts/check-route-guards.mjs`: **94 routes checked, every one guarded
+server-side**, with five deliberately public and each carrying its reason in the script. It
+catches what the runtime tests cannot — a new page that simply forgets to ask, because the
+author copied a file and deleted the wrong line. It first reported two failures that were
+the script's own fault, and the reason is worth having written down: a file-serving route
+handler legitimately answers 401 or 403 rather than redirecting, because redirecting a PDF
+download to `/login` produces an HTML page with a `.pdf` filename.
+
+**Performance measured, with the plan when asked for.** 400 matters, 2,000 assets, 1,600
+documents, 19,200 indexed passages. The case list runs in 4 ms, a permission-filtered
+ranked full-text search in 28 ms, and the pathological case — a term appearing in every
+passage — in 41 ms. Nothing is quadratic. The figures are explicitly *not* offered as a
+prediction of production: they are measured against PostgreSQL in WebAssembly, which is
+slower than a real server by a constant factor, and that is useful precisely because of it.
+
+One measurement was wrong before it was right, and the document says so. The first run
+reported the search at 197 ms; the cause was a synthetic corpus in which every passage held
+identical text, so every query matched all 19,200 rows and the probe was timing *ranking*
+rather than searching. A benchmark that is accidentally degenerate reports a problem that
+does not exist, and acting on it would have meant optimising something that was never slow.
+
+**Monitoring that does not double as reconnaissance.** `GET /api/health` answers `{"ok":true}`
+to anybody and the detail only to `admin.settings.manage` — schema version, a handful of
+counts, and which of the four configured-elsewhere dependencies are actually present. That
+last field matters here more than anywhere: the scanner, the OCR engine, the embedding model
+and the drafting assistant are each absent by design and each refuses rather than
+pretending, so a deployment that silently lost its scanner configuration would otherwise
+look identical to one that never had any.
+
+**UAT and cutover are stated, not claimed.** `docs/HARDENING.md` lists what a tester can
+exercise end to end today, and — in the same table — what is blocked and by which open
+question. Half of "the system does not do X" turns out to be "X is a decision nobody has
+made yet", and discovering that during UAT wastes the tester's day. Cutover is a checklist
+with nine blocking conditions, five of them technical and four of them about real data, and
+it has deliberately **not** been performed: PGlite behind a single instance is correct for
+development and is not a production posture.
+
 ---
 
 ## Sequencing notes

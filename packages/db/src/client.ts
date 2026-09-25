@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import * as schema from "./schema/index.js";
+import type { DumpableDatabase } from "./backup.js";
 import { DatabaseInUseError, claimDirectory, releaseDirectory } from "./lock.js";
 
 /**
@@ -170,6 +171,25 @@ export async function createTestDb(): Promise<{ db: Database; close: () => Promi
   await mem.waitReady;
   const db = drizzlePglite(mem, { schema });
   return { db, close: () => mem.close() };
+}
+
+/**
+ * A test database whose engine handle is returned as well.
+ *
+ * `createTestDb` deliberately hides the engine — a test should talk to Drizzle. The backup tests
+ * are the exception: taking a backup is an engine operation, so they need the instance. Returned
+ * as `DumpableDatabase` rather than `PGlite` so nothing outside this package has to import the
+ * engine to use it.
+ */
+export async function createRestorableTestDb(): Promise<{
+  pglite: DumpableDatabase;
+  db: Database;
+  close: () => Promise<void>;
+}> {
+  const mem = new PGlite();
+  await mem.waitReady;
+  const db = drizzlePglite(mem, { schema });
+  return { pglite: mem, db, close: () => mem.close() };
 }
 
 export async function closeDb(): Promise<void> {
