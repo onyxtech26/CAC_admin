@@ -5,7 +5,9 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-    "types": ["node"],
+    // vite/client declares import.meta.env, which src/staff-entry.ts reads for the staff
+    // login URL. Without it the build works (Vite substitutes it) and the typecheck does not.
+    "types": ["node", "vite/client"],
 
     /* Bundler mode */
     "moduleResolution": "bundler",

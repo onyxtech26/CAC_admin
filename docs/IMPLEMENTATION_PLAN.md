@@ -772,6 +772,26 @@ development and is not a production posture.
 
 ---
 
+## The staff entrance on the public site
+
+CAC asked for a double-click on HOME to open the staff login, alongside the sentence that matters
+more than the gesture: **security must never depend upon the login page being hidden.** Both are
+true in `apps/web/src/staff-entry.ts`.
+
+A double-click on the brand and on the footer's "Home" navigates to the staff login. There is no
+visible link, because the public site is for CAC's clients and a staff entrance in the footer
+invites people to try it — but that is tidiness, not security. The login is an ordinary URL: typing
+it works, bookmarking it works, and a keyboard user who cannot double-click is told the address
+rather than shut out. What protects the platform is the session, the second factor, the capability
+check on every route and the server-side guard on every page — all of which are tested, and none of
+which depends on the URL being unadvertised.
+
+Where the staff app lives is a deployment question (Q-INFRA-1), so `VITE_STAFF_LOGIN_URL` is a
+build-time variable. It defaults to `/staff/login`, which assumes both applications behind one
+origin — the arrangement that needs no cross-origin cookie.
+
+---
+
 ## Sequencing notes
 
 - **Phases 1–4** (accounting) and **5–8** (HR) are independent after Phase 1. If CAC has

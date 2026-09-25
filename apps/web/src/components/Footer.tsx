@@ -4,6 +4,7 @@ import { Icon } from "./Icon";
 import { LogoMark } from "./ui";
 import { CONTACT, NAV, SERVICES, TAGLINES, waLink } from "../data";
 import { AddressModal } from "./AddressModal";
+import { staffEntryProps } from "../staff-entry";
 
 export default function Footer() {
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -50,7 +51,17 @@ export default function Footer() {
         <div className="lg:col-span-2">
           <p className="font-mono text-[11px] uppercase tracking-wide-2 text-gold-2/70">Navigate</p>
           <ul className="mt-5 space-y-3 text-sm">
-            <li><Link to="/" className="text-stone transition hover:text-gold-2">Home</Link></li>
+            {/* The literal "HOME" CAC asked for: a double-click opens the staff login.
+                A convenience, not a control — see src/staff-entry.ts. */}
+            <li>
+              <Link
+                to="/"
+                className="text-stone transition hover:text-gold-2"
+                {...staffEntryProps()}
+              >
+                Home
+              </Link>
+            </li>
             {NAV.map((n) => (
               <li key={n.to}><Link to={n.to} className="text-stone transition hover:text-gold-2">{n.label}</Link></li>
             ))}

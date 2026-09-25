@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { Icon } from "./Icon";
 import { LogoMark } from "./ui";
 import { CONTACT, NAV, waLink } from "../data";
+import { staffEntryProps } from "../staff-entry";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -40,8 +41,11 @@ export default function Navbar() {
       }`}
     >
       <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-6 px-5 py-3.5 lg:px-8">
-        {/* Brand */}
-        <Link to="/" className="group flex items-center gap-3">
+        {/* Brand — and the staff entrance.
+            A double-click here opens the staff login. It is a convenience, not a control:
+            the login is an ordinary URL and nothing about the platform's security depends
+            on it being unadvertised. See src/staff-entry.ts. */}
+        <Link to="/" className="group flex items-center gap-3" {...staffEntryProps()}>
           <span className="relative">
             <LogoMark size={46} />
             <span className="absolute -inset-1 rounded-full blur-md transition group-hover: glow-gold" />
