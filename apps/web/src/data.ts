@@ -54,7 +54,7 @@ export const TEAM: TeamMember[] = [
     img: "/assets/team-03.webp",
     blurb: [
       "Our Managing Director holds a qualification in Electro-Mechanical Engineering from Singapore and has extensive experience across various professional fields. Throughout his career, he has developed strong expertise in human relationships, communication, negotiation, and problem-solving.",
-      "His involvement in complex family disputes, inheritance matters, and property-related conflicts led him to specialise in Property Forensic Investigation. With 26 years of experience in the field and as a Senior Consultant, he has assisted clients in resolving various property and inheritance disputes through investigation, analysis, and practical solutions.",
+      "His involvement in complex family disputes, inheritance matters, and property-related conflicts led him to specialise in Property Forensic Investigation. With 26 years of experience in the field, he has assisted clients in resolving various property and inheritance disputes through investigation, analysis, and practical solutions.",
     ],
   },
   {

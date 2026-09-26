@@ -9,6 +9,15 @@ export default function ServiceDetail() {
   const idx = SERVICES.findIndex((s) => s.id === serviceId);
   if (idx === -1) {
     return (
+      <>
+        {/* This panel used to emit no metadata at all, so the tab kept whatever title the previous
+            route had left and a crawler was free to index a nonexistent discipline. */}
+        <Seo
+          title="Discipline not found · CAC"
+          description="That discipline is not in the current catalogue."
+          path={`/services/${serviceId ?? ""}`}
+          noindex
+        />
       <section className="grid min-h-[70vh] place-items-center px-5 pt-32 text-center">
         <div>
           <Icon name="magnifier-house" size={56} className="mx-auto text-gold-2/50" />
@@ -19,6 +28,7 @@ export default function ServiceDetail() {
           </Link>
         </div>
       </section>
+      </>
     );
   }
   const s = SERVICES[idx];

@@ -141,6 +141,13 @@ export const PERMISSIONS = {
     ["doc.delete", "Delete documents"],
     ["doc.archive", "Archive documents"],
   ],
+  // Enquiries from the public website. Separate from `accounting.customer` because an enquiry is not
+  // yet a customer and most of it never will be: whoever answers the phone should be able to read
+  // and reply to one without being given the ability to create a billable account.
+  crm: [
+    ["crm.enquiry.view", "Read enquiries from the website"],
+    ["crm.enquiry.manage", "Answer, assign and close enquiries"],
+  ],
   admin: [
     ["admin.user.manage", "Create, suspend and amend user accounts"],
     ["admin.role.manage", "Assign roles and permissions"],
@@ -220,6 +227,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     // operation in the document pipeline that cannot be undone.
     "doc.view", "doc.download", "doc.archive", "doc.delete",
     "admin.settings.manage", "audit.view", "audit.export",
+    "crm.enquiry.view", "crm.enquiry.manage",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],
 
@@ -232,6 +240,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     // opens and nobody can complete an appraisal.
     "hr.appraisal.review",
     ...readOnlyOf("case."), "case.view_all",
+    "crm.enquiry.view", "crm.enquiry.manage",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],
 
@@ -254,6 +263,8 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     // Importing a statement and matching what is obvious is the work; saying the
     // account is reconciled is a conclusion, and stays with the accountant.
     "accounting.bank.import", "accounting.bank.match",
+    // Whoever answers the phone reads the website's enquiries and replies to them.
+    "crm.enquiry.view", "crm.enquiry.manage",
     "hr.leave.request", "hr.payslip.view_own",
   ],
 
@@ -286,6 +297,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     // everybody who can upload.
     "doc.view", "doc.upload", "doc.download", "doc.archive",
     "accounting.invoice.view", "hr.overtime.approve", "hr.leave.approve",
+    "crm.enquiry.view", "crm.enquiry.manage",
     "accounting.claim.create", "hr.leave.request", "hr.payslip.view_own",
   ],
 

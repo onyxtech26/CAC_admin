@@ -8,6 +8,7 @@ export * from "./authz.js";
 export * from "./audit.js";
 export * from "./session.js";
 export * from "./settings.js";
+export * from "./enquiries.js";
 export * from "./sequence.js";
 export * from "./accounts.js";
 export * from "./periods.js";

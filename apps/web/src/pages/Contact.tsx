@@ -5,6 +5,7 @@ import { Eyebrow, Heading, Reveal } from "../components/ui";
 import { CONTACT, TEAM, waLink } from "../data";
 import { Seo } from "../components/Seo";
 import { AddressModal } from "../components/AddressModal";
+import { EnquiryForm } from "../components/EnquiryForm";
 
 export default function Contact() {
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -55,6 +56,27 @@ export default function Contact() {
                           <Eyebrow>{m.role}</Eyebrow>
                         </div>
                         <h2 className="mt-2 font-display text-3xl text-ivory">{m.name}</h2>
+                        {/* `TeamMember` declares these and nothing rendered them, so a consultant
+                            with a direct line had no way to show it. Rendered when present and
+                            absent otherwise, which is the documented fallback: the main channels
+                            below reach the same people. */}
+                        {(m.phoneDisplay || m.email) && (
+                          <div className="mt-3 flex flex-col gap-1 text-[13px]">
+                            {m.phoneDisplay && (
+                              <a
+                                href={`tel:+${m.phoneRaw ?? m.phoneDisplay.replace(/\D/g, "")}`}
+                                className="text-sand hover:text-gold-2"
+                              >
+                                {m.phoneDisplay}
+                              </a>
+                            )}
+                            {m.email && (
+                              <a href={`mailto:${m.email}`} className="text-sand hover:text-gold-2">
+                                {m.email}
+                              </a>
+                            )}
+                          </div>
+                        )}
                         {/* Justified for flush left and right edges. Hyphenation
                             is deliberately OFF — breaking words across lines reads
                             as cramped in a bio. The card padding below is pulled in
@@ -73,6 +95,15 @@ export default function Contact() {
             })}
           </div>
   
+          {/* The form every call to action on this site points at. Above the contact cards on
+              purpose: somebody who arrived by clicking "Start Investigation" came here to say
+              something, and the telephone number is for those who would rather not. */}
+          <div className="mt-12" id="enquire">
+            <Reveal>
+              <EnquiryForm />
+            </Reveal>
+          </div>
+
           {/* Main grid */}
           <div className="mt-12">
             {/* left: details */}

@@ -28,18 +28,26 @@ export default function Footer() {
             An independent Malaysian property forensic consultancy converting registry records, colonial grants and probate archives into documentary evidence.
           </p>
           <p className="mt-5 font-display text-lg italic text-gold-gradient">"{TAGLINES[1]}"</p>
+          {/*
+            Each of these is an icon and nothing else, so each needs a name of its own: a screen
+            reader announced four unnamed links on every page of the site.
+
+            LinkedIn is not here. It was `href="#"` with `target="_blank"`, which opens a second copy
+            of the page the visitor is already on — a link to nowhere, sitewide. When CAC has a
+            LinkedIn page its URL goes in `data.ts` beside the TikTok one and it comes back.
+          */}
           <div className="mt-6 flex items-center gap-3">
             {[
-              { n: "linkedin", href: "#" },
-              { n: "tiktok", href: CONTACT.tiktokUrl },
-              { n: "whatsapp", href: waLink() },
-              { n: "mail", href: `mailto:${CONTACT.email}` },
+              { n: "tiktok", href: CONTACT.tiktokUrl, label: "CAC on TikTok" },
+              { n: "whatsapp", href: waLink(), label: `WhatsApp CAC on ${CONTACT.phoneDisplay}` },
+              { n: "mail", href: `mailto:${CONTACT.email}`, label: `Email CAC at ${CONTACT.email}` },
             ].map((s) => (
               <a
                 key={s.n}
                 href={s.href}
                 target="_blank"
                 rel="noreferrer"
+                aria-label={s.label}
                 className="grid h-10 w-10 place-items-center rounded-full border border-gold-2/25 text-gold-2/80 transition hover:border-gold-2 hover:bg-gold-2/10 hover:text-gold-2"
               >
                 <Icon name={s.n} size={18} />

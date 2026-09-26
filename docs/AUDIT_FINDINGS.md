@@ -593,6 +593,11 @@ and the payslip path receives only the last four digits.
 
 ## 12. The public site (`apps/web`)
 
+> **Fixed**, apart from four unused asset files and the hand-written `sitemap.xml` date, both noted
+> at the end. The enquiry form now writes to the platform rather than to a `mailto:`, which needed a
+> table, a public endpoint and a screen; the rest is the soft 404, the accessibility barriers and the
+> content errors.
+
 ### 12.1 There is no enquiry form anywhere on the site
 
 `apps/web/src/pages/Contact.tsx` renders a consultant roster and four contact cards. There is no
@@ -609,6 +614,26 @@ Confirmed by sweep: zero `<form>`, zero `onSubmit`, zero `fetch`, zero `FormData
 So nothing a visitor types is silently discarded — because there is nowhere to type anything. The
 only data-out channels are `mailto:`, `tel:` and `wa.me`.
 
+**Fixed, as a pipeline rather than a form.** An enquiry is a record, not an email, because an email
+is somebody's inbox: `org.enquiry` (migration 0036), a public `POST /api/enquiries` on the staff
+platform, and an Enquiries screen high in the staff navigation. `SERVICE_OPTIONS` is the dropdown, as
+it was always meant to be.
+
+The endpoint is the only route in the platform a stranger may write through, so: every field
+trimmed, length-capped and validated in the core *and* by CHECK constraints; a per-address rate limit
+counted in the database rather than in memory, checked before anything else so a flood costs nothing
+and a visitor's typos cannot lock them out; the body capped before it reaches the parser; a honeypot
+field that answers "received" rather than telling a script which check caught it; CORS restricted to
+listed origins with no wildcard; and no error that tells a stranger anything about the inside. A
+trigger refuses any edit to what an enquirer wrote — the firm's handling is recorded beside it, so
+"answered" cannot be achieved by rewriting the question.
+
+The form says what actually happens: the enquiry reaches a screen the firm reads, with a reference,
+and no turnaround is promised because there is no mail transport and nobody has promised one. If the
+endpoint is unreachable it says so and puts the telephone number in front of the visitor — a form
+that swallows an enquiry is worse than no form, because the visitor believes they have been in
+touch.
+
 ### 12.2 A soft 404 on every unknown URL
 
 `apps/web/src/App.tsx:59` — `<Route path="*" element={<Home />} />`, and `vercel.json` rewrites
@@ -617,39 +642,70 @@ canonical pointing at the site root. Search engines will index arbitrary URLs as
 is no 404 page. The "Discipline not found" panel for a bad service id renders no `<Seo>` either, so
 the tab keeps whatever title the previous route left.
 
+**Fixed.** A real not-found page, with the address that was asked for, the navigation and the six
+disciplines. A static host cannot return a 404 status for a rewritten path, so the page carries
+`noindex, follow` and a canonical of its own path instead — and `Seo` removes the robots tag again on
+the way out, so navigating from it to a real page does not mark the real page noindex. The
+"Discipline not found" panel gained the same treatment. Verified in the browser: one `<h1>`,
+`noindex, follow`, and a canonical of the requested path.
+
 ### 12.3 Accessibility barriers that stop people
+
+> **All four fixed**, and each verified in the browser rather than by reading the diff.
 
 - **The mobile drawer and the "Book Consultation" dropdown stay in the tab order while closed**
   (`Navbar.tsx:143`, `:101`) — hidden with `max-h-0 opacity-0` and `pointer-events-none`, neither of
   which removes focus. A keyboard or screen-reader user tabbing past the brand lands on seven
   invisible links, on every page. Neither control has `aria-expanded` or `aria-controls`, and the
-  panels have no `aria-hidden`, so a screen reader is never told the menu opened.
+  panels have no `aria-hidden`, so a screen reader is never told the menu opened. **Fixed** with
+  `inert` on both panels while closed — which removes the subtree from focus *and* from the
+  accessibility tree, where `aria-hidden` alone would leave it tabbable — plus `aria-expanded` and
+  `aria-controls` on both controls. Verified: nine invisible links out of the tab order, and the
+  dropdown becomes reachable the moment it opens.
 - **The address dialog is not a dialog** (`AddressModal.tsx:31`): no `role`, no `aria-modal`, no
   accessible name, and focus is never moved into it or trapped. Escape closes it, but Tab walks the
-  page underneath an opaque overlay.
+  page underneath an opaque overlay. **Fixed:** `role="dialog"`, `aria-modal`, a name from its own
+  heading, focus moved in on open, Tab wrapped at both ends, and focus returned to whatever opened
+  it. Verified in the browser, including the return.
 - **The splash screen runs ~5.2 seconds on every page load**, full-screen at `z-[100]`, with no skip
   and no click or key dismissal (`SplashScreen.tsx:163`). Reduced motion shortens it to ~1.6 s, which
   is the right instinct; nobody else can get past it. It also emits a second `<h1>` that coexists
-  with each page's real one.
+  with each page's real one. **Fixed:** a click, a tap or any key ends it — no button to find, which
+  is the point — and the overlay is `aria-hidden` with the wordmark demoted from `<h1>`, so a screen
+  reader reads the page rather than the animation. Verified: Escape clears it within a second.
 - **The four footer social links contain only an icon** with `aria-hidden="true"` and no label, so a
   screen reader announces four unnamed links on every page. The services search input has no label
-  either, and its clear button has no accessible name.
+  either, and its clear button has no accessible name. **Fixed:** each social link names itself, the
+  search has a visually-hidden label and the clear button an `aria-label`. The LinkedIn link is gone
+  rather than named — see below.
 
 ### 12.4 Content
 
-- **The LinkedIn button is `href="#"`** with `target="_blank"` — it opens a second tab of the current
-  page. Visible site-wide.
-- **The search hint suggests a term that matches nothing.** `Services.tsx:61` suggests "ROI"; the word
-  appears nowhere in `data.ts`.
-- **Mr Shiva's role contradicts his own blurb** — `data.ts:52` says "Managing Director", the blurb two
-  lines later says "as a Senior Consultant". Both show on the same card.
-- **A CTA paragraph is parked in the wrong section** (`WhyCAC.tsx:106`) with no link attached.
-- **`group-hover: glow-gold`** (`Navbar.tsx:51`) — a stray space breaks the variant, so the brand halo
-  is always on.
-- **Per-consultant contact details are declared and never built** — `TeamMember` has optional phone
-  and email fields with a documented fallback; `Contact.tsx` renders neither.
-- **Four unused assets**, including `property.lottie` — an animation that was cut.
+- ~~**The LinkedIn button is `href="#"`**~~ with `target="_blank"` — it opens a second tab of the
+  current page. Visible site-wide. **Removed** rather than named: a link to nowhere is not improved
+  by labelling it. When CAC has a page, its URL goes in `data.ts` beside the TikTok one.
+- ~~**The search hint suggests a term that matches nothing.**~~ **Fixed:** "ownership", which
+  matches, in place of "ROI", which does not. Suggesting a term that returns nothing, on the screen
+  that has just returned nothing, is the opposite of help.
+- ~~**Mr Shiva's role contradicts his own blurb**~~ — `data.ts:52` says "Managing Director", the blurb
+  two lines later says "as a Senior Consultant". Both show on the same card. **Fixed by removing the
+  second title, not by choosing between them**: which is right is CAC's to say, and the sentence
+  reads the same without it. Worth CAC confirming.
+- ~~**A CTA paragraph is parked in the wrong section**~~ (`WhyCAC.tsx:106`) with no link attached.
+  **Fixed:** it now has the button it was inviting people to press, pointing at the enquiry form.
+- ~~**`group-hover: glow-gold`**~~ (`Navbar.tsx:51`) — a stray space breaks the variant, so the brand
+  halo is always on. **Fixed.** The space made it two classes: a bare `group-hover:` that does
+  nothing and an unconditional `glow-gold`.
+- ~~**Per-consultant contact details are declared and never built**~~ — `TeamMember` has optional
+  phone and email fields with a documented fallback; `Contact.tsx` renders neither. **Fixed:**
+  rendered when present, absent otherwise, which is the documented fallback. No values are seeded, so
+  nothing changes on screen until CAC adds one.
+- **Four unused assets**, including `property.lottie` — an animation that was cut. **Left alone**:
+  deleting a file that something loads dynamically is a worse outcome than a few unreferenced
+  kilobytes, and a sweep cannot prove nothing loads them.
 - **`sitemap.xml` has a hand-written `lastmod` of 2026-08-20** and is not regenerated by the build.
+  **Left alone**: a `lastmod` that is always today is as untrue as one that is always August, and
+  what it should say is when CAC last changed the page — which the build does not know.
 
 Verified good: all 26 asset paths resolve, all routes and internal links resolve, every icon name
 exists, WhatsApp/tel/mailto links are well-formed, the build is clean with zero warnings, all 12

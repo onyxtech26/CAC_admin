@@ -10,6 +10,7 @@ import ServiceDetail from "./pages/ServiceDetail";
 import Process from "./pages/Process";
 import WhyCAC from "./pages/WhyCAC";
 import Contact from "./pages/Contact";
+import NotFound from "./pages/NotFound";
 import SplashScreen from "./components/SplashScreen";
 import { CONTACT, waLink } from "./data";
 
@@ -56,7 +57,10 @@ export default function App() {
             <Route path="/process" element={<Process />} />
             <Route path="/why-cac" element={<WhyCAC />} />
             <Route path="/contact" element={<Contact />} />
-            <Route path="*" element={<Home />} />
+            {/* Not the homepage. Rendering Home for any unknown address meant a typo returned a
+                200 with homepage content and a canonical pointing at the site root, so a crawler
+                would index arbitrary URLs as the homepage. */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
         <Footer />

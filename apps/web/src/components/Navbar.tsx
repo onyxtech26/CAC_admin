@@ -48,7 +48,10 @@ export default function Navbar() {
         <Link to="/" className="group flex items-center gap-3" {...staffEntryProps()}>
           <span className="relative">
             <LogoMark size={46} />
-            <span className="absolute -inset-1 rounded-full blur-md transition group-hover: glow-gold" />
+            {/* `group-hover:glow-gold`, with no space. The space made it two classes — a bare
+                `group-hover:` that does nothing and an unconditional `glow-gold` — so the halo was
+                on at all times rather than on hover. */}
+            <span className="absolute -inset-1 rounded-full blur-md opacity-0 transition group-hover:opacity-100 glow-gold" />
           </span>
           <span className="leading-tight">
             <span className="block font-display text-[15px] font-bold tracking-wide text-ivory">
@@ -93,12 +96,25 @@ export default function Navbar() {
           <div ref={ddRef} className="relative hidden sm:block">
             <button
               onClick={() => setDd((v) => !v)}
+              aria-expanded={dd}
+              aria-controls="consultation-channels"
               className="gold-btn sheen-host flex items-center gap-2 rounded-sm px-5 py-2.5 text-[12px] uppercase"
             >
               Book Consultation
               <Icon name="chevron-down" size={14} className={`transition-transform ${dd ? "rotate-180" : ""}`} />
             </button>
+            {/*
+              `inert` as well as the opacity.
+
+              The panel was hidden with `opacity-0` and `pointer-events-none`, neither of which
+              removes anything from the tab order — so a keyboard user tabbing past the brand landed
+              on two invisible links, on every page, with no way to tell where they were. `inert`
+              takes the whole subtree out of focus and out of the accessibility tree at once, and
+              `aria-expanded` on the button is what tells a screen reader the menu opened.
+            */}
             <div
+              id="consultation-channels"
+              inert={!dd}
               className={`absolute right-0 top-[calc(100%+10px)] w-64 origin-top-right overflow-hidden rounded-md border border-gold-2/25 bg-navy-2/95 p-2 shadow-2xl backdrop-blur-xl transition-all duration-200 ${
                 dd ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none -translate-y-2 opacity-0"
               }`}
@@ -130,7 +146,9 @@ export default function Navbar() {
           </div>
 
           <button
-            aria-label="Menu"
+            aria-label={open ? "Close the menu" : "Open the menu"}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
             onClick={() => setOpen((v) => !v)}
             className="grid h-11 w-11 place-items-center rounded-sm border border-gold-2/30 text-gold-2 lg:hidden"
           >
@@ -139,8 +157,16 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile drawer */}
+      {/*
+        Mobile drawer.
+
+        Closed, it was `max-h-0 opacity-0` — invisible and still in the tab order, so every page put
+        seven unreachable-looking links in a keyboard user's way. `inert` removes the subtree from
+        focus and from the accessibility tree while it is shut.
+      */}
       <div
+        id="mobile-menu"
+        inert={!open}
         className={`overflow-hidden border-t border-gold-2/10 bg-navy/95 backdrop-blur-xl transition-[max-height,opacity] duration-500 lg:hidden ${
           open ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
         }`}

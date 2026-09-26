@@ -29,7 +29,12 @@ export interface NavSection {
 export const NAVIGATION: NavSection[] = [
   {
     heading: "Overview",
-    items: [{ label: "Dashboard", href: "/", capabilities: [] }],
+    items: [
+      { label: "Dashboard", href: "/", capabilities: [] },
+      // Where the website's enquiry form arrives. High in the list on purpose: an enquiry nobody
+      // looks at is a client who went elsewhere.
+      { label: "Enquiries", href: "/enquiries", capabilities: ["crm.enquiry.view"] },
+    ],
   },
   {
     heading: "Accounting",

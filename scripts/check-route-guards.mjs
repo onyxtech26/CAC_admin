@@ -51,6 +51,7 @@ const PUBLIC = new Map([
   [join("denied", "page.tsx"), "Tells somebody they were refused. Showing it to a stranger reveals nothing."],
   [join("api", "logout", "route.ts"), "Ending a session must work even when the session is already invalid."],
   [join("api", "health", "route.ts"), "An uptime check has no session. Unauthenticated it answers only ok/not ok; the detail needs admin.settings.manage, which it checks itself."],
+  [join("api", "enquiries", "route.ts"), "Where the public website's enquiry form posts. A visitor has no session by definition. It writes one table, validates and length-caps every field, rate-limits per address in the database, caps the body before parsing, and returns no detail about a failure."],
   ["page.tsx", "The dashboard. Guarded by the layout's requirePrincipal; see the note in the file."],
   ["layout.tsx", "Not a route."],
   ["not-found.tsx", "Not a route."],

@@ -6,9 +6,23 @@ export const SITE_URL = "https://www.conglomerate4u.com";
 
 type Props =
   /** static page — metadata comes from src/seo-routes.json */
-  | { route: keyof typeof ROUTES; title?: never; description?: never; path?: never }
+  | { route: keyof typeof ROUTES; title?: never; description?: never; path?: never; noindex?: never }
   /** dynamic page (e.g. a service) — metadata supplied by the caller */
-  | { route?: never; title: string; description: string; path: string };
+  | {
+      route?: never;
+      title: string;
+      description: string;
+      path: string;
+      /**
+       * Tells a crawler not to keep this page.
+       *
+       * A static host cannot return a 404 status for a path it has rewritten to `index.html`, so
+       * this is what stops every mistyped URL being indexed as a real page. Used by the not-found
+       * page and by the "discipline not found" panel, which previously emitted no metadata at all
+       * and left whatever title the last route had in the tab.
+       */
+      noindex?: boolean;
+    };
 
 /** Shared by the app and scripts/prerender.mjs so the two cannot drift. */
 export function pageTitle(title: string) {
@@ -60,7 +74,16 @@ export function Seo(props: Props) {
       document.head.appendChild(link);
     }
     link.setAttribute("href", `${SITE_URL}${path}`);
-  }, [title, description, path]);
+
+    // Removed as well as added: navigating from the not-found page to a real one must not leave the
+    // real one marked noindex.
+    const robots = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (props.noindex) {
+      setMeta('meta[name="robots"]', "name", "robots", "noindex, follow");
+    } else if (robots) {
+      robots.remove();
+    }
+  }, [title, description, path, props.noindex]);
 
   return null;
 }

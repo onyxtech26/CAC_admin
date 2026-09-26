@@ -38,14 +38,29 @@ export default function Services() {
             <Reveal delay={120} className="w-full lg:max-w-md">
               <div className="flex items-center overflow-hidden rounded-sm border border-gold-2/30 bg-navy-2/60 focus-within:border-gold-2">
                 <span className="grid place-items-center px-3 text-gold-2"><Icon name="magnifier-fingerprint" size={18} /></span>
+                {/* A placeholder is not a label: it disappears the moment somebody types, and a
+                    screen reader announces an unnamed text box. The label is visually hidden rather
+                    than absent. */}
+                <label htmlFor="service-search" className="sr-only">
+                  Search the disciplines
+                </label>
                 <input
+                  id="service-search"
+                  type="search"
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Search disciplines, deliverables, keywords…"
                   className="w-full bg-transparent py-3.5 pr-3 text-sm text-ivory outline-none placeholder:text-mute/60"
                 />
                 {q && (
-                  <button onClick={() => setQ("")} className="px-3 text-mute hover:text-gold-2"><Icon name="close" size={16} /></button>
+                  <button
+                    type="button"
+                    onClick={() => setQ("")}
+                    aria-label="Clear the search"
+                    className="px-3 text-mute hover:text-gold-2"
+                  >
+                    <Icon name="close" size={16} />
+                  </button>
                 )}
               </div>
               <p className="mt-2 font-mono text-[10px] uppercase tracking-wide-2 text-mute">
@@ -58,7 +73,7 @@ export default function Services() {
             <div className="mt-16 grid place-items-center rounded-lg border border-dashed border-gold-2/20 py-20 text-center">
               <Icon name="magnifier-house" size={42} className="text-gold-2/40" />
               <p className="mt-4 font-display text-2xl text-ivory">No disciplines match "{q}"</p>
-              <p className="mt-2 text-sm text-stone">Try "forensic", "title", "fraud", "ROI" or "estate".</p>
+              <p className="mt-2 text-sm text-stone">Try "forensic", "title", "fraud", "ownership" or "estate".</p>
             </div>
           ) : (
             <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

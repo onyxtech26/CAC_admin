@@ -86,6 +86,23 @@ body {
   transform: translate(-50%, 0);
 }
 
+/* ---------- Visually hidden, still announced ----------
+   For a label that a sighted reader does not need because the placeholder and the icon already say
+   what the field is, and that a screen reader does need because neither of those is a name.
+   Tailwind ships this class, but the site pulls in Tailwind's preflight only — so it is written out
+   here rather than assumed. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 /* ---------- Scrollbar ---------- */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: #08111f; }

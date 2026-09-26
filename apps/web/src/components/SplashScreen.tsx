@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { LogoMark } from "./ui";
 
 /**
@@ -170,6 +170,32 @@ export default function SplashScreen() {
   const [showLogo, setShowLogo] = useState(false);
   const [fading, setFading] = useState(false);
 
+  /**
+   * Anything dismisses it.
+   *
+   * Five seconds is not long unless you are trying to read something, on a slow connection, for the
+   * fourth time today, or with a screen reader that has just met a full-screen overlay it cannot get
+   * past. Reduced motion already shortened it, which was the right instinct and only covered the
+   * people who had thought to set that preference. A click, a tap or any key now ends it — no button
+   * to find, which is the point.
+   */
+  const dismiss = useCallback(() => {
+    setFading(true);
+    setTimeout(() => setVisible(false), 400);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const onKey = (event: KeyboardEvent) => {
+      // Not a modifier on its own: somebody pressing Shift to type is not asking to skip.
+      if (event.key === "Shift" || event.key === "Control" || event.key === "Alt") return;
+      dismiss();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [visible, dismiss]);
+
   useEffect(() => {
     if (!visible) return;
 
@@ -191,6 +217,11 @@ export default function SplashScreen() {
 
   return (
     <div
+      onClick={dismiss}
+      // Presentational: the page behind it carries the content and its own heading, and a screen
+      // reader should be reading that rather than an animation. It is also why the wordmark below is
+      // no longer an <h1> — it used to be a second one, competing with every page's real heading.
+      aria-hidden="true"
       className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-ink transition-opacity duration-700 ${
         fading ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
@@ -224,13 +255,13 @@ export default function SplashScreen() {
           </div>
         </div>
 
-        <h1
+        <p
           className="splash-line mt-6 font-display text-2xl font-bold tracking-wider text-ivory sm:text-3xl"
           data-on={showLogo}
           style={{ transitionDelay: showLogo ? "120ms" : "0ms" }}
         >
           CONGLOMERATE APPRAISAL
-        </h1>
+        </p>
         <p
           className="splash-line mt-2 font-mono text-[11px] uppercase tracking-[0.3em] text-gold-2/90"
           data-on={showLogo}

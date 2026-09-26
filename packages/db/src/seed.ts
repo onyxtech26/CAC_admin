@@ -252,6 +252,9 @@ const SEQUENCES = [
   { key: "case", prefix: "CASE" },
   { key: "document", prefix: "DOC" },
   { key: "case_document", prefix: "CDOC" },
+  // Enquiries from the public site. Numbered like everything else, so a caller can be asked to
+  // quote a reference and the firm can find what they sent.
+  { key: "enquiry", prefix: "ENQ" },
 ];
 
 export async function seed(db?: Database): Promise<void> {

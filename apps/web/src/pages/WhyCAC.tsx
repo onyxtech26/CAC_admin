@@ -104,8 +104,16 @@ export default function WhyCAC() {
                 <Tag>Uncover The Truth · Protect Your Legacy</Tag>
               </div>
               <p className="mt-4 max-w-2xl text-stone">
-                Begin with a confidential briefing. We will scope the investigation, outline the registry trail, and tell you — plainly — what the record can prove.
+                Begin with a confidential briefing. We will scope the investigation, outline the
+                registry trail, and tell you — plainly — what the record can prove.
               </p>
+              {/* The paragraph above invited the reader to begin and gave them no way to. */}
+              <Link
+                to="/contact#enquire"
+                className="gold-btn mt-5 inline-flex items-center gap-2 rounded-sm px-6 py-3 text-[12px] uppercase"
+              >
+                Start a briefing <Icon name="arrow" size={16} />
+              </Link>
             </Reveal>
             <div className="mt-8 grid gap-px overflow-hidden rounded-lg border border-gold-2/15 bg-gold-2/10 sm:grid-cols-2 lg:grid-cols-3">
               {STANDARDS.map((s, i) => (

@@ -240,6 +240,9 @@ export const AUDIT = {
   ROLE_REVOKED: "ROLE_REVOKED",
   PERMISSION_OVERRIDDEN: "PERMISSION_OVERRIDDEN",
   SETTING_CHANGED: "SETTING_CHANGED",
+  /** Written with no actor: an enquiry arrives from the public site, where nobody is signed in. */
+  ENQUIRY_RECEIVED: "ENQUIRY_RECEIVED",
+  ENQUIRY_HANDLED: "ENQUIRY_HANDLED",
   SESSION_REVOKED: "SESSION_REVOKED",
   /**
    * A capability check that refused.
