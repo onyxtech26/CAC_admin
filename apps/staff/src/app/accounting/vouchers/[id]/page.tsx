@@ -53,9 +53,16 @@ export default async function VoucherPage({ params }: { params: Promise<{ id: st
         { label: voucher.voucherNo ?? LABEL[voucher.status] },
       ]}
       actions={
-        canEdit ? (
-          <LinkButton href={`/accounting/vouchers/${voucher.id}/edit`}>Edit draft</LinkButton>
-        ) : undefined
+        <div className="flex gap-2">
+          {canEdit && (
+            <LinkButton href={`/accounting/vouchers/${voucher.id}/edit`}>Edit draft</LinkButton>
+          )}
+          {/* Once it has been approved there is something to print: the payee signs it, and the
+              firm files it against the bank statement. */}
+          {voucher.status !== "draft" && voucher.status !== "pending_approval" && (
+            <LinkButton href={`/accounting/vouchers/${voucher.id}/pdf`}>Open PDF</LinkButton>
+          )}
+        </div>
       }
     >
       <div className="space-y-4">

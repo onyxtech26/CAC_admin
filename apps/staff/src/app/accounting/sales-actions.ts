@@ -15,6 +15,7 @@ import {
   createReceipt,
   decideQuotation,
   deleteInvoice,
+  deleteQuotation,
   deleteReceipt,
   issueInvoice,
   postReceipt,
@@ -68,6 +69,7 @@ function readLines(form: FormData): DocumentLineInput[] {
       discountPercent: at("discountPercent") || null,
       taxCodeId: at("taxCodeId") || null,
       accountId: at("accountId") || null,
+      caseId: at("caseId") || null,
     });
   }
   return lines;
@@ -130,6 +132,9 @@ export async function quotationAction(_prev: FormState, form: FormData): Promise
         ? "accounting.quotation.convert"
         : "accounting.quotation.create";
 
+  // Deleting sends the reader back to the list, since the thing they were looking at is gone.
+  const deleted = action === "delete";
+
   try {
     const { principal, db, context } = await begin(needed);
     await db.transaction(async (tx) => {
@@ -142,6 +147,12 @@ export async function quotationAction(_prev: FormState, form: FormData): Promise
           break;
         case "decline":
           await decideQuotation(tx, principal, quotationId, "declined", {
+            reason: optional(form, "reason"),
+            context,
+          });
+          break;
+        case "delete":
+          await deleteQuotation(tx, principal, quotationId, {
             reason: optional(form, "reason"),
             context,
           });
@@ -160,6 +171,7 @@ export async function quotationAction(_prev: FormState, form: FormData): Promise
   revalidatePath(`/accounting/quotations/${quotationId}`);
   revalidatePath("/accounting/quotations");
   if (invoiceId) redirect(`/accounting/invoices/${invoiceId}`);
+  if (deleted) redirect("/accounting/quotations");
   return { notice: "Done." };
 }
 
@@ -238,11 +250,28 @@ export async function invoiceAction(_prev: FormState, form: FormData): Promise<F
           await voidInvoice(tx, principal, invoiceId, { reason: text(form, "reason"), context });
           notice = "Voided, and the ledger entry reversed.";
           break;
-        case "credit":
+        case "credit": {
+          // Lines when the form sent them, which is a partial credit; none means the whole invoice,
+          // which is what `createCreditNote` falls back to. The screen only ever sent the second,
+          // so crediting one line of several — the ordinary case — had no way through at all.
+          const credited = readLines(form).filter((line) => {
+            const value = Number.parseFloat(String(line.unitPrice ?? "0"));
+            return Number.isFinite(value) && value > 0;
+          });
           creditNoteId = (
-            await createCreditNote(tx, principal, { invoiceId, reason: text(form, "reason") }, context)
+            await createCreditNote(
+              tx,
+              principal,
+              {
+                invoiceId,
+                reason: text(form, "reason"),
+                lines: credited.length > 0 ? credited : undefined,
+              },
+              context,
+            )
           ).id;
           break;
+        }
         default:
           throw new Error(`Unknown invoice action: ${action}`);
       }

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@cac/db";
 import {
+  amountToSql,
   approvalCapabilityFor,
   formatAmount,
   formatDate,
@@ -323,6 +324,16 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 kind={invoice.kind}
                 permissions={permissions}
                 approvalHint={approvalHint}
+                creditableLines={invoice.lines.map((line) => ({
+                  description: line.description,
+                  quantity: line.quantity,
+                  unit: line.unit ?? "",
+                  lineTotal: amountToSql(line.lineTotal),
+                  unitPrice: amountToSql(line.unitPrice),
+                  accountId: line.accountId,
+                  taxCodeId: line.taxCodeId ?? "",
+                  caseId: line.caseId ?? "",
+                }))}
               />
               {permissions.canEdit && (
                 <div className="mt-3 border-t border-[var(--color-line)] pt-3">

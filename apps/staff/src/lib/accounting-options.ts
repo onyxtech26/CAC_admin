@@ -1,7 +1,15 @@
 import "server-only";
 import { getDb } from "@cac/db";
 import { sql } from "drizzle-orm";
-import { getSetting, listCustomers, listPostableAccounts, listSuppliers, listTaxCodes } from "@cac/core";
+import {
+  getSetting,
+  listCases,
+  listCustomers,
+  listPostableAccounts,
+  listSuppliers,
+  listTaxCodes,
+  type Principal,
+} from "@cac/core";
 
 /**
  * The reference data every sales form needs.
@@ -11,7 +19,7 @@ import { getSetting, listCustomers, listPostableAccounts, listSuppliers, listTax
  * answer to "why is there no tax on this invoice" and belongs next to the form
  * rather than in a FAQ.
  */
-export async function salesFormOptions() {
+export async function salesFormOptions(principal?: Principal) {
   const db = await getDb();
 
   const [customers, accounts, taxCodes, sstRegistered] = await Promise.all([
@@ -21,11 +29,27 @@ export async function salesFormOptions() {
     getSetting<boolean>(db, "tax.sst_registered", false),
   ]);
 
+  /**
+   * The matters a line can be billed against.
+   *
+   * Only for a caller who can see cases, and only the ones they may see — `listCases` applies the
+   * same scoping the case screens do, so the invoice form cannot become a way to enumerate matters.
+   * Closed cases are left out: an invoice raised against a matter that finished is almost always a
+   * mis-click, and the ones that are not can be attributed by reopening it.
+   */
+  const cases =
+    principal && (principal.capabilities.has("case.view") || principal.capabilities.has("case.view_all"))
+      ? (await listCases(db, principal, { limit: 500 }))
+          .filter((matter) => matter.status !== "closed")
+          .map((matter) => ({ id: matter.id, caseNo: matter.caseNo, title: matter.title }))
+      : [];
+
   const usableTaxCodes = taxCodes
     .filter((code) => code.isActive && code.kind !== "input")
     .map((code) => ({ id: code.id, code: code.code, name: code.name, rate: code.currentRate }));
 
   return {
+    cases,
     customers: customers.map((customer) => ({
       id: customer.id,
       code: customer.code,

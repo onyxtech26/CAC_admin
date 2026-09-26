@@ -42,7 +42,14 @@ import {
   suggestAllocation,
   voidReceipt,
 } from "./receipts.js";
-import { balanceSheet, customerStatement, profitAndLoss, receivablesAging } from "./reports.js";
+import {
+  balanceSheet,
+  customerStatement,
+  matterRevenue,
+  profitAndLoss,
+  receivablesAging,
+} from "./reports.js";
+import { openCase } from "./cases.js";
 
 /**
  * Phase 3, against the worked example in docs/IMPLEMENTATION_PLAN.md:
@@ -1007,6 +1014,78 @@ describe("the financial reports", () => {
     // the fix neither did, and the same arithmetic hid two real figures.
     expect(after.netProfit).toBe(before.netProfit);
     expect(after.netProfit).toBe(after.grossProfit - after.totalExpenses);
+  });
+
+  it("attributes revenue to the matter it was billed against", async () => {
+    /**
+     * The join between the two halves of the platform. `invoice_line.case_id` has been accepted,
+     * computed, persisted and carried through conversions and credit notes since Phase 3 — and no
+     * form set one and no report read one, so for a firm that bills per matter the case management
+     * and the money were two systems sharing a database.
+     */
+    const caseManager = await makePrincipal("case-manager@cac.test", ["CASE_MANAGER"]);
+    const matter = await openCase(db, caseManager, {
+      matterType: "probate",
+      title: "Estate of Lim Ah Seng",
+      deceasedName: "Lim Ah Seng",
+      customerId,
+    });
+
+    const invoice = await createInvoice(db, clerk, {
+      customerId,
+      documentDate: "2026-11-10",
+      lines: [
+        { description: "Grant application", unitPrice: "2000.00", accountCode: "4120", caseId: matter.id },
+        { description: "General advice", unitPrice: "500.00", accountCode: "4110" },
+      ],
+    });
+    await submitInvoice(db, clerk, invoice.id);
+    await approveInvoice(db, director, invoice.id);
+    await issueInvoice(db, accountant, invoice.id);
+
+    const report = await matterRevenue(db, { from: "2026-01-01", to: "2026-12-31" });
+    const row = report.rows.find((entry) => entry.caseId === matter.id)!;
+
+    expect(formatAmount(row.billed)).toBe("2,000.00");
+    expect(row.invoices).toBe(1);
+
+    // The line that names no matter is not lost — it is counted as unattributed, which is the figure
+    // that tells somebody whether the matter column is being used.
+    expect(report.unattributed).toBeGreaterThanOrEqual(parseAmount("500.00"));
+
+    // Nothing has been paid, so the matter's share of what is owed is its share of the invoice.
+    expect(formatAmount(row.outstanding)).toBe("2,000.00");
+  });
+
+  it("nets a credit note off the matter it credited", async () => {
+    const before = await matterRevenue(db, { from: "2026-01-01", to: "2026-12-31" });
+    const matterId = before.rows.find((row) => row.billed > 0n)!.caseId;
+    const billedBefore = before.rows.find((row) => row.caseId === matterId)!.billed;
+
+    const invoices = await db.execute<{ id: string }>(sql`
+      SELECT DISTINCT i.id FROM accounting.invoice i
+        JOIN accounting.invoice_line l ON l.invoice_id = i.id
+       WHERE l.case_id = ${matterId} AND i.kind = 'invoice' AND i.status = 'issued'
+       LIMIT 1
+    `);
+
+    const note = await createCreditNote(db, director, {
+      invoiceId: invoices.rows![0]!.id,
+      reason: "Part of the scope was not carried out",
+      lines: [
+        { description: "Reduction", unitPrice: "500.00", accountCode: "4120", caseId: matterId },
+      ],
+    });
+    await submitInvoice(db, clerk, note.id);
+    await approveInvoice(db, secondDirector, note.id);
+    await issueInvoice(db, accountant, note.id);
+
+    const after = await matterRevenue(db, { from: "2026-01-01", to: "2026-12-31" });
+    const row = after.rows.find((entry) => entry.caseId === matterId)!;
+
+    // The matter was billed 500 less. A credit note carries the matter through, so crediting an
+    // invoice reduces what the matter was billed rather than leaving a figure nobody recognises.
+    expect(row.billed).toBe(billedBefore - parseAmount("500.00"));
   });
 
   it("the balance sheet balances, including profit not yet closed to reserves", async () => {

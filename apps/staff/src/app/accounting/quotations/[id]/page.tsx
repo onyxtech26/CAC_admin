@@ -4,7 +4,7 @@ import { getDb } from "@cac/db";
 import { formatAmount, formatDate, getQuotation } from "@cac/core";
 import { requireCapability } from "@/lib/auth";
 import { Shell } from "@/components/Shell";
-import { Alert, Badge, DataTable, Panel, Td, TotalRow } from "@/components/ui";
+import { Alert, Badge, DataTable, LinkButton, Panel, Td, TotalRow } from "@/components/ui";
 import { QuotationActions } from "./QuotationActions";
 
 const TONE = {
@@ -24,6 +24,8 @@ export default async function QuotationPage({ params }: { params: Promise<{ id: 
   const quotation = await getQuotation(db, id);
   if (!quotation) notFound();
 
+  const canEdit = principal.capabilities.has("accounting.quotation.create");
+
   return (
     <Shell
       principal={principal}
@@ -33,6 +35,18 @@ export default async function QuotationPage({ params }: { params: Promise<{ id: 
         { label: "Quotations", href: "/accounting/quotations" },
         { label: quotation.quotationNo ?? "Draft" },
       ]}
+      actions={
+        <div className="flex gap-2">
+          {quotation.status === "draft" && canEdit && (
+            <LinkButton href={`/accounting/quotations/${quotation.id}/edit`}>Edit draft</LinkButton>
+          )}
+          {/* Only once it has been sent. Before that there is no number, and a document with DRAFT
+              across it is not one to hand a client. The route refuses the same case. */}
+          {quotation.status !== "draft" && (
+            <LinkButton href={`/accounting/quotations/${quotation.id}/pdf`}>Open PDF</LinkButton>
+          )}
+        </div>
+      }
     >
       <div className="space-y-4">
         {quotation.convertedInvoiceId && (

@@ -23,7 +23,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   if (!invoice) notFound();
   if (invoice.status !== "draft") redirect(`/accounting/invoices/${id}`);
 
-  const options = await salesFormOptions();
+  const options = await salesFormOptions(principal);
 
   return (
     <Shell
@@ -44,6 +44,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
           customers={options.customers}
           accounts={options.accounts}
           taxCodes={options.taxCodes}
+          cases={options.cases}
           defaultCustomerId={invoice.customerId}
           defaultDate={invoice.invoiceDate}
           defaultDueDate={invoice.dueDate}
@@ -59,6 +60,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
             discountPercent: line.discountPercent ?? "",
             taxCodeId: line.taxCodeId ?? "",
             accountId: line.accountId,
+            caseId: line.caseId ?? "",
           }))}
           dueDateLabel="Due date"
           taxNote={options.taxNote}

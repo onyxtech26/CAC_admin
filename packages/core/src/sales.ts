@@ -214,6 +214,50 @@ export async function updateQuotation(
   });
 }
 
+/**
+ * Throws a draft quotation away.
+ *
+ * Every comparable document — invoice, voucher, purchase order, claim, journal — could be deleted
+ * while it was a draft, and a quotation could not: the detail screen offered only "send", so a
+ * quotation raised by mistake could be sent, declined, and left on the list for ever. Only a draft,
+ * and only with the audit row, because the document existed and somebody should be able to see that
+ * it did.
+ */
+export async function deleteQuotation(
+  db: Executor,
+  principal: Principal,
+  quotationId: string,
+  options: { reason?: string | null; context?: AuditContext } = {},
+): Promise<void> {
+  requireCapability(principal, "accounting.quotation.create");
+
+  const existing = await db.execute<{ status: string; quotation_no: string | null; total: string }>(
+    sql`SELECT status, quotation_no, total FROM accounting.quotation
+         WHERE id = ${quotationId} FOR UPDATE`,
+  );
+  const quotation = existing.rows?.[0];
+  if (!quotation) throw new NotFoundError("That quotation no longer exists.");
+  if (quotation.status !== "draft") {
+    throw new ConflictError(
+      `This quotation has been ${quotation.status} and cannot be deleted. A quotation the client has ` +
+        "seen stays on the record, whatever became of it.",
+    );
+  }
+
+  await writeAudit(db, {
+    ...options.context,
+    actorUserId: principal.userId,
+    actorLabel: principal.email,
+    action: AUDIT.QUOTATION_DELETED,
+    entityType: "quotation",
+    entityId: quotationId,
+    oldValues: { status: quotation.status, total: quotation.total },
+    reason: options.reason ?? null,
+  });
+
+  await db.execute(sql`DELETE FROM accounting.quotation WHERE id = ${quotationId}`);
+}
+
 /** Numbers the quotation and marks it sent. From here its contents are fixed. */
 export async function sendQuotation(
   db: Executor,

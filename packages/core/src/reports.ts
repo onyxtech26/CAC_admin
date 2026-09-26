@@ -666,3 +666,191 @@ export async function customerStatement(
     closingBalance: balance,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Revenue by matter
+// ---------------------------------------------------------------------------
+
+export interface MatterRevenueRow {
+  caseId: string;
+  caseNo: string;
+  title: string;
+  matterType: string;
+  status: string;
+  customerName: string | null;
+  /** Issued invoices, net of credit notes. */
+  billed: Amount;
+  /** Of that, what is still owed — apportioned to this matter by its share of each invoice. */
+  outstanding: Amount;
+  /** Quoted and not yet invoiced: accepted quotations whose lines name this matter. */
+  quoted: Amount;
+  invoices: number;
+}
+
+export interface MatterRevenue {
+  from: string;
+  to: string;
+  rows: MatterRevenueRow[];
+  totals: { billed: Amount; outstanding: Amount; quoted: Amount };
+  /** Issued revenue in the period that names no matter at all. */
+  unattributed: Amount;
+}
+
+/**
+ * What each matter has been billed.
+ *
+ * `invoice_line.case_id` and `quotation_line.case_id` have been accepted, computed, persisted and
+ * carried through conversions and credit notes since Phase 3, and nothing read them: no form set one
+ * and no report used one. For a firm that bills per matter that was the missing join between the two
+ * halves of the platform — the case management on one side, the money on the other.
+ *
+ * Two things here are deliberate.
+ *
+ * **Credit notes net off.** A credit note's lines carry the matter through, so crediting an invoice
+ * reduces what the matter was billed rather than leaving a figure nobody recognises.
+ *
+ * **What is outstanding is apportioned, not attributed.** A receipt pays an invoice, not a line, so
+ * an invoice split across two matters that is half paid cannot say which half. Each matter is given
+ * its share of the invoice's outstanding balance in the ratio of its lines, which is the only honest
+ * answer — and it is why this column is described as the matter's share rather than its debt.
+ */
+export async function matterRevenue(
+  db: Executor,
+  options: { from?: string; to?: string } = {},
+): Promise<MatterRevenue> {
+  const from = toIsoDate(parseIsoDate(options.from ?? "2000-01-01", "from"));
+  const to = toIsoDate(parseIsoDate(options.to ?? toIsoDate(today()), "to"));
+
+  const rows = await db.execute<{
+    case_id: string;
+    case_no: string;
+    title: string;
+    matter_type: string;
+    status: string;
+    customer_name: string | null;
+    billed: string;
+    outstanding: string;
+    invoices: number;
+  }>(sql`
+    WITH billed AS (
+      SELECT l.case_id,
+             i.id AS invoice_id,
+             i.kind,
+             SUM(l.line_total) AS matter_total,
+             -- The invoice's own total, for the apportionment below.
+             MAX(i.total) AS invoice_total,
+             MAX(i.total - i.amount_allocated) AS invoice_outstanding
+        FROM accounting.invoice_line l
+        JOIN accounting.invoice i ON i.id = l.invoice_id
+       WHERE l.case_id IS NOT NULL
+         AND i.status IN ('issued', 'paid')
+         AND i.invoice_date BETWEEN ${from}::date AND ${to}::date
+       GROUP BY l.case_id, i.id, i.kind
+    )
+    SELECT c.id AS case_id, c.case_no, c.title, c.matter_type, c.status,
+           cust.name AS customer_name,
+           COALESCE(SUM(
+             CASE WHEN b.kind = 'credit_note' THEN -b.matter_total ELSE b.matter_total END
+           ), 0)::text AS billed,
+           -- Rounded to the money scale. Each matter's share is rounded on its own, so the shares of
+           -- a split invoice can differ from its outstanding balance by a fraction of a sen; that is
+           -- inherent in apportioning one payment across several matters and is why the column is
+           -- described as a share rather than a debt.
+           ROUND(COALESCE(SUM(
+             CASE
+               WHEN b.kind = 'credit_note' OR b.invoice_total = 0 THEN 0
+               ELSE b.invoice_outstanding * (b.matter_total / b.invoice_total)
+             END
+           ), 0), 4)::text AS outstanding,
+           count(DISTINCT b.invoice_id) FILTER (WHERE b.kind = 'invoice')::int AS invoices
+      FROM billed b
+      JOIN estate.case c ON c.id = b.case_id
+      LEFT JOIN accounting.customer cust ON cust.id = c.customer_id
+     GROUP BY c.id, c.case_no, c.title, c.matter_type, c.status, cust.name
+     ORDER BY c.case_no
+  `);
+
+  // Accepted quotations that have not become invoices: work promised and not yet billed.
+  const quoted = await db.execute<{ case_id: string; quoted: string }>(sql`
+    SELECT l.case_id, COALESCE(SUM(l.line_total), 0)::text AS quoted
+      FROM accounting.quotation_line l
+      JOIN accounting.quotation q ON q.id = l.quotation_id
+     WHERE l.case_id IS NOT NULL
+       AND q.status = 'accepted' AND q.converted_invoice_id IS NULL
+       AND q.quotation_date BETWEEN ${from}::date AND ${to}::date
+     GROUP BY l.case_id
+  `);
+  const quotedByCase = new Map(
+    (quoted.rows ?? []).map((row) => [row.case_id, parseAmount(row.quoted)]),
+  );
+
+  const unattributed = await db.execute<{ total: string }>(sql`
+    SELECT COALESCE(SUM(
+             CASE WHEN i.kind = 'credit_note' THEN -l.line_total ELSE l.line_total END
+           ), 0)::text AS total
+      FROM accounting.invoice_line l
+      JOIN accounting.invoice i ON i.id = l.invoice_id
+     WHERE l.case_id IS NULL
+       AND i.status IN ('issued', 'paid')
+       AND i.invoice_date BETWEEN ${from}::date AND ${to}::date
+  `);
+
+  const all: MatterRevenueRow[] = (rows.rows ?? []).map((row) => ({
+    caseId: row.case_id,
+    caseNo: row.case_no,
+    title: row.title,
+    matterType: row.matter_type,
+    status: row.status,
+    customerName: row.customer_name,
+    billed: parseAmount(row.billed),
+    outstanding: parseAmount(row.outstanding),
+    quoted: quotedByCase.get(row.case_id) ?? 0n,
+    invoices: row.invoices,
+  }));
+
+  // A matter with an accepted quotation and no invoice yet belongs in the list: "promised and not
+  // billed" is exactly what somebody reads this report to find.
+  for (const [caseId, amount] of quotedByCase) {
+    if (all.some((row) => row.caseId === caseId)) continue;
+    const found = await db.execute<{
+      case_no: string;
+      title: string;
+      matter_type: string;
+      status: string;
+      customer_name: string | null;
+    }>(sql`
+      SELECT c.case_no, c.title, c.matter_type, c.status, cust.name AS customer_name
+        FROM estate.case c
+        LEFT JOIN accounting.customer cust ON cust.id = c.customer_id
+       WHERE c.id = ${caseId}
+    `);
+    const matter = found.rows?.[0];
+    if (!matter) continue;
+    all.push({
+      caseId,
+      caseNo: matter.case_no,
+      title: matter.title,
+      matterType: matter.matter_type,
+      status: matter.status,
+      customerName: matter.customer_name,
+      billed: 0n,
+      outstanding: 0n,
+      quoted: amount,
+      invoices: 0,
+    });
+  }
+
+  all.sort((left, right) => left.caseNo.localeCompare(right.caseNo));
+
+  return {
+    from,
+    to,
+    rows: all,
+    totals: {
+      billed: sumAmounts(all.map((row) => row.billed)),
+      outstanding: sumAmounts(all.map((row) => row.outstanding)),
+      quoted: sumAmounts(all.map((row) => row.quoted)),
+    },
+    unattributed: parseAmount(unattributed.rows?.[0]?.total ?? "0"),
+  };
+}

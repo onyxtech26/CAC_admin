@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { deleteInvoiceAction, invoiceAction } from "../../sales-actions";
 import type { FormState } from "../../action-errors";
 import { Alert, Button } from "@/components/ui";
+import { CreditNoteForm, type CreditableLine } from "./CreditNoteForm";
 
 const initial: FormState = {};
 
@@ -30,12 +31,15 @@ export function InvoiceActions({
   kind,
   permissions,
   approvalHint,
+  creditableLines,
 }: {
   invoiceId: string;
   status: string;
   kind: "invoice" | "credit_note";
   permissions: InvoicePermissions;
   approvalHint: string;
+  /** The invoice's own lines, so a credit note can be raised for part of it. */
+  creditableLines: CreditableLine[];
 }) {
   const [state, action, pending] = useActionState(invoiceAction, initial);
   const noun = kind === "credit_note" ? "credit note" : "invoice";
@@ -121,15 +125,11 @@ export function InvoiceActions({
       {(status === "issued" || status === "paid") && permissions.canVoid && (
         <div className="space-y-3">
           {kind === "invoice" && (
-            <ReasonForm
-              action={action}
+            <CreditNoteForm
               invoiceId={invoiceId}
-              actionName="credit"
-              label="Raise a credit note"
-              prompt="Why is the customer being credited?"
-              placeholder="Scope reduced, billed twice, goodwill…"
+              lines={creditableLines}
+              action={action}
               pending={pending}
-              variant="secondary"
             />
           )}
           <ReasonForm

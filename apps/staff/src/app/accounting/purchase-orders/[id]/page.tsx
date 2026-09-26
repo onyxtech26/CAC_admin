@@ -55,6 +55,11 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
           {canEdit && (
             <LinkButton href={`/accounting/purchase-orders/${order.id}/edit`}>Edit draft</LinkButton>
           )}
+          {/* The document the supplier is actually sent. An issued order commits the firm, and it
+              used to commit it on the strength of a row in a table. */}
+          {order.status !== "draft" && order.status !== "pending_approval" && (
+            <LinkButton href={`/accounting/purchase-orders/${order.id}/pdf`}>Open PDF</LinkButton>
+          )}
           {(order.status === "issued" || order.status === "received") &&
             principal.capabilities.has("accounting.voucher.create") && (
               <LinkButton href={`/accounting/vouchers/new?order=${order.id}`} variant="primary">

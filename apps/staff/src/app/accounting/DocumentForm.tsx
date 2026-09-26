@@ -27,6 +27,12 @@ export interface CustomerOption {
   paymentTermsDays: number;
 }
 
+export interface CaseOption {
+  id: string;
+  caseNo: string;
+  title: string;
+}
+
 export interface TaxOption {
   id: string;
   code: string;
@@ -43,6 +49,15 @@ export interface DocumentFormLine {
   discountPercent: string;
   taxCodeId: string;
   accountId: string;
+  /**
+   * The matter this line is billed against.
+   *
+   * `invoice_line.case_id` and `quotation_line.case_id` have been accepted, computed, persisted and
+   * carried through conversions and credit notes since Phase 3 — and no form ever set one and no
+   * report ever read one, so for a firm that bills per matter the two halves of the platform were
+   * not joined at all.
+   */
+  caseId: string;
 }
 
 const emptyLine = (): DocumentFormLine => ({
@@ -53,6 +68,7 @@ const emptyLine = (): DocumentFormLine => ({
   discountPercent: "",
   taxCodeId: "",
   accountId: "",
+  caseId: "",
 });
 
 const initial: FormState = {};
@@ -78,6 +94,7 @@ export function DocumentForm({
   customers,
   accounts,
   taxCodes,
+  cases = [],
   defaultCustomerId,
   defaultDate,
   defaultDueDate,
@@ -95,6 +112,8 @@ export function DocumentForm({
   customers: CustomerOption[];
   accounts: AccountOption[];
   taxCodes: TaxOption[];
+  /** Open matters this line can be billed against. Empty when the caller holds no case access. */
+  cases?: CaseOption[];
   defaultCustomerId?: string;
   defaultDate: string;
   defaultDueDate?: string;
@@ -214,7 +233,18 @@ export function DocumentForm({
           <caption className="sr-only">Document lines</caption>
           <thead>
             <tr className="border-b border-[var(--color-line)]">
-              {["#", "Description", "Account", "Qty", "Unit price", "Disc %", "Tax", "Line total", ""].map(
+              {[
+                "#",
+                "Description",
+                "Account",
+                ...(cases.length > 0 ? ["Matter"] : []),
+                "Qty",
+                "Unit price",
+                "Disc %",
+                "Tax",
+                "Line total",
+                "",
+              ].map(
                 (heading, index) => (
                   <th
                     key={`${heading}-${index}`}
@@ -264,6 +294,24 @@ export function DocumentForm({
                     ))}
                   </select>
                 </td>
+                {cases.length > 0 && (
+                  <td className="px-2 py-1.5">
+                    <select
+                      name={`lines[${index}].caseId`}
+                      value={line.caseId}
+                      onChange={(event) => update(index, "caseId", event.target.value)}
+                      aria-label={`Matter for line ${index + 1}`}
+                      className="w-full min-w-[160px] rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5"
+                    >
+                      <option value="">—</option>
+                      {cases.map((matter) => (
+                        <option key={matter.id} value={matter.id}>
+                          {matter.caseNo} — {matter.title}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                )}
                 <td className="px-2 py-1.5">
                   <input
                     name={`lines[${index}].quantity`}

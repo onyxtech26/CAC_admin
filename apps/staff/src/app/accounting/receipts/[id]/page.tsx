@@ -13,7 +13,7 @@ import {
 import { requireCapability } from "@/lib/auth";
 import { salesFormOptions } from "@/lib/accounting-options";
 import { Shell } from "@/components/Shell";
-import { Alert, Badge, DataTable, Panel, Td } from "@/components/ui";
+import { Alert, Badge, DataTable, LinkButton, Panel, Td } from "@/components/ui";
 import { AllocationForm, ReceiptActions, ReceiptForm, RemoveAllocation } from "../ReceiptForms";
 
 const TONE = { draft: "warn", posted: "ok", void: "danger" } as const;
@@ -73,6 +73,12 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
         { label: "Receipts", href: "/accounting/receipts" },
         { label: receipt.receiptNo ?? "Draft" },
       ]}
+      actions={
+        // The customer's proof that the money arrived, and which invoices it was put against.
+        receipt.status !== "draft" ? (
+          <LinkButton href={`/accounting/receipts/${receipt.id}/pdf`}>Open PDF</LinkButton>
+        ) : undefined
+      }
     >
       <div className="space-y-4">
         {receipt.status === "void" && (

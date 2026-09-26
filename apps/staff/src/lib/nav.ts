@@ -59,6 +59,7 @@ export const NAVIGATION: NavSection[] = [
       { label: "Profit and loss", href: "/accounting/reports/profit-and-loss", capabilities: ["accounting.report.view"] },
       { label: "Balance sheet", href: "/accounting/reports/balance-sheet", capabilities: ["accounting.report.view"] },
       { label: "Receivables aging", href: "/accounting/reports/aging", capabilities: ["accounting.report.view"] },
+      { label: "Revenue by matter", href: "/accounting/reports/by-matter", capabilities: ["accounting.report.view"] },
 
       { label: "Bank reconciliation", href: "/accounting/bank", capabilities: ["accounting.bank.view"] },
       { label: "e-Invoice (MyInvois)", href: "/accounting/einvoice", capabilities: ["accounting.einvoice.view"] },

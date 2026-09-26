@@ -21,7 +21,7 @@ export default async function NewInvoicePage({
   const principal = await requireCapability("accounting.invoice.create");
   const query = await searchParams;
   await getDb();
-  const options = await salesFormOptions();
+  const options = await salesFormOptions(principal);
 
   const date = toIsoDate(today());
 
@@ -52,6 +52,7 @@ export default async function NewInvoicePage({
             customers={options.customers}
             accounts={options.accounts}
             taxCodes={options.taxCodes}
+          cases={options.cases}
             defaultCustomerId={query.customer}
             defaultDate={date}
             dueDateLabel="Due date"

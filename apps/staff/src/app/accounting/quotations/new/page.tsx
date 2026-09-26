@@ -10,7 +10,7 @@ import { saveQuotation } from "../../sales-actions";
 export default async function NewQuotationPage() {
   const principal = await requireCapability("accounting.quotation.create");
   await getDb();
-  const options = await salesFormOptions();
+  const options = await salesFormOptions(principal);
   const date = toIsoDate(today());
 
   return (
@@ -37,6 +37,7 @@ export default async function NewQuotationPage() {
             customers={options.customers}
             accounts={options.accounts}
             taxCodes={options.taxCodes}
+            cases={options.cases}
             defaultDate={date}
             dueDateLabel="Valid until"
             taxNote={options.taxNote}
