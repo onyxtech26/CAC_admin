@@ -46,12 +46,31 @@ export async function renderCasePackPdf(
 
   let y = PAGE_MARGIN;
 
-  /** Moves to a new page when the next block would not fit. */
+  /**
+   * Moves to a new page when the next block would not fit.
+   *
+   * `needed` is capped at a page, because a block taller than a page cannot be made to fit by
+   * adding one — pdfkit flows it across pages by itself, and asking for a page break first would
+   * only leave a blank one in front of it.
+   */
   const room = (needed: number) => {
-    if (y + needed > BOTTOM) {
+    const page = BOTTOM - PAGE_MARGIN;
+    if (y + Math.min(needed, page) > BOTTOM) {
       doc.addPage();
       y = PAGE_MARGIN;
     }
+  };
+
+  /**
+   * Where pdfkit actually finished, rather than where we predicted it would.
+   *
+   * The two differ whenever a block is long enough to flow onto another page: the measured height
+   * is the height of *all* of it, so adding it to `y` gives a number far past the bottom of the
+   * page it started on, and everything after it is laid out against a fiction. Reading the cursor
+   * back is correct in both cases and costs nothing.
+   */
+  const after = (gap: number) => {
+    y = doc.y + gap;
   };
 
   const heading = (text: string) => {
@@ -73,7 +92,7 @@ export async function renderCasePackPdf(
     const height = doc.fontSize(size).font("Helvetica").heightOfString(text, { width: CONTENT_WIDTH });
     room(height + 4);
     doc.fillColor(options.colour ?? "#22272f").text(text, PAGE_MARGIN, y, { width: CONTENT_WIDTH });
-    y += height + (options.gap ?? 3);
+    after(options.gap ?? 3);
   };
 
   const line = (
@@ -96,17 +115,14 @@ export async function renderCasePackPdf(
       .font(options.strong ? "Helvetica-Bold" : "Helvetica")
       .fillColor("#22272f")
       .text(value || "—", PAGE_MARGIN + labelWidth, y, { width: valueWidth });
-    y += height + 1;
+    // The label may be taller than the value when the value is a dash, so keep whichever reached
+    // furthest down.
+    y = Math.max(doc.y, y + height) + 1;
 
     if (options.note) {
-      const noteHeight = doc
-        .fontSize(8)
-        .font("Helvetica")
-        .heightOfString(options.note, { width: valueWidth });
-      doc.fillColor("#7a838f").text(options.note, PAGE_MARGIN + labelWidth, y, {
-        width: valueWidth,
-      });
-      y += noteHeight + 2;
+      doc.fontSize(8).font("Helvetica").fillColor("#7a838f");
+      doc.text(options.note, PAGE_MARGIN + labelWidth, y, { width: valueWidth });
+      after(2);
     }
     y += 2;
   };

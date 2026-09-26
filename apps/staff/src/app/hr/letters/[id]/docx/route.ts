@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@cac/db";
-import { getLetter, getSetting } from "@cac/core";
-import { requireAnyCapability } from "@/lib/auth";
+import { AUDIT, getLetter, getSetting, writeAudit } from "@cac/core";
+import { getRequestContext, requireAnyCapability } from "@/lib/auth";
 import { renderLetterDocx } from "@/lib/letter-docx";
 
 /**
@@ -18,7 +18,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   // Either capability opens the file: the person who generated the letter, and the person who has to
   // approve it. Gating on `generate` alone meant a director approving an appointment letter could not
   // read it, and `hr.letter.approve` is precisely the capability that says they should.
-  await requireAnyCapability(["hr.letter.generate", "hr.letter.approve"]);
+  const principal = await requireAnyCapability(["hr.letter.generate", "hr.letter.approve"]);
   const { id } = await params;
   const db = await getDb();
 
@@ -38,6 +38,18 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   });
 
   const reference = letter.letterNo ?? "draft";
+
+  // Producing a copy is recorded, as it is for the PDF. A .docx more so, if anything: it is the
+  // form that gets edited elsewhere and sent on.
+  await writeAudit(db, {
+    ...(await getRequestContext()),
+    actorUserId: principal.userId,
+    actorLabel: principal.email,
+    action: AUDIT.DOCUMENT_PRODUCED,
+    entityType: "letter",
+    entityId: letter.id,
+    newValues: { reference, kind: letter.kind, format: "docx" },
+  });
 
   return new NextResponse(new Uint8Array(docx), {
     headers: {

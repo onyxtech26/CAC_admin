@@ -573,6 +573,15 @@ function readTextArray(value: unknown): string[] {
 }
 
 /** The facts a rule engine call needs, keyed for `evaluateCondition`. */
+/**
+ * The facts recorded against a matter, for the engine.
+ *
+ * **Takes no principal, and checks nothing.** Every caller resolves access first — `nextQuestions`
+ * and `recomputeChecklist` both hold the record returned by `requireCaseAccess` before they get
+ * here — so the contract is that the caller has scoped the case. Stated because the function is
+ * exported and the compiler cannot say it: a screen calling this with an id out of a request would
+ * read another matter's facts.
+ */
 export async function loadCaseFacts(db: Executor, caseId: string): Promise<FactValues> {
   const result = await db.execute<{ fact_key: string; value: string | null; kind: string }>(sql`
     SELECT f.fact_key, f.value, d.kind

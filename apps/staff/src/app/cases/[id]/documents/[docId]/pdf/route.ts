@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@cac/db";
 import {
+  AUDIT,
   documentBytes,
   getGeneratedDocument,
   getSetting,
   isUserFacingError,
+  writeAudit,
 } from "@cac/core";
 import { getRequestContext, requireCapability } from "@/lib/auth";
 import { renderCaseDocumentPdf } from "@/lib/case-document-pdf";
@@ -67,6 +69,29 @@ export async function GET(
       address: address || "",
       email: "",
       phone: "",
+    });
+
+
+    /**
+     * Producing a copy is recorded.
+     *
+     * For a finalised document the stored file is served and `documentBytes` audits that read; this
+     * covers the other path, the preview of something still in draft or under review. A draft of a
+     * court application leaving as a file is worth the same row as a final one — arguably more,
+     * since it is the version that has not been approved.
+     */
+    await writeAudit(db, {
+      ...(await getRequestContext()),
+      actorUserId: principal.userId,
+      actorLabel: principal.email,
+      action: AUDIT.DOCUMENT_PRODUCED,
+      entityType: "estate.generated_document",
+      entityId: document.id,
+      newValues: {
+        documentNo: document.documentNo,
+        status: document.status,
+        format: "pdf",
+      },
     });
 
     return new NextResponse(new Uint8Array(pdf), {

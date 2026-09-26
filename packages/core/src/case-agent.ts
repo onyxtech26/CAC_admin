@@ -12,7 +12,12 @@ import {
   rulesInForce,
   type Condition,
 } from "./case-rules.js";
-import { estatePosition, requireCaseAccess, type EstatePosition } from "./cases.js";
+import {
+  caseAccessClause,
+  estatePosition,
+  requireCaseAccess,
+  type EstatePosition,
+} from "./cases.js";
 import { listAssets, listCaseFacts, listLiabilities, listParties } from "./case-file.js";
 import { listRequirements } from "./case-checklist.js";
 import { searchLibrary } from "./library.js";
@@ -592,11 +597,10 @@ export async function similarMatters(
       FROM estate.case c
       LEFT JOIN estate.case_fact f ON f.case_id = c.id AND f.value IS NOT NULL
      WHERE c.id <> ${caseId}
-       AND (${principal.capabilities.has("case.view_all")}
-            OR EXISTS (
-              SELECT 1 FROM estate.case_assignment a
-               WHERE a.case_id = c.id AND a.employee_id = ${principal.employeeId ?? null}
-                 AND a.removed_at IS NULL))
+       -- caseAccessClause, not a copy of it. This had the same predicate written out inline, and a
+       -- security rule with two implementations is a security rule with one that will be missed:
+       -- the receipt allocation had the same shape, and its copy had already drifted.
+       AND ${caseAccessClause(principal, "c")}
   `);
 
   const grouped = new Map<

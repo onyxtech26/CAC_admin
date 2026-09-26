@@ -867,6 +867,15 @@ export interface RecordCaseEventInput {
  * `detail` goes through `redact()` on the way in. A timeline is read by more people
  * than a case file is.
  */
+/**
+ * Adds an entry to a matter's timeline.
+ *
+ * **Takes no principal, and checks nothing.** It is called from inside functions that have already
+ * established access to the case and are recording what they just did — so a check here would be a
+ * second, weaker copy of one that has already happened. That makes the contract worth stating: the
+ * caller is responsible for having scoped the case, and a screen must never call this directly with
+ * a case id out of a request.
+ */
 export async function recordCaseEvent(db: Executor, input: RecordCaseEventInput): Promise<void> {
   const summary = input.summary.trim();
   if (!summary) throw new ValidationError("An entry needs a summary.", "summary");

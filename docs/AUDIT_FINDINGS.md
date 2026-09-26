@@ -293,6 +293,11 @@ high-value capability; `cases.age_of_majority` → null disables the age check;
 
 ## 8. What this audit did not cover
 
+**A snapshot, kept as written.** This was the state at the end of part one and every line of it has
+since been overtaken: the remaining slices were read (parts two and three), the findings were fixed,
+and the test count is now 769. It is left here unedited because an audit that quietly rewrites its own
+earlier account is not an audit. Read it as history.
+
 - The remaining four slices in the table above were still running when this was written.
 - No fix has been applied. Every finding above is a report, not a change.
 - The browser pass exercised reads on all 52 screens and the full authentication chain. It did not
@@ -723,17 +728,73 @@ internally consistent everywhere they appear.
 
 ---
 
-## 13. What remains unaudited
+## 13. Estate cases and the case agent (Phases 9 and 11)
 
-**Estate cases and the case agent (Phases 9 and 11).** The auditor for this slice was cut by the
-usage limit twice before producing anything. Not audited: the three-valued rule engine's edge cases,
-the recomputation invariants, whether every read of `estate.case` and its children is scoped by
-`caseAccessClause`, and the preparation-pack PDF's layout limits.
+The one slice the earlier passes never read. The auditor was cut by the usage limit twice; this is the
+read it did not get to. Six exported modules, ~4,600 lines: `cases.ts`, `case-rules.ts`,
+`case-agent.ts`, the case screens, the generated-document routes and the preparation-pack PDF.
 
-What is known about it: 79 tests cover the rule engine's three-valued logic, the recomputation
-invariants and the access scoping, and all pass. The browser pass rendered every case screen
-cleanly. That is not the same as an adversarial read, and the accounting and auth slices are the
-proof — both were fully tested and both had defects that only a read found.
+### Defects found
+
+- ~~**`similarMatters` reimplemented the access predicate inline**~~ (`case-agent.ts:600`). Every other
+  read in the slice ends in `caseAccessClause(principal, alias)`; this one wrote the same condition out
+  by hand. It matched, today — but a copy of a security predicate is a copy that does not get fixed
+  when the original does, and this one is in the function whose whole purpose is to show a consultant
+  matters they did not open. **Fixed** to call `caseAccessClause`. No behaviour change now; the point is
+  that there is now one definition of who may see a case.
+
+- ~~**The preparation pack's page-break arithmetic desynchronised from the page**~~
+  (`case-pack-pdf.ts`). `y` was advanced by the *measured* height of each block. When a block is long
+  enough for pdfkit to flow it onto a second page, that height is the height of all of it, so `y` lands
+  far past the bottom of the page it started on — and every block after it is positioned against a
+  number that no longer describes the document. The visible result was a page break where none was
+  needed and a blank page in the middle of a pack that goes to court. **Fixed** by reading the cursor
+  back from pdfkit (`after()`) instead of predicting it, and by capping `room()`'s request at one page,
+  since a block taller than a page cannot be made to fit by adding one. A probe on a seeded case went
+  from four pages to three, with the blank one gone.
+
+- ~~**Producing a document was not recorded**~~ — found in the pack route, and it turned out to span the
+  whole document surface. The invoice PDF route wrote a `DOCUMENT_PRODUCED` row and said why: it is the
+  point at which figures leave the system. Five of the six other document routes wrote nothing — the
+  case pack, the case document as PDF and as DOCX, and the HR letter as PDF and as DOCX, plus the
+  payslip. So the question an audit is actually asked — *who took a copy of this, and when* — was
+  answerable for an invoice and not for a court application or somebody's payslip. **Fixed:** all
+  eleven document routes now write `DOCUMENT_PRODUCED`. The row identifies the document and the format
+  and carries none of its contents; the trail is append-only and the one table case contents and salary
+  figures must not be duplicated into. Every route that emits a file now records it: eleven
+  `DOCUMENT_PRODUCED`, the library file route's `DOCUMENT_DOWNLOADED` (in `documentBytes`, so it holds
+  for every caller), and the aging CSV's `EXPORT_SENSITIVE`.
+
+### A finding I withdrew
+
+I flagged `{all: []}` — an empty condition group — as a rule that silently matches everything, and
+added validation to reject it. The tests failed, and they were right: an empty `all` is the documented
+idiom for "this rule always applies", `describeCondition` renders it as the word "always", and seeded
+rules use it. **I reverted the change.** Recording it because an audit that only lists confirmed hits
+is not describing how the reading went.
+
+### Checked and found sound
+
+- **Access scoping.** Every exported function that reads `estate.case` or a child table ends in
+  `caseAccessClause`, including the counts, the agent's retrieval and the timeline. Two functions take
+  no principal — `recordCaseEvent` and `loadCaseFacts` — and that is deliberate: they are called from
+  inside functions that have already resolved access. Both now say so at the top of the doc comment,
+  because a function taking no principal is exactly the thing a later reader adds a route to.
+- **The three-valued rule engine.** `decided`/`undecided` propagation is correct in all four
+  combinators: an unknown fact under `all` yields undecided rather than false, under `any` it yields
+  undecided only when no branch is already true, `not` of undecided stays undecided, and the
+  missing-fact list is the union of what each undecided branch could not answer. This is the part that
+  must never guess, and it does not.
+- **Recomputation invariants.** A requirement already satisfied or waived is never overwritten by a
+  recompute, and `UNIQUE (case_id, rule_id)` makes a concurrent double-recompute a constraint error
+  rather than two rows. Checked against the migration, not only the code.
+- **The agent refuses rather than composes.** With no assistant configured, retrieval returns citations
+  and the screen says the search was lexical. Nothing is summarised, and no case content leaves the
+  system.
+
+Not covered, and stated plainly: I did not load-test the pack PDF against a case with hundreds of
+documents, and I did not audit the seeded rule *content* against Malaysian probate practice — that is
+`Q-LEGAL-1` in `docs/OPEN_QUESTIONS.md` and it is CAC's to answer, not mine to invent.
 
 ## 14. Honest summary of severity
 

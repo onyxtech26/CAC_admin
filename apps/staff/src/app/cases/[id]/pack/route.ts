@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@cac/db";
-import { buildCasePack, getSetting, isUserFacingError } from "@cac/core";
-import { requireCapability } from "@/lib/auth";
+import { AUDIT, buildCasePack, isUserFacingError, writeAudit } from "@cac/core";
+import { getRequestContext, requireCapability } from "@/lib/auth";
+import { companyDetails } from "@/lib/company-details";
 import { renderCasePackPdf } from "@/lib/case-pack-pdf";
 
 /**
@@ -22,16 +23,34 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   try {
     const pack = await buildCasePack(db, principal, id);
 
-    const [name, address] = await Promise.all([
-      getSetting<string>(db, "company.name", "Conglomerate Appraisal Consultancy"),
-      getSetting<string>(db, "company.address", ""),
-    ]);
+    const pdf = await renderCasePackPdf(pack, await companyDetails(db));
 
-    const pdf = await renderCasePackPdf(pack, {
-      name: name || "Conglomerate Appraisal Consultancy",
-      address: address || "",
-      email: "",
-      phone: "",
+    /**
+     * Producing a pack is recorded.
+     *
+     * Every other document route audits itself and this one did not, which is the wrong way round:
+     * the pack is the most complete thing the platform assembles — the deceased, the parties, every
+     * figure with its basis, the gaps and the contradictions — and it leaves as a file somebody
+     * carries into a meeting. "Who took a copy of this matter, and when" is the question asked
+     * after it turns up somewhere it should not have.
+     *
+     * The contents are not in the row: the matter is identified and the audit trail is append-only,
+     * so copying a family's affairs into it would be the opposite of careful.
+     */
+    await writeAudit(db, {
+      ...(await getRequestContext()),
+      actorUserId: principal.userId,
+      actorLabel: principal.email,
+      action: AUDIT.DOCUMENT_PRODUCED,
+      entityType: "estate.case",
+      entityId: id,
+      newValues: {
+        caseNo: pack.caseNo,
+        document: "case preparation pack",
+        format: "pdf",
+        requirements: pack.requirements.length,
+        gaps: pack.gaps.length,
+      },
     });
 
     return new NextResponse(new Uint8Array(pdf), {

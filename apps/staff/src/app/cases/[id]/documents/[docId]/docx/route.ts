@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@cac/db";
-import { getGeneratedDocument, getSetting, isUserFacingError } from "@cac/core";
-import { requireCapability } from "@/lib/auth";
+import {
+  AUDIT,
+  getGeneratedDocument,
+  getSetting,
+  isUserFacingError,
+  writeAudit,
+} from "@cac/core";
+import { getRequestContext, requireCapability } from "@/lib/auth";
 import { renderCaseDocumentDocx } from "@/lib/case-document-docx";
 
 /**
@@ -45,6 +51,23 @@ export async function GET(
       address: address || "",
       email: "",
       phone: "",
+    });
+
+    // Producing a copy is recorded, for the reason the invoice route gives and five of the six
+    // document routes did not follow: this is the point at which a matter's contents leave as a
+    // file, and a .docx is the form that gets edited elsewhere and sent on.
+    await writeAudit(db, {
+      ...(await getRequestContext()),
+      actorUserId: principal.userId,
+      actorLabel: principal.email,
+      action: AUDIT.DOCUMENT_PRODUCED,
+      entityType: "estate.generated_document",
+      entityId: document.id,
+      newValues: {
+        documentNo: document.documentNo,
+        status: document.status,
+        format: "docx",
+      },
     });
 
     return new NextResponse(new Uint8Array(docx), {
