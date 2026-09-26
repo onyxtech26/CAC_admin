@@ -91,6 +91,11 @@ export function MfaEnrolment() {
             be shown again.
           </p>
         </div>
+        <p className="text-[11px] text-[var(--color-muted)]">
+          The warning at the top of this page is now out of date — your authenticator is enrolled. It
+          is still there because refreshing this page would take the codes above with it, and they
+          are shown once. It goes when you follow the link below.
+        </p>
         {/* A link rather than automatic navigation: the page must not move on
             until the person has actually taken a copy of the codes. */}
         <a href="/account" className="inline-block text-[12px] text-[var(--color-info)] underline">

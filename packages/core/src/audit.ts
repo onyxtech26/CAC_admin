@@ -90,10 +90,42 @@ const MASKED_KEYS = new Set([
 ]);
 
 function maskValue(value: unknown): unknown {
-  if (typeof value === "number") return "***";
   if (typeof value !== "string") return "***";
   if (value.length <= 4) return "***";
+
+  /**
+   * An amount is masked whole; an identifier keeps its last four.
+   *
+   * The last four digits of an account or an NRIC are a deliberate partial identifier — enough to
+   * say which account, not enough to use it, which is why `bank_account_last4` is a column. The last
+   * four characters of an *amount* are nothing of the kind: "3500.00" masked to "***0.00" gives the
+   * figure to the nearest hundred and its shape, from a function whose job is to remove both.
+   *
+   * So: anything with a fractional part, and any run of digits too short to be an account number,
+   * goes entirely.
+   */
+  const digits = value.replace(/\D/g, "");
+  const looksLikeAnAmount = /^-?[\d,]+\.\d+$/.test(value.trim());
+  if (looksLikeAnAmount || digits.length < 10) return "***";
+
   return `${"*".repeat(Math.max(3, value.length - 4))}${value.slice(-4)}`;
+}
+
+/** A Malaysian NRIC: twelve digits, hyphenated or not. */
+const NRIC_SHAPE = /\b\d{6}-?\d{2}-?\d{4}\b/g;
+/** Ten or more digits in a row, with optional separators: an account or a card. */
+const LONG_NUMBER_SHAPE = /\b\d[\d\s-]{8,}\d\b/g;
+
+/**
+ * Removes the two shapes that must never reach an append-only table, and nothing else.
+ *
+ * Exported so the same rule can be applied wherever free text is stored beside a record, and tested
+ * directly against the awkward cases.
+ */
+export function redactFreeText(input: string): string {
+  return input
+    .replace(NRIC_SHAPE, "[identification number removed]")
+    .replace(LONG_NUMBER_SHAPE, "[number removed]");
 }
 
 /**
@@ -150,6 +182,21 @@ export async function writeAudit(db: Executor, entry: AuditEntry): Promise<void>
   const oldValues = entry.oldValues === undefined ? null : JSON.stringify(redact(entry.oldValues));
   const newValues = entry.newValues === undefined ? null : JSON.stringify(redact(entry.newValues));
 
+  /**
+   * The reason is free text a person typed, and it went in untouched.
+   *
+   * `redact()` works on property names, and a reason has none — it is one string, and the only
+   * mandatory one in the platform is the reason for resetting somebody's MFA, typed at the moment an
+   * administrator is looking at an identity document. An NRIC pasted into that box landed
+   * unredacted in an append-only table that cannot be scrubbed.
+   *
+   * So the *content* is scanned, for the two shapes that are unmistakable and irreversible: a
+   * Malaysian NRIC and a long run of digits that is a bank account or a card. Deliberately narrow.
+   * A reason is meant to be read by whoever reviews the trail later, and a filter that mangles
+   * ordinary sentences would make people write less rather than less sensitive.
+   */
+  const reason = entry.reason == null ? null : redactFreeText(entry.reason);
+
   await db.execute(sql`
     INSERT INTO audit.event (
       actor_user_id, actor_label, action, entity_type, entity_id,
@@ -162,7 +209,7 @@ export async function writeAudit(db: Executor, entry: AuditEntry): Promise<void>
       ${entry.entityId ?? null},
       ${oldValues}::jsonb,
       ${newValues}::jsonb,
-      ${entry.reason ?? null},
+      ${reason},
       ${entry.ip ?? null},
       ${entry.userAgent ?? null},
       ${entry.correlationId ?? null}
@@ -179,6 +226,8 @@ export const AUDIT = {
   LOGOUT_ALL: "LOGOUT_ALL",
   MFA_ENROLLED: "MFA_ENROLLED",
   MFA_FAILED: "MFA_FAILED",
+  /** A second factor accepted, and by which means. Failures without successes are unreadable. */
+  MFA_SATISFIED: "MFA_SATISFIED",
   MFA_RESET: "MFA_RESET",
   PASSWORD_CHANGED: "PASSWORD_CHANGED",
   PASSWORD_RESET_REQUESTED: "PASSWORD_RESET_REQUESTED",
@@ -192,6 +241,14 @@ export const AUDIT = {
   PERMISSION_OVERRIDDEN: "PERMISSION_OVERRIDDEN",
   SETTING_CHANGED: "SETTING_CHANGED",
   SESSION_REVOKED: "SESSION_REVOKED",
+  /**
+   * A capability check that refused.
+   *
+   * The /denied page tells the person "The request has been recorded", which was not true: nothing
+   * wrote anything. Either the sentence goes or the row does, and the row is worth more — a pattern
+   * of denials is how somebody probing what they can reach looks from the inside.
+   */
+  ACCESS_DENIED: "ACCESS_DENIED",
   EXPORT_SENSITIVE: "EXPORT_SENSITIVE",
 
   // Accounting

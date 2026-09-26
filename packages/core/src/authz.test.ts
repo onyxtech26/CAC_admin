@@ -250,6 +250,11 @@ describe("audit redaction", () => {
     expect(result.employee.nric).toBe("**********5678");
     expect(result.employee.bank_account).toBe("******7890");
     expect(result.employee.basic_salary).toBe("***");
+    // Not "***0.00": the last four characters of an amount are the amount to the nearest hundred and
+    // the shape of the figure, from the function whose job is to remove both. An identifier's last
+    // four are a deliberate partial identifier; an amount's are not.
+    expect(redact({ salary: "3500.00" })).toEqual({ salary: "***" });
+    expect(redact({ bank_account: "1234567890" })).toEqual({ bank_account: "******7890" });
 
     // Everything else survives untouched.
     expect(result.email).toBe("person@cac.test");

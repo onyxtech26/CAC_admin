@@ -172,7 +172,9 @@ export async function revokeSessionAction(
     `);
     if (!owned.rows?.[0]) return { error: "That session is not yours." };
 
-    await revokeSession(db, sessionId, principal.userId);
+    // Ending a device from this list is somebody noticing something, not signing out, and the trail
+    // records it as the different event it is.
+    await revokeSession(db, sessionId, principal.userId, "revoked");
   } catch (error) {
     return toState(error, "The session could not be ended.");
   }

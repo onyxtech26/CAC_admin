@@ -3,11 +3,13 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "@cac/db";
 import {
+  AUDIT,
   AuthenticationError,
   AuthorizationError,
   DEFAULT_LOGIN_POLICY,
   requireCapability as assertCapability,
   resolvePrincipal,
+  writeAudit,
   type Principal,
 } from "@cac/core";
 
@@ -86,11 +88,40 @@ export async function requireCapability(capability: string): Promise<Principal> 
     assertCapability(principal, capability);
   } catch (error) {
     if (error instanceof AuthorizationError || error instanceof AuthenticationError) {
+      await recordDenial(principal, capability);
       redirect(`/denied?capability=${encodeURIComponent(capability)}`);
     }
     throw error;
   }
   return principal;
+}
+
+/**
+ * Writes the denial the /denied page promises.
+ *
+ * That page says "The request has been recorded", and nothing recorded anything — a sentence the
+ * platform could not support, on the screen where somebody is most likely to be testing what they
+ * can reach. A run of these from one account is exactly what a reviewer wants to see.
+ *
+ * Failures here are swallowed. A denial that cannot be written must still be a denial; turning it
+ * into a 500 would tell the caller something about the platform's internals and let them keep the
+ * page they were refused.
+ */
+async function recordDenial(principal: Principal, capability: string): Promise<void> {
+  try {
+    const db = await getDb();
+    await writeAudit(db, {
+      actorUserId: principal.userId,
+      actorLabel: principal.email,
+      action: AUDIT.ACCESS_DENIED,
+      entityType: "capability",
+      entityId: null,
+      newValues: { capability, roles: principal.roles },
+      ...(await getRequestContext()),
+    });
+  } catch (error) {
+    console.error("[auth] the denial could not be recorded:", error);
+  }
 }
 
 /**
@@ -107,6 +138,7 @@ export async function requireAnyCapability(capabilities: string[]): Promise<Prin
   if (principal.mustEnrolMfa) redirect("/account?enrol-mfa=1");
 
   if (!capabilities.some((capability) => principal.capabilities.has(capability))) {
+    await recordDenial(principal, capabilities.join(" or "));
     redirect(`/denied?capability=${encodeURIComponent(capabilities[0])}`);
   }
   return principal;

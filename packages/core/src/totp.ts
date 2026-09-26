@@ -102,30 +102,52 @@ export function verifyTotp(
   token: string,
   options: TotpOptions & { window?: number; now?: number } = {},
 ): boolean {
+  return matchTotpStep(secretBase32, token, options) !== null;
+}
+
+/**
+ * The counter step a code matched, or null.
+ *
+ * `verifyTotp` answers yes or no, which is not enough to stop a replay: the drift window accepts
+ * three steps, so a code seen over a shoulder or captured by a phishing page kept working for about
+ * ninety seconds. Knowing *which* step matched lets the caller record it and refuse that step and
+ * everything before it, which spends the code.
+ *
+ * `after` is the last step already spent. A match at or below it is treated as no match at all, and
+ * deliberately so: the caller cannot then accidentally accept a replay by ignoring a flag.
+ */
+export function matchTotpStep(
+  secretBase32: string,
+  token: string,
+  options: TotpOptions & { window?: number; now?: number; after?: number | null } = {},
+): number | null {
   const { period, digits } = { ...DEFAULTS, ...options };
   const window = options.window ?? 1;
   const now = options.now ?? Date.now();
 
   const submitted = token.replace(/\s/g, "");
-  if (!/^\d+$/.test(submitted) || submitted.length !== digits) return false;
+  if (!/^\d+$/.test(submitted) || submitted.length !== digits) return null;
 
   const secret = base32Decode(secretBase32);
   const counter = Math.floor(now / 1000 / period);
   const submittedBuffer = Buffer.from(submitted);
+  const after = options.after ?? null;
 
-  let matched = false;
+  let matchedStep: number | null = null;
   for (let drift = -window; drift <= window; drift++) {
-    const candidate = Buffer.from(hotp(secret, counter + drift, options));
+    const step = counter + drift;
+    const candidate = Buffer.from(hotp(secret, step, options));
     // Do not break early: comparing every candidate keeps the work constant
     // regardless of which step matched.
     if (
       candidate.length === submittedBuffer.length &&
-      timingSafeEqual(candidate, submittedBuffer)
+      timingSafeEqual(candidate, submittedBuffer) &&
+      (after === null || step > after)
     ) {
-      matched = true;
+      matchedStep = step;
     }
   }
-  return matched;
+  return matchedStep;
 }
 
 /** otpauth:// URI for authenticator QR codes. */

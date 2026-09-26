@@ -6,6 +6,7 @@ import { seed } from "@cac/db/seed";
 import { ALL_PERMISSIONS, MAKER_CHECKER_PAIRS, ROLE_PERMISSIONS, ROLES } from "@cac/db/rbac";
 import { hashPassword } from "./password.js";
 import { isMakerCheckerPair, resolveCapabilities, type Principal } from "./authz.js";
+import { redactFreeText } from "./audit.js";
 
 /**
  * Phase 13: the permission model as a whole, rather than one module at a time.
@@ -343,5 +344,27 @@ describe("the guards that do not depend on the application", () => {
     for (let index = 0; index < numbers.length; index += 1) {
       expect(numbers[index], `migration numbering jumps at ${names[index]}`).toBe(index);
     }
+  });
+});
+
+describe("what reaches the audit trail", () => {
+  it("takes an identification number out of a free-text reason", () => {
+    // `redact()` works on property names, and a reason has none. The only mandatory reason in the
+    // platform is the one for resetting somebody's MFA, typed while an administrator is looking at
+    // an identity document — and it went into an append-only table untouched.
+    expect(redactFreeText("Lost phone, verified against NRIC 860101-14-5566")).toBe(
+      "Lost phone, verified against NRIC [identification number removed]",
+    );
+    expect(redactFreeText("Refund to account 1234 5678 9012")).toBe(
+      "Refund to account [number removed]",
+    );
+  });
+
+  it("leaves an ordinary sentence alone, including the figures in it", () => {
+    // Deliberately narrow. A reason exists to be read by whoever reviews the trail later, and a
+    // filter that mangled ordinary sentences would make people write less rather than less
+    // sensitive.
+    const reason = "Corrected on 4 June 2026 after the client called; invoice 2026-114 for RM 4,500.";
+    expect(redactFreeText(reason)).toBe(reason);
   });
 });

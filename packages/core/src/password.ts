@@ -112,5 +112,19 @@ export function generateRecoveryCodes(count = 10): { codes: string[]; hashes: st
     }
     codes.push(code);
   }
-  return { codes, hashes: codes.map(hashToken) };
+  // Hashed in the form the code is *read in*, not the form it is printed in. The hyphen is there to
+  // make ten characters readable; hashing it meant somebody who typed ABCDEFGHIJ instead of
+  // ABCDE-FGHIJ was told their code was wrong, in the same words as an actual wrong code, at the
+  // moment they had already lost their authenticator.
+  return { codes, hashes: codes.map((code) => hashToken(normaliseRecoveryCode(code))) };
+}
+
+/**
+ * A recovery code as it is compared: upper case, letters and digits only.
+ *
+ * So the hyphen is presentation, spaces pasted from a password manager do not matter, and the same
+ * ten characters are the same code however they arrive.
+ */
+export function normaliseRecoveryCode(input: string): string {
+  return input.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }

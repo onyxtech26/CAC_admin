@@ -1,9 +1,10 @@
 import { sql } from "drizzle-orm";
 import type { Database } from "@cac/db";
 import { generateToken, hashToken, hashPassword, verifyPassword } from "./password.js";
+import { normaliseRecoveryCode } from "./password.js";
 import { resolveCapabilities, resolveRoles, type Principal } from "./authz.js";
 import { AUDIT, writeAudit } from "./audit.js";
-import { verifyTotp } from "./totp.js";
+import { matchTotpStep } from "./totp.js";
 import { decryptSecret } from "./secrets.js";
 
 /**
@@ -31,6 +32,17 @@ export interface LoginPolicy {
   lockoutMinutes: number;
   idleMinutes: number;
   absoluteHours: number;
+  /**
+   * Failed attempts from one address, within the window below, before that address is refused.
+   *
+   * The per-account lock does nothing against somebody trying one password against two hundred
+   * accounts: each account sees a single failure. `auth.login_attempt` recorded every attempt with
+   * its address and nothing ever read the table, so the per-address backoff the security model
+   * promises did not exist. Twenty is generous for an office behind one NAT address and far below
+   * what a spray needs.
+   */
+  maxFailedFromOneAddress: number;
+  addressWindowMinutes: number;
 }
 
 export const DEFAULT_LOGIN_POLICY: LoginPolicy = {
@@ -38,6 +50,8 @@ export const DEFAULT_LOGIN_POLICY: LoginPolicy = {
   lockoutMinutes: 15,
   idleMinutes: 30,
   absoluteHours: 12,
+  maxFailedFromOneAddress: 20,
+  addressWindowMinutes: 15,
 };
 
 /**
@@ -87,6 +101,23 @@ export async function login(
 ): Promise<LoginResult> {
   const normalised = email.trim().toLowerCase();
 
+  // Before anything else, including the account lookup: a refused address is refused whoever it
+  // claims to be, and the refusal must not itself become a way to ask questions about an account.
+  if (ctx.ip) {
+    const recent = await db.execute<{ n: string }>(sql`
+      SELECT count(*)::text AS n FROM auth.login_attempt
+       WHERE ip = ${ctx.ip}::inet AND success = false
+         AND created_at > now() - ${`${policy.addressWindowMinutes} minutes`}::interval
+    `);
+    if (Number(recent.rows?.[0]?.n ?? "0") >= policy.maxFailedFromOneAddress) {
+      await recordAttempt(db, normalised, false, "address_throttled", ctx);
+      return {
+        status: "locked",
+        until: new Date(Date.now() + policy.addressWindowMinutes * 60_000),
+      };
+    }
+  }
+
   const found = await db.execute<UserRow>(sql`
     SELECT id, email, password_hash, full_name, status, mfa_enforced,
            employee_id, failed_attempts, locked_until
@@ -103,7 +134,21 @@ export async function login(
     return { status: "invalid" };
   }
 
-  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+  const passwordOk = await verifyPassword(password, user.password_hash);
+
+  /**
+   * The state of the account is disclosed only to somebody who proved they hold its password.
+   *
+   * These two checks ran *before* the password was verified, so "this account is locked" and "this
+   * account is suspended" came back for any junk password — which tells an attacker that the address
+   * is a real one, and more. The comment in the sign-in action even claimed the suspended message was
+   * safe "because the password was correct"; it had never been checked. The whole point of hashing an
+   * unknown account's password is to make every wrong answer look the same, and this undid it two
+   * lines later.
+   *
+   * The password check itself still runs first and always, so the timing does not change either.
+   */
+  if (passwordOk && user.locked_until && new Date(user.locked_until) > new Date()) {
     await recordAttempt(db, normalised, false, "locked", ctx);
     await writeAudit(db, {
       action: AUDIT.LOGIN_LOCKED,
@@ -115,12 +160,10 @@ export async function login(
     return { status: "locked", until: new Date(user.locked_until) };
   }
 
-  if (user.status !== "active") {
+  if (passwordOk && user.status !== "active") {
     await recordAttempt(db, normalised, false, "suspended", ctx);
     return { status: "suspended" };
   }
-
-  const passwordOk = await verifyPassword(password, user.password_hash);
 
   if (!passwordOk) {
     const attempts = user.failed_attempts + 1;
@@ -128,7 +171,13 @@ export async function login(
     await db.execute(sql`
       UPDATE auth."user"
       SET failed_attempts = ${attempts},
-          locked_until = ${shouldLock ? new Date(Date.now() + policy.lockoutMinutes * 60_000).toISOString() : null}
+          -- Never clears an existing lock. Writing null on every failed attempt would have meant a
+          -- locked account unlocked itself on the next wrong guess.
+          locked_until = ${
+            shouldLock
+              ? new Date(Date.now() + policy.lockoutMinutes * 60_000).toISOString()
+              : (user.locked_until ?? null)
+          }
       WHERE id = ${user.id}
     `);
     await recordAttempt(db, normalised, false, "bad_credentials", ctx);
@@ -249,7 +298,7 @@ export async function completeMfa(
       return { status: "locked", until: new Date(session.locked_until) } as const;
     }
 
-    const satisfy = async (): Promise<MfaResult> => {
+    const satisfy = async (how: "authenticator" | "recovery code"): Promise<MfaResult> => {
       const { token, hash } = generateToken();
       await tx.execute(sql`
         UPDATE auth.session
@@ -259,23 +308,46 @@ export async function completeMfa(
       await tx.execute(sql`
         UPDATE auth."user" SET failed_attempts = 0, locked_until = NULL WHERE id = ${session.user_id}
       `);
+
+      // The success paths returned before writing anything, so the trail held every failed second
+      // factor and no successful one — which makes the failures hard to read, since there is nothing
+      // to compare them against, and leaves no record that a recovery code was spent.
+      await writeAudit(tx, {
+        action: AUDIT.MFA_SATISFIED,
+        entityType: "session",
+        entityId: session.id,
+        actorUserId: session.user_id,
+        newValues: { using: how },
+        ...ctx,
+      });
+
       return { status: "ok", token };
     };
 
-    const devices = await tx.execute<{ id: string; secret_enc: string }>(sql`
-      SELECT id, secret_enc FROM auth.mfa_device
+    const devices = await tx.execute<{ id: string; secret_enc: string; last_step: string | null }>(sql`
+      SELECT id, secret_enc, last_step FROM auth.mfa_device
       WHERE user_id = ${session.user_id} AND confirmed_at IS NOT NULL
     `);
 
     for (const device of devices.rows ?? []) {
-      if (verifyTotp(decryptSecret(device.secret_enc), code)) {
-        await tx.execute(sql`UPDATE auth.mfa_device SET last_used_at = now() WHERE id = ${device.id}`);
-        return satisfy();
+      // The step is recorded, so the same code cannot be used twice. The drift window accepts three
+      // steps, which made a code seen over a shoulder good for about ninety seconds.
+      const step = matchTotpStep(decryptSecret(device.secret_enc), code, {
+        after: device.last_step === null ? null : Number(device.last_step),
+      });
+      if (step !== null) {
+        await tx.execute(sql`
+          UPDATE auth.mfa_device SET last_used_at = now(), last_step = ${step} WHERE id = ${device.id}
+        `);
+        return satisfy("authenticator");
       }
     }
 
     // Recovery codes are single-use, and this is where that is made true rather than hoped for.
-    const codeHash = hashToken(code.trim().toUpperCase());
+    // Normalised rather than merely upper-cased: the hyphen is there to make ten characters
+    // readable, and hashing it meant a code typed without it was refused in the same words as a
+    // wrong one, at the moment somebody had already lost their authenticator.
+    const codeHash = hashToken(normaliseRecoveryCode(code));
     const recovery = await tx.execute<{ id: string }>(sql`
       SELECT id FROM auth.recovery_code
        WHERE user_id = ${session.user_id} AND code_hash = ${codeHash} AND used_at IS NULL
@@ -285,7 +357,7 @@ export async function completeMfa(
       await tx.execute(sql`
         UPDATE auth.recovery_code SET used_at = now() WHERE id = ${recovery.rows[0].id}
       `);
-      return satisfy();
+      return satisfy("recovery code");
     }
 
     const attempts = session.failed_attempts + 1;
@@ -341,9 +413,11 @@ export async function resolvePrincipal(
     last_seen_at: string;
     must_change_password: boolean;
     must_enrol_mfa: boolean;
+    locked_until: string | null;
   }>(sql`
     SELECT s.id AS session_id, s.user_id, u.email, u.full_name, u.employee_id,
            u.status, s.mfa_satisfied_at, s.last_seen_at, u.must_change_password,
+           u.locked_until,
            -- Required to hold an authenticator and holding none.
            --
            -- Two sources, both of which were decorative before. The mfa_enforced column is set on
@@ -376,6 +450,14 @@ export async function resolvePrincipal(
   const row = rows.rows?.[0];
   if (!row || row.status !== "active") return null;
 
+  // Locking an account ends its sessions. Suspension already did; locking did not, so an account
+  // locked *because somebody was guessing at it* carried on working in whatever browser was already
+  // signed in — including, if the guessing had already succeeded once, the attacker's.
+  if (row.locked_until && new Date(row.locked_until) > new Date()) {
+    await db.execute(sql`UPDATE auth.session SET revoked_at = now() WHERE id = ${row.session_id}`);
+    return null;
+  }
+
   const idleMs = Date.now() - new Date(row.last_seen_at).getTime();
   if (idleMs > policy.idleMinutes * 60_000) {
     await db.execute(sql`UPDATE auth.session SET revoked_at = now() WHERE id = ${row.session_id}`);
@@ -403,10 +485,23 @@ export async function resolvePrincipal(
   };
 }
 
-export async function revokeSession(db: Database, sessionId: string, actorUserId?: string): Promise<void> {
+/**
+ * Ends one session.
+ *
+ * `reason` separates the two things this is used for, which the trail could not tell apart: signing
+ * out, and somebody looking at a list of their devices and killing one they do not recognise. The
+ * second is a security event — it is the moment a person notices something — and it was recorded as
+ * an ordinary logout. `AUDIT.SESSION_REVOKED` was declared for it and never written.
+ */
+export async function revokeSession(
+  db: Database,
+  sessionId: string,
+  actorUserId?: string,
+  reason: "signed out" | "revoked" = "signed out",
+): Promise<void> {
   await db.execute(sql`UPDATE auth.session SET revoked_at = now() WHERE id = ${sessionId} AND revoked_at IS NULL`);
   await writeAudit(db, {
-    action: AUDIT.LOGOUT,
+    action: reason === "revoked" ? AUDIT.SESSION_REVOKED : AUDIT.LOGOUT,
     entityType: "session",
     entityId: sessionId,
     actorUserId: actorUserId ?? null,
