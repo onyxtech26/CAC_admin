@@ -52,9 +52,10 @@ export default async function AccountPage() {
     <Shell principal={principal} title="My account" breadcrumbs={[{ label: "My account" }]}>
       <div className="space-y-4">
         {mfa.required && !mfa.enrolled && (
-          <Alert tone="warn">
-            Your role requires an authenticator and none is enrolled. Set one up below — until you do,
-            a password is the only thing protecting this account.
+          <Alert tone="danger">
+            <strong>This account requires an authenticator and has none.</strong> Set one up below.
+            Nothing else in the platform opens until you do — until this pass the requirement was
+            displayed here and enforced nowhere, and a password alone reached every screen.
           </Alert>
         )}
 

@@ -249,6 +249,20 @@ export async function sendQuotation(
   return { quotationNo };
 }
 
+/**
+ * Records the customer's answer to a quotation.
+ *
+ * Gated on `accounting.quotation.approve`, and acceptance needs somebody other than the person who
+ * raised it. Both were declared and neither was true: this required
+ * `accounting.quotation.create` and called no `requireDifferentApprover`, so the person who wrote a
+ * quotation could accept it and convert it into a draft invoice without anybody else touching it —
+ * while `rbac.ts` listed the pair in `MAKER_CHECKER_PAIRS` and `RBAC_MATRIX.md` handed out
+ * `quotation.approve` selectively. The capability gated nothing at all.
+ *
+ * The second-person rule applies to acceptance rather than to both, because that is the decision that
+ * turns into money: an accepted quotation converts to an invoice. A decline closes it and needs the
+ * same capability, since it is the same set of people, but not a second pair of hands.
+ */
 export async function decideQuotation(
   db: Executor,
   principal: Principal,
@@ -256,15 +270,40 @@ export async function decideQuotation(
   decision: "accepted" | "declined",
   options: { reason?: string | null; context?: AuditContext } = {},
 ): Promise<void> {
-  requireCapability(principal, "accounting.quotation.create");
+  requireCapability(principal, "accounting.quotation.approve");
 
-  const existing = await db.execute<{ status: string; quotation_no: string | null }>(
-    sql`SELECT status, quotation_no FROM accounting.quotation WHERE id = ${quotationId} FOR UPDATE`,
+  const existing = await db.execute<{
+    status: string;
+    quotation_no: string | null;
+    created_by: string;
+    valid_until: string | null;
+  }>(
+    sql`SELECT status, quotation_no, created_by, valid_until
+          FROM accounting.quotation WHERE id = ${quotationId} FOR UPDATE`,
   );
   const quotation = existing.rows?.[0];
   if (!quotation) throw new NotFoundError("That quotation no longer exists.");
   if (quotation.status !== "sent") {
     throw new ConflictError(`Only a sent quotation can be marked ${decision}; this one is ${quotation.status}.`);
+  }
+
+  if (decision === "accepted") {
+    requireDifferentApprover({
+      principal,
+      createdByUserId: quotation.created_by,
+      action: "accept",
+    });
+
+    // An offer that has lapsed is not an offer. `valid_until` was computed, stored and displayed, and
+    // read by nothing: a quotation that expired a year ago could be accepted and converted at the
+    // price it carried then.
+    const validUntil = quotation.valid_until ? String(quotation.valid_until).slice(0, 10) : null;
+    if (validUntil && validUntil < toIsoDate(today())) {
+      throw new ConflictError(
+        `${quotation.quotation_no ?? "That quotation"} was valid until ${validUntil} and has lapsed. ` +
+          "Raise a new one at today's prices rather than accepting the old figure.",
+      );
+    }
   }
 
   await db.execute(sql`
@@ -435,8 +474,16 @@ export async function updateInvoice(
 ): Promise<void> {
   requireCapability(principal, "accounting.invoice.create");
 
-  const existing = await db.execute<{ status: string; total: string; created_by: string }>(
-    sql`SELECT status, total, created_by FROM accounting.invoice WHERE id = ${invoiceId} FOR UPDATE`,
+  const existing = await db.execute<{
+    status: string;
+    kind: "invoice" | "credit_note";
+    total: string;
+    created_by: string;
+    customer_id: string;
+    credits_invoice_id: string | null;
+  }>(
+    sql`SELECT status, kind, total, created_by, customer_id, credits_invoice_id
+          FROM accounting.invoice WHERE id = ${invoiceId} FOR UPDATE`,
   );
   const invoice = existing.rows?.[0];
   if (!invoice) throw new NotFoundError("That invoice no longer exists.");
@@ -448,12 +495,57 @@ export async function updateInvoice(
     );
   }
 
+  /**
+   * A credit note is a row in this table too, and editing one is not editing an invoice.
+   *
+   * This function read `status, total, created_by` and never `kind`, while the "you may not credit
+   * more than the invoice" rule lived only in `createCreditNote` and nowhere in the database. So:
+   * credit an invoice of RM 1,000 in full, open the draft credit note in the edit screen, change the
+   * line to RM 10,000 and the customer to somebody else, approve, issue — and `issueInvoice` posted a
+   * RM 10,000 revenue reversal and a RM 9,000 credit balance for a customer who had never been
+   * invoiced. Nothing along that path looked at the cap again.
+   *
+   * Two rules restore it. The customer belongs to the invoice being credited and cannot be moved, and
+   * the amount is re-checked against what is left to credit, this draft excluded from the sum.
+   */
+  if (invoice.kind === "credit_note") {
+    if (input.customerId !== invoice.customer_id) {
+      throw new ValidationError(
+        "A credit note belongs to the invoice it credits, so it cannot be moved to another customer. " +
+          "Void it and raise a credit note against the right invoice instead.",
+        "customerId",
+      );
+    }
+  }
+
   const customer = await requireCustomer(db, input.customerId);
   const date = toIsoDate(input.documentDate ? parseIsoDate(input.documentDate) : today());
   const dueDate = input.dueDate
     ? toIsoDate(parseIsoDate(input.dueDate, "dueDate"))
     : toIsoDate(addDays(parseIsoDate(date), customer.paymentTermsDays));
   const computed = await computeDocumentLines(db, input.lines, date);
+
+  if (invoice.kind === "credit_note" && invoice.credits_invoice_id) {
+    const credited = await db.execute<{ total: string; invoice_no: string | null }>(sql`
+      SELECT total::text AS total, invoice_no FROM accounting.invoice
+       WHERE id = ${invoice.credits_invoice_id}
+    `);
+    const target = credited.rows?.[0];
+    if (!target) throw new NotFoundError("The invoice this credit note credits no longer exists.");
+
+    const outstanding =
+      parseAmount(target.total) -
+      (await creditedSoFar(db, invoice.credits_invoice_id, invoiceId));
+
+    if (computed.totals.total > outstanding) {
+      throw new ValidationError(
+        `That credits ${formatAmount(computed.totals.total)} against ` +
+          `${target.invoice_no ?? "an invoice"}, which has only ${formatAmount(outstanding)} left to ` +
+          "credit. A credit note cannot reverse more than was invoiced.",
+        "lines",
+      );
+    }
+  }
 
   await db.execute(sql`DELETE FROM accounting.invoice_line WHERE invoice_id = ${invoiceId}`);
   await db.execute(sql`
@@ -699,6 +791,33 @@ export async function issueInvoice(
   const taxTotal = parseAmount(invoice.tax_total);
   const credit = invoice.kind === "credit_note";
 
+  // The cap, one last time, at the point where it stops being a document and becomes a ledger entry.
+  //
+  // It is checked when the note is raised and again when it is edited; this is the gate that actually
+  // guards the money, and it is cheap. The cap has never existed in the database, so the only thing
+  // standing between an over-credit and a posted reversal of revenue is a check in application code —
+  // which means there should be one on every path that posts.
+  if (credit && invoice.credits_invoice_id) {
+    const target = await db.execute<{ total: string; invoice_no: string | null }>(sql`
+      SELECT total::text AS total, invoice_no FROM accounting.invoice
+       WHERE id = ${invoice.credits_invoice_id}
+    `);
+    const original = target.rows?.[0];
+    if (!original) throw new NotFoundError("The invoice this credit note credits no longer exists.");
+
+    const outstanding =
+      parseAmount(original.total) -
+      (await creditedSoFar(db, invoice.credits_invoice_id, invoiceId));
+
+    if (total > outstanding) {
+      throw new ConflictError(
+        `This credit note is for ${formatAmount(total)} against ` +
+          `${original.invoice_no ?? "an invoice"}, which has only ${formatAmount(outstanding)} left ` +
+          "to credit. Issuing it would reverse revenue that was never invoiced.",
+      );
+    }
+  }
+
   const invoiceNo = await allocateDocumentNumber(db, credit ? "credit_note" : "invoice", { on: date });
 
   const customer = await db.execute<{ name: string; code: string }>(
@@ -919,10 +1038,21 @@ export async function createCreditNote(
   return { id };
 }
 
-async function creditedSoFar(db: Executor, invoiceId: string): Promise<Amount> {
+/**
+ * What has already been credited against an invoice.
+ *
+ * `exceptId` leaves one credit note out, which is what editing one needs: the draft being edited is
+ * itself in the sum, and counting it would make every edit look like it exceeded the cap.
+ */
+async function creditedSoFar(
+  db: Executor,
+  invoiceId: string,
+  exceptId?: string,
+): Promise<Amount> {
   const result = await db.execute<{ total: string }>(sql`
     SELECT COALESCE(SUM(total), 0)::text AS total FROM accounting.invoice
      WHERE credits_invoice_id = ${invoiceId} AND status <> 'void'
+       AND (${exceptId ?? null}::uuid IS NULL OR id <> ${exceptId ?? null}::uuid)
   `);
   return parseAmount(result.rows?.[0]?.total ?? "0");
 }
@@ -942,12 +1072,14 @@ type LockedInvoice = {
   amount_allocated: string;
   journal_id: string | null;
   created_by: string;
+  /** Set on a credit note: the invoice it credits, and so the cap it may not exceed. */
+  credits_invoice_id: string | null;
 };
 
 async function lockInvoice(db: Executor, invoiceId: string): Promise<LockedInvoice> {
   const result = await db.execute<LockedInvoice>(sql`
     SELECT status, kind, invoice_no, customer_id, invoice_date, total, tax_total,
-           amount_allocated, journal_id, created_by
+           amount_allocated, journal_id, created_by, credits_invoice_id
       FROM accounting.invoice WHERE id = ${invoiceId} FOR UPDATE
   `);
   const invoice = result.rows?.[0];

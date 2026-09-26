@@ -107,6 +107,7 @@ async function makePrincipal(
     sessionId: "00000000-0000-0000-0000-000000000000",
     mfaSatisfied: true,
     mustChangePassword: false,
+    mustEnrolMfa: false,
   };
 }
 

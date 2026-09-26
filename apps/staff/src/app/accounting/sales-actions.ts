@@ -120,8 +120,18 @@ export async function quotationAction(_prev: FormState, form: FormData): Promise
   const action = text(form, "action");
   let invoiceId: string | undefined;
 
+  // Each branch asks for the capability it actually needs. Every one of them used to ask for
+  // `quotation.create`, which is how accepting a quotation ended up requiring nothing more than being
+  // able to write one.
+  const needed =
+    action === "accept" || action === "decline"
+      ? "accounting.quotation.approve"
+      : action === "convert"
+        ? "accounting.quotation.convert"
+        : "accounting.quotation.create";
+
   try {
-    const { principal, db, context } = await begin("accounting.quotation.create");
+    const { principal, db, context } = await begin(needed);
     await db.transaction(async (tx) => {
       switch (action) {
         case "send":

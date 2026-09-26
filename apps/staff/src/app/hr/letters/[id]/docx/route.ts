@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "@cac/db";
 import { getLetter, getSetting } from "@cac/core";
-import { requireCapability } from "@/lib/auth";
+import { requireAnyCapability } from "@/lib/auth";
 import { renderLetterDocx } from "@/lib/letter-docx";
 
 /**
@@ -15,7 +15,10 @@ import { renderLetterDocx } from "@/lib/letter-docx";
  * and stored, so the Word file and the PDF of the same letter cannot disagree.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  await requireCapability("hr.letter.generate");
+  // Either capability opens the file: the person who generated the letter, and the person who has to
+  // approve it. Gating on `generate` alone meant a director approving an appointment letter could not
+  // read it, and `hr.letter.approve` is precisely the capability that says they should.
+  await requireAnyCapability(["hr.letter.generate", "hr.letter.approve"]);
   const { id } = await params;
   const db = await getDb();
 

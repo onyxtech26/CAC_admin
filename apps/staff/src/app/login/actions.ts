@@ -4,7 +4,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { getDb } from "@cac/db";
 import { DEFAULT_LOGIN_POLICY, completeMfa, login } from "@cac/core";
-import { getRequestContext, getSessionToken, setSessionCookie } from "@/lib/auth";
+import {
+  clearSessionCookie,
+  getRequestContext,
+  getSessionToken,
+  setSessionCookie,
+} from "@/lib/auth";
 
 export interface FormState {
   error?: string;
@@ -84,8 +89,33 @@ export async function verifyMfa(_prev: FormState, formData: FormData): Promise<F
 
   const db = await getDb();
   const ctx = await getRequestContext();
-  const ok = await completeMfa(db, token, parsed.data.code, ctx);
+  const result = await completeMfa(db, token, parsed.data.code, ctx);
 
-  if (!ok) return { error: "That code is not correct or has expired." };
+  switch (result.status) {
+    case "ok":
+      // Completing the second factor rotates the token, so the cookie has to be replaced. Testing
+      // the old return value for truthiness would now always pass, which is why this is a switch.
+      await setSessionCookie(result.token, DEFAULT_LOGIN_POLICY.absoluteHours);
+      break;
+
+    case "locked": {
+      await clearSessionCookie();
+      const minutes = Math.max(1, Math.ceil((result.until.getTime() - Date.now()) / 60_000));
+      return {
+        error:
+          `Too many incorrect codes. This account is locked for about ${minutes} minute` +
+          `${minutes === 1 ? "" : "s"}. Sign in again after that, or ask an administrator.`,
+      };
+    }
+
+    case "no_session":
+      await clearSessionCookie();
+      redirect("/login");
+      break;
+
+    default:
+      return { error: "That code is not correct or has expired." };
+  }
+
   redirect("/");
 }

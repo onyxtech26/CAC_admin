@@ -77,6 +77,11 @@ export async function requireCapability(capability: string): Promise<Principal> 
   // reached through requirePrincipal, so it stays available.
   if (principal.mustChangePassword) redirect("/account?change-password=1");
 
+  // And an account required to hold an authenticator does not work until it holds one. The flag was
+  // set on the user screen, shown on /account, and enforced nowhere at all — the account signed in
+  // with a password alone and reached everything. /account stays reachable so it can be enrolled.
+  if (principal.mustEnrolMfa) redirect("/account?enrol-mfa=1");
+
   try {
     assertCapability(principal, capability);
   } catch (error) {
@@ -99,6 +104,7 @@ export async function requireCapability(capability: string): Promise<Principal> 
 export async function requireAnyCapability(capabilities: string[]): Promise<Principal> {
   const principal = await requirePrincipal();
   if (principal.mustChangePassword) redirect("/account?change-password=1");
+  if (principal.mustEnrolMfa) redirect("/account?enrol-mfa=1");
 
   if (!capabilities.some((capability) => principal.capabilities.has(capability))) {
     redirect(`/denied?capability=${encodeURIComponent(capabilities[0])}`);

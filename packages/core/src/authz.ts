@@ -51,6 +51,17 @@ export interface Principal {
    * carry on working with it is how a handover password becomes a permanent one.
    */
   mustChangePassword: boolean;
+  /**
+   * The account is required to hold an authenticator and does not.
+   *
+   * `auth."user".mfa_enforced` was written by the user screen, displayed on /account, and enforced
+   * nowhere: whether a second factor was demanded depended only on whether a device happened to be
+   * enrolled, so ticking "require an authenticator app" achieved nothing and the account signed in
+   * with a password alone. Carried on the principal so the route guard can act on it, exactly as it
+   * acts on `mustChangePassword`: /account stays reachable so the authenticator can be enrolled, and
+   * nothing else opens until it is.
+   */
+  mustEnrolMfa: boolean;
 }
 
 /**

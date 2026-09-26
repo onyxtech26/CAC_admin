@@ -19,7 +19,13 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string; docId: string }> },
 ) {
-  const principal = await requireCapability("case.document.generate");
+  // Reading a document is not generating one.
+  //
+  // This gated on `case.document.generate`, so the director asked to approve a generated application
+  // was sent to /denied for a capability they have no business holding — the approver could not open
+  // the thing they were approving. `case.document.download` exists for exactly this and gated
+  // nothing at all; now it gates this, and the approving roles hold it.
+  const principal = await requireCapability("case.document.download");
   const { id, docId } = await params;
   const db = await getDb();
 

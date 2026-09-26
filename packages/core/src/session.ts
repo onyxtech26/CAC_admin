@@ -40,6 +40,22 @@ export const DEFAULT_LOGIN_POLICY: LoginPolicy = {
   absoluteHours: 12,
 };
 
+/**
+ * The outcome of the second factor.
+ *
+ * It returns a token because completing MFA **rotates** it. `completeMfa` used to set
+ * `mfa_satisfied_at` on the existing row and nothing else, so a pre-MFA token that had been fixed,
+ * copied or observed became a fully satisfied session the moment the legitimate holder typed their
+ * code — the session-fixation case the security model says rotation exists to prevent. The session
+ * row is the same row, so there is still exactly one thing to revoke and the audit chain is
+ * unbroken; only the bearer token changes.
+ */
+export type MfaResult =
+  | { status: "ok"; token: string }
+  | { status: "invalid" }
+  | { status: "locked"; until: Date }
+  | { status: "no_session" };
+
 export type LoginResult =
   | { status: "ok"; token: string; sessionId: string; mfaRequired: false }
   | { status: "mfa_required"; token: string; sessionId: string; mfaRequired: true }
@@ -182,58 +198,123 @@ async function recordAttempt(
   `);
 }
 
-/** Completes the MFA step for a session that is otherwise authenticated. */
+/**
+ * Completes the MFA step for a session that is otherwise authenticated.
+ *
+ * Three things here are load-bearing and none of them was true before.
+ *
+ * **The attempt is counted.** The step had no limit at all: somebody holding the password, and so a
+ * pre-MFA cookie, could post codes at `/login/mfa` until one worked — three valid TOTP values per
+ * thirty-second window and ten live recovery codes, against a twelve-hour session. `MFA_FAILED` was
+ * written to the audit trail and nothing read it. Failures now go on the same counter the password
+ * step uses and lock the same account, because it is the same account being attacked; the lock also
+ * revokes the session being used, so a locked-out attacker cannot sit and wait for it to lift.
+ *
+ * **The whole thing is one transaction, and the recovery code is locked.** The `used_at IS NULL`
+ * select had no `FOR UPDATE` and ran on the pooled handle, so two simultaneous posts of the same
+ * code both passed it and both satisfied a session — a single-use code spent twice. Enrolment took
+ * the lock; this did not.
+ *
+ * **The token rotates.** See `MfaResult`.
+ */
 export async function completeMfa(
   db: Database,
   sessionToken: string,
   code: string,
   ctx: LoginContext = {},
-): Promise<boolean> {
+  policy: LoginPolicy = DEFAULT_LOGIN_POLICY,
+): Promise<MfaResult> {
   const tokenHash = hashToken(sessionToken);
-  const rows = await db.execute<{ id: string; user_id: string }>(sql`
-    SELECT id, user_id FROM auth.session
-    WHERE token_hash = ${tokenHash} AND revoked_at IS NULL AND expires_at > now()
-  `);
-  const session = rows.rows?.[0];
-  if (!session) return false;
 
-  const devices = await db.execute<{ id: string; secret_enc: string }>(sql`
-    SELECT id, secret_enc FROM auth.mfa_device
-    WHERE user_id = ${session.user_id} AND confirmed_at IS NOT NULL
-  `);
+  return db.transaction(async (tx) => {
+    // The user row is locked as well as the session, because the attempt counter lives on it and two
+    // codes posted at once must not both read the same count.
+    const rows = await tx.execute<{
+      id: string;
+      user_id: string;
+      status: string;
+      failed_attempts: number;
+      locked_until: string | null;
+    }>(sql`
+      SELECT s.id, s.user_id, u.status, u.failed_attempts, u.locked_until
+        FROM auth.session s
+        JOIN auth."user" u ON u.id = s.user_id
+       WHERE s.token_hash = ${tokenHash} AND s.revoked_at IS NULL AND s.expires_at > now()
+       FOR UPDATE
+    `);
+    const session = rows.rows?.[0];
+    if (!session || session.status !== "active") return { status: "no_session" } as const;
 
-  for (const device of devices.rows ?? []) {
-    if (verifyTotp(decryptSecret(device.secret_enc), code)) {
-      await db.execute(sql`
-        UPDATE auth.session SET mfa_satisfied_at = now() WHERE id = ${session.id}
-      `);
-      await db.execute(sql`
-        UPDATE auth.mfa_device SET last_used_at = now() WHERE id = ${device.id}
-      `);
-      return true;
+    if (session.locked_until && new Date(session.locked_until) > new Date()) {
+      return { status: "locked", until: new Date(session.locked_until) } as const;
     }
-  }
 
-  // Recovery codes are single-use.
-  const codeHash = hashToken(code.trim().toUpperCase());
-  const recovery = await db.execute<{ id: string }>(sql`
-    SELECT id FROM auth.recovery_code
-    WHERE user_id = ${session.user_id} AND code_hash = ${codeHash} AND used_at IS NULL
-  `);
-  if (recovery.rows?.[0]) {
-    await db.execute(sql`UPDATE auth.recovery_code SET used_at = now() WHERE id = ${recovery.rows[0].id}`);
-    await db.execute(sql`UPDATE auth.session SET mfa_satisfied_at = now() WHERE id = ${session.id}`);
-    return true;
-  }
+    const satisfy = async (): Promise<MfaResult> => {
+      const { token, hash } = generateToken();
+      await tx.execute(sql`
+        UPDATE auth.session
+           SET mfa_satisfied_at = now(), token_hash = ${hash}, last_seen_at = now()
+         WHERE id = ${session.id}
+      `);
+      await tx.execute(sql`
+        UPDATE auth."user" SET failed_attempts = 0, locked_until = NULL WHERE id = ${session.user_id}
+      `);
+      return { status: "ok", token };
+    };
 
-  await writeAudit(db, {
-    action: AUDIT.MFA_FAILED,
-    entityType: "session",
-    entityId: session.id,
-    actorUserId: session.user_id,
-    ...ctx,
+    const devices = await tx.execute<{ id: string; secret_enc: string }>(sql`
+      SELECT id, secret_enc FROM auth.mfa_device
+      WHERE user_id = ${session.user_id} AND confirmed_at IS NOT NULL
+    `);
+
+    for (const device of devices.rows ?? []) {
+      if (verifyTotp(decryptSecret(device.secret_enc), code)) {
+        await tx.execute(sql`UPDATE auth.mfa_device SET last_used_at = now() WHERE id = ${device.id}`);
+        return satisfy();
+      }
+    }
+
+    // Recovery codes are single-use, and this is where that is made true rather than hoped for.
+    const codeHash = hashToken(code.trim().toUpperCase());
+    const recovery = await tx.execute<{ id: string }>(sql`
+      SELECT id FROM auth.recovery_code
+       WHERE user_id = ${session.user_id} AND code_hash = ${codeHash} AND used_at IS NULL
+       FOR UPDATE
+    `);
+    if (recovery.rows?.[0]) {
+      await tx.execute(sql`
+        UPDATE auth.recovery_code SET used_at = now() WHERE id = ${recovery.rows[0].id}
+      `);
+      return satisfy();
+    }
+
+    const attempts = session.failed_attempts + 1;
+    const shouldLock = attempts >= policy.maxFailedAttempts;
+    const until = shouldLock ? new Date(Date.now() + policy.lockoutMinutes * 60_000) : null;
+
+    await tx.execute(sql`
+      UPDATE auth."user"
+         SET failed_attempts = ${attempts}, locked_until = ${until ? until.toISOString() : null}
+       WHERE id = ${session.user_id}
+    `);
+
+    if (shouldLock) {
+      // The half-authenticated session goes too. Leaving it alive would let whoever is guessing wait
+      // out the lockout with the same cookie and carry on.
+      await tx.execute(sql`UPDATE auth.session SET revoked_at = now() WHERE id = ${session.id}`);
+    }
+
+    await writeAudit(tx, {
+      action: AUDIT.MFA_FAILED,
+      entityType: "session",
+      entityId: session.id,
+      actorUserId: session.user_id,
+      newValues: { failedAttempts: attempts, locked: shouldLock },
+      ...ctx,
+    });
+
+    return until ? { status: "locked", until } : { status: "invalid" };
   });
-  return false;
 }
 
 /**
@@ -259,9 +340,35 @@ export async function resolvePrincipal(
     mfa_satisfied_at: string | null;
     last_seen_at: string;
     must_change_password: boolean;
+    must_enrol_mfa: boolean;
   }>(sql`
     SELECT s.id AS session_id, s.user_id, u.email, u.full_name, u.employee_id,
-           u.status, s.mfa_satisfied_at, s.last_seen_at, u.must_change_password
+           u.status, s.mfa_satisfied_at, s.last_seen_at, u.must_change_password,
+           -- Required to hold an authenticator and holding none.
+           --
+           -- Two sources, both of which were decorative before. The mfa_enforced column is set on
+           -- the user screen and was read at login and ignored. The security.mfa_required_roles
+           -- setting is seeded with the six roles SECURITY_MODEL.md calls mandatory and was read by
+           -- nothing at all, so the policy that document states was enforced neither per user nor
+           -- per role.
+           ((
+              u.mfa_enforced
+              OR EXISTS (
+                SELECT 1
+                  FROM auth.user_role ur
+                  JOIN auth.role r ON r.id = ur.role_id
+                 WHERE ur.user_id = u.id
+                   AND r.key IN (
+                     SELECT jsonb_array_elements_text(st.value)
+                       FROM org.setting st
+                      WHERE st.key = 'security.mfa_required_roles'
+                        AND jsonb_typeof(st.value) = 'array'
+                   )
+              )
+            ) AND NOT EXISTS (
+              SELECT 1 FROM auth.mfa_device d
+               WHERE d.user_id = u.id AND d.confirmed_at IS NOT NULL
+            )) AS must_enrol_mfa
     FROM auth.session s JOIN auth."user" u ON u.id = s.user_id
     WHERE s.token_hash = ${tokenHash} AND s.revoked_at IS NULL AND s.expires_at > now()
   `);
@@ -292,6 +399,7 @@ export async function resolvePrincipal(
     capabilities,
     mfaSatisfied: row.mfa_satisfied_at !== null,
     mustChangePassword: row.must_change_password,
+    mustEnrolMfa: row.must_enrol_mfa,
   };
 }
 

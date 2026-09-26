@@ -53,6 +53,10 @@ database. **This is the first time any screen has been exercised by use rather t
 
 ## 2. Blocking defects
 
+> **All eight are fixed**, in the pass after this audit, with regression tests in
+> `packages/core/src/sales.test.ts` and `packages/core/src/session.test.ts`. Each entry keeps the
+> original finding and ends with what was done. 731 tests pass.
+
 ### 2.1 A credit note can be edited past the amount it is allowed to credit
 
 `packages/core/src/sales.ts:429` — `updateInvoice` selects `status, total, created_by` and **never
@@ -67,8 +71,11 @@ approve, issue. `issueInvoice` posts the credit journal on the `kind === "credit
 (`sales.ts:700`) with no re-check. Result: a RM 10,000 revenue reversal and a RM 9,000 credit
 balance against a customer who was never invoiced.
 
-**Fix:** `updateInvoice` must read `kind` and, for a credit note, re-apply the cap against
-`creditedSoFar` — and the edit screen must not offer a credit note the invoice form.
+**Fixed.** `updateInvoice` reads `kind`, refuses to move a credit note to another customer, and
+re-applies the cap against `creditedSoFar` with the draft itself excluded from the sum. `issueInvoice`
+checks it a third time, because that is the moment it stops being a document and becomes a posted
+reversal of revenue, and because the cap has never existed in the database — every path that posts
+should therefore carry it.
 
 ### 2.2 A quotation can be accepted by the person who raised it
 
@@ -81,6 +88,17 @@ including accept and convert.
 in `MAKER_CHECKER_PAIRS`, and `docs/RBAC_MATRIX.md` grants `quotation.approve` selectively. **Both
 are false statements about the running system.** `accounting.quotation.approve` gates nothing.
 
+**Fixed.** `decideQuotation` requires `accounting.quotation.approve`, and acceptance requires somebody
+other than the person who raised it — acceptance rather than both, because acceptance is the decision
+that becomes an invoice. The server action asks for the capability each branch needs instead of
+`quotation.create` for all four. DIRECTOR gains `accounting.quotation.approve`, since a director
+approves invoices and this is the same kind of act.
+
+While in there: **an accepted quotation must not have lapsed.** `valid_until` was computed, stored,
+displayed and read by nothing, so a quotation that expired a year ago converted silently at the price
+it carried then. That was finding 3's second bullet; it is fixed here because it lives in the same
+function.
+
 ### 2.3 The second factor has no attempt limit
 
 `packages/core/src/session.ts:186` — `completeMfa` neither reads nor increments
@@ -92,12 +110,25 @@ nothing reads it.
 The account lockout `docs/SECURITY_MODEL.md` promises exists on the password and **not at all on the
 second factor**.
 
+**Fixed.** A failed code increments the same `failed_attempts` counter the password step uses and
+locks the same account — it is the same account being attacked — and the lockout also revokes the
+half-authenticated session, so it cannot be waited out with the same cookie.
+
 ### 2.4 The session token is not rotated when MFA completes
 
 `packages/core/src/session.ts:207` — `completeMfa` only sets `mfa_satisfied_at` on the existing row.
 A pre-MFA token that was fixed, copied or observed becomes a fully MFA-satisfied session the moment
 the legitimate user completes TOTP. `docs/SECURITY_MODEL.md` §2 explicitly requires rotation "on
 login, MFA completion and privilege change"; only login rotates.
+
+**Fixed.** `completeMfa` issues a new token and returns it, and the sign-in action replaces the
+cookie. The session *row* is the same row, so there is still exactly one thing to revoke and the audit
+chain is unbroken; only the bearer token changes. The old token stops resolving, which the test
+asserts directly.
+
+One consequence worth stating: the function used to return a boolean and now returns a result object,
+so `if (!ok)` would have become always-false. The caller is a `switch`, and the type change made the
+compiler find it.
 
 ### 2.5 `mfa_enforced` is written, displayed, and never enforced
 
@@ -109,6 +140,27 @@ with a password alone and reached all 124 of its capabilities, while `/account` 
 role requires an authenticator and none is enrolled."* The platform states a requirement it does not
 impose.
 
+**Fixed**, on the `must_change_password` pattern, which is the same shape of problem and already had
+an answer. `resolvePrincipal` computes `mustEnrolMfa` — the account requires an authenticator and holds
+none — and the route guard sends such a principal to /account until one is enrolled. /account stays
+reachable so it can be; nothing else opens. Signing in still succeeds, because there is no second
+factor to ask for yet, and a session that could not reach the enrolment screen would be a locked door
+with the key inside.
+
+The requirement now has two sources, because the document names two. `mfa_enforced` is the per-user
+flag; `security.mfa_required_roles` is seeded with the six roles SECURITY_MODEL.md calls mandatory and
+was, like the flag, read by nothing. Either one requires an authenticator, so unticking the box for a
+director is not a way around the firm's own policy.
+
+**This changes what happens at the next sign-in.** `mfa_enforced` defaults to true on every account
+and `bootstrap` sets it explicitly, so an existing account without an authenticator will be sent to
+/account to enrol one before anything else opens. That is the behaviour the platform has been claiming
+all along; it is just now true.
+
+Also fixed while here: the notice on /account said the requirement existed. It now says what happens.
+
+730 tests → 731 with the role-policy test.
+
 ### 2.6 The approver of a legal document cannot open it
 
 `apps/staff/src/app/cases/[id]/documents/[docId]/pdf/route.ts:29` and `docx/route.ts:22` both
@@ -118,12 +170,22 @@ redirected to `/denied?capability=case.document.generate`.
 
 `case.document.download`, which exists for exactly this, gates nothing.
 
+**Fixed.** The document's own page and both file routes gate on `case.document.download`, which now
+gates something, and DIRECTOR and LAWYER_OR_AUTHORISED_REVIEWER hold it. The letters half of the same
+defect (10.7) is fixed the same way: those routes accept `hr.letter.generate` or `hr.letter.approve`,
+there being no `hr.letter.download` to grant.
+
 ### 2.7 A recovery code can be spent twice
 
 `packages/core/src/session.ts:218` — the `SELECT ... WHERE used_at IS NULL` has no `FOR UPDATE` and
 runs on the pooled handle rather than in a transaction. Two simultaneous posts of the same code both
 pass the select and both mark the session satisfied. `enrolment.ts:49` and `:183` do take
 `FOR UPDATE`, so the pattern was known.
+
+**Fixed.** The whole of `completeMfa` is one transaction; the session and user rows are locked when
+they are read, and the recovery code is selected `FOR UPDATE`. The test says honestly what it proves:
+PGlite holds a single connection and serialises the two calls, so it demonstrates the logic and cannot
+demonstrate the lock. Against a real PostgreSQL the same test exercises both.
 
 ### 2.8 A setting's value is written to the audit trail verbatim
 
@@ -132,12 +194,19 @@ pass the select and both mark the session satisfied. `enrolment.ts:49` and `:183
 masked list. The first credential stored as a setting — a MyInvois client secret, an API key — is
 copied in plaintext into an append-only table that cannot be scrubbed.
 
+**Fixed, by refusing the premise.** `org.setting` is a plain jsonb column, readable by anybody with
+settings access, copied verbatim into every backup, and copied into the audit trail — three places, one
+of them permanent. It is not a secret store, so `setSetting` now refuses a key that reads like a
+credential and says where such a value belongs instead. The audit payload redacts one anyway, as a
+backstop for a key that slips past the pattern, and `client_secret`, `private_key` and `credential`
+join the sensitive-key list that `redact()` works from.
+
 ---
 
 ## 3. Incomplete functionality
 
 - **A draft quotation cannot be edited or deleted.** `apps/staff/src/app/accounting/quotations/[id]/QuotationActions.tsx:44` offers only "send". `saveQuotation` has an update branch that nothing reaches. Every comparable document (invoice, voucher, PO, claim, journal) has an edit route.
-- **`expired` is a quotation status nothing can reach.** `valid_until` is computed, stored and displayed, the trigger permits `sent → expired`, and no code sets it. Worse, `decideQuotation` and `convertQuotationToInvoice` never read it: a quotation that lapsed a year ago converts silently.
+- **`expired` is a quotation status nothing can reach.** `valid_until` is computed, stored and displayed, the trigger permits `sent → expired`, and no code sets it. Worse, `decideQuotation` and `convertQuotationToInvoice` never read it: a quotation that lapsed a year ago converts silently. **Half fixed:** accepting a lapsed quotation is now refused, naming the date it lapsed. Nothing yet *sets* the `expired` status, so the list still shows a lapsed quotation as sent; that is cosmetic beside the conversion, which was not.
 - **Only full credit notes can be raised.** `createCreditNote` accepts a `lines` array for a partial credit; `sales-actions.ts:222` never passes it. Crediting one line — the common case — has no screen.
 - **No customer-facing document for a quotation, receipt, voucher or purchase order.** Only invoices, payslips, letters and case documents have a PDF route. A quotation advances to `sent` and an issued PO commits the firm to a supplier, with nothing to send.
 - **e-Invoice has no submission path at all.** `buildEInvoiceDocument` (`einvoice.ts:496`) has zero callers repo-wide; `provider.submit()` is called only from tests. Beyond the documented Q-FIN-2 refusal: even with a TIN, client id, secret and environment supplied, nothing invokes the provider, no column records a submission id or status, and the invoice line form has no classification code field the adapter requires.
@@ -153,8 +222,13 @@ Seven of 127 keys are checked nowhere in `apps/staff` or `packages/core`. Each i
 in `docs/RBAC_MATRIX.md`, which is the document somebody reads to decide who may do what. This is
 the same class as the `template.*` family already removed in migration 0026.
 
-`accounting.einvoice.submit` · `accounting.einvoice.cancel` · `accounting.quotation.approve` ·
-`admin.integration.manage` · `audit.export` · `case.document.download` · `hr.schedule.view`
+`accounting.einvoice.submit` · `accounting.einvoice.cancel` · ~~`accounting.quotation.approve`~~ ·
+`admin.integration.manage` · `audit.export` · ~~`case.document.download`~~ · `hr.schedule.view`
+
+Two of them now gate something, as a consequence of 2.2 and 2.6: `accounting.quotation.approve` gates
+accepting a quotation, and `case.document.download` gates reading a generated case document. Five
+remain, and the same choice applies to each — wire it up or remove it, because a capability that gates
+nothing is a line in the matrix that is not true.
 
 ## 5. Dangerous defaults
 

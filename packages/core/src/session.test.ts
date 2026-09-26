@@ -166,10 +166,19 @@ describe("multi-factor authentication", () => {
     const before = await resolvePrincipal(db, result.token);
     expect(before?.mfaSatisfied).toBe(false);
 
-    expect(await completeMfa(db, result.token, totp(secret))).toBe(true);
+    const completed = await completeMfa(db, result.token, totp(secret));
+    expect(completed.status).toBe("ok");
+    if (completed.status !== "ok") return;
 
-    const after = await resolvePrincipal(db, result.token);
+    // The token rotates. The old one is the one that may have been fixed or observed while the
+    // session was half-authenticated, and it must not become a satisfied session.
+    expect(completed.token).not.toBe(result.token);
+    expect(await resolvePrincipal(db, result.token)).toBeNull();
+
+    const after = await resolvePrincipal(db, completed.token);
     expect(after?.mfaSatisfied).toBe(true);
+    // The same session row, so there is still exactly one thing to revoke.
+    expect(after?.sessionId).toBe(result.sessionId);
   });
 
   it("rejects a wrong code and leaves the session half-authenticated", async () => {
@@ -177,8 +186,30 @@ describe("multi-factor authentication", () => {
     const result = await login(db, "mfabad@cac.test", PASSWORD);
     if (result.status !== "mfa_required") throw new Error("expected mfa_required");
 
-    expect(await completeMfa(db, result.token, "000000")).toBe(false);
+    expect((await completeMfa(db, result.token, "000000")).status).toBe("invalid");
     expect((await resolvePrincipal(db, result.token))?.mfaSatisfied).toBe(false);
+  });
+
+  it("locks the account after too many wrong codes, and takes the session with it", async () => {
+    await userWithTotp("mfalock@cac.test");
+    const result = await login(db, "mfalock@cac.test", PASSWORD);
+    if (result.status !== "mfa_required") throw new Error("expected mfa_required");
+
+    // Five is `DEFAULT_LOGIN_POLICY.maxFailedAttempts`, the same counter and the same lock the
+    // password step uses — it is the same account being attacked. Before this, the second factor had
+    // no limit at all: three valid TOTP values per thirty-second window and ten recovery codes could
+    // be guessed at leisure by somebody who already had the password.
+    for (let attempt = 1; attempt < DEFAULT_LOGIN_POLICY.maxFailedAttempts; attempt += 1) {
+      expect((await completeMfa(db, result.token, "000000")).status).toBe("invalid");
+    }
+
+    const last = await completeMfa(db, result.token, "000000");
+    expect(last.status).toBe("locked");
+
+    // The half-authenticated session is revoked too, so the lockout cannot simply be waited out with
+    // the same cookie.
+    expect(await resolvePrincipal(db, result.token)).toBeNull();
+    expect((await login(db, "mfalock@cac.test", PASSWORD)).status).toBe("locked");
   });
 
   it("accepts a recovery code once and only once", async () => {
@@ -197,12 +228,91 @@ describe("multi-factor authentication", () => {
 
     const first = await login(db, "recovery@cac.test", PASSWORD);
     if (first.status !== "mfa_required") throw new Error("expected mfa_required");
-    expect(await completeMfa(db, first.token, codes[0]!)).toBe(true);
+    expect((await completeMfa(db, first.token, codes[0]!)).status).toBe("ok");
 
     // The same code must not work a second time.
     const second = await login(db, "recovery@cac.test", PASSWORD);
     if (second.status !== "mfa_required") throw new Error("expected mfa_required");
-    expect(await completeMfa(db, second.token, codes[0]!)).toBe(false);
+    expect((await completeMfa(db, second.token, codes[0]!)).status).toBe("invalid");
+  });
+
+  it("spends a recovery code once even when two requests arrive together", async () => {
+    const userId = await makeUser("recovery-race@cac.test");
+    const secret = generateSecret();
+    await db.execute(sql`
+      INSERT INTO auth.mfa_device (user_id, secret_enc, confirmed_at)
+      VALUES (${userId}, ${encryptSecret(secret)}, now())
+    `);
+    const { codes, hashes } = generateRecoveryCodes(1);
+    await db.execute(sql`
+      INSERT INTO auth.recovery_code (user_id, code_hash) VALUES (${userId}, ${hashes[0]!})
+    `);
+
+    const one = await login(db, "recovery-race@cac.test", PASSWORD);
+    const two = await login(db, "recovery-race@cac.test", PASSWORD);
+    if (one.status !== "mfa_required" || two.status !== "mfa_required") {
+      throw new Error("expected mfa_required");
+    }
+
+    // Both posts of the same single-use code, at once.
+    //
+    // What this proves, honestly: that one of the two is refused. It does not prove the row lock,
+    // because PGlite holds a single connection and serialises the two transactions — the race the
+    // lock exists for cannot be reproduced here at all. The lock is in the code and reviewable; this
+    // test covers the logic around it. Against a real PostgreSQL the same test would exercise both.
+    const results = await Promise.all([
+      completeMfa(db, one.token, codes[0]!),
+      completeMfa(db, two.token, codes[0]!),
+    ]);
+
+    expect(results.filter((row) => row.status === "ok")).toHaveLength(1);
+
+    const spent = await db.execute<{ n: string }>(sql`
+      SELECT count(*)::text AS n FROM auth.recovery_code
+       WHERE user_id = ${userId} AND used_at IS NOT NULL
+    `);
+    expect(Number(spent.rows![0]!.n)).toBe(1);
+  });
+
+  it("requires an authenticator when the account says so, and lets nothing else through", async () => {
+    // `mfa_enforced` was written by the user screen, shown on /account, and enforced nowhere: with no
+    // device enrolled the account signed straight in and reached everything it had a capability for.
+    const userId = await makeUser("enforced@cac.test", { roles: ["ACCOUNTANT"] });
+    await db.execute(sql`UPDATE auth."user" SET mfa_enforced = true WHERE id = ${userId}`);
+
+    const result = await login(db, "enforced@cac.test", PASSWORD);
+    // There is no device, so there is no code to ask for; the session is usable only to enrol one.
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+
+    const principal = await resolvePrincipal(db, result.token);
+    expect(principal?.mustEnrolMfa).toBe(true);
+
+    // Enrolling clears it, and nothing else does.
+    await db.execute(sql`
+      INSERT INTO auth.mfa_device (user_id, secret_enc, confirmed_at)
+      VALUES (${userId}, ${encryptSecret(generateSecret())}, now())
+    `);
+    expect((await resolvePrincipal(db, result.token))?.mustEnrolMfa).toBe(false);
+  });
+
+  it("requires one for a role the settings say must have it, flag or no flag", async () => {
+    // `security.mfa_required_roles` is seeded with the six roles SECURITY_MODEL.md calls mandatory and
+    // was read by nothing at all. Unticking the per-user flag for a director must not be a way around
+    // the firm's own policy.
+    const userId = await makeUser("rolemfa@cac.test", { roles: ["DIRECTOR"] });
+    await db.execute(sql`UPDATE auth."user" SET mfa_enforced = false WHERE id = ${userId}`);
+
+    const result = await login(db, "rolemfa@cac.test", PASSWORD);
+    if (result.status !== "ok") throw new Error("expected ok");
+    expect((await resolvePrincipal(db, result.token))?.mustEnrolMfa).toBe(true);
+
+    // Somebody whose role is not on the list, and whose flag is off, is not asked.
+    const other = await makeUser("noroleneeded@cac.test", { roles: ["EMPLOYEE"] });
+    await db.execute(sql`UPDATE auth."user" SET mfa_enforced = false WHERE id = ${other}`);
+    const second = await login(db, "noroleneeded@cac.test", PASSWORD);
+    if (second.status !== "ok") throw new Error("expected ok");
+    expect((await resolvePrincipal(db, second.token))?.mustEnrolMfa).toBe(false);
   });
 });
 

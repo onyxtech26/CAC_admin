@@ -199,6 +199,9 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     ...readOnlyOf("accounting."),
     "accounting.invoice.approve", "accounting.invoice.approve_high_value",
     "accounting.invoice.void",
+    // Recording that a customer accepted a quotation turns it into a billable invoice, so it is a
+    // second pair of hands rather than a clerical act, and a director is one of the pairs.
+    "accounting.quotation.approve",
     "accounting.receipt.approve",
     "accounting.voucher.approve", "accounting.voucher.approve_high_value",
     "accounting.po.approve", "accounting.pettycash.approve",
@@ -209,6 +212,9 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     "hr.payroll.approve", "hr.payroll.finalise", "hr.payslip.view_all",
     "hr.letter.approve", "hr.statutory.manage", "hr.appraisal.review",
     ...readOnlyOf("case."), "case.view_all", "case.agent.run",
+    // Approving a document you cannot open is not approving it. `readOnlyOf` stops at `.view`, so the
+    // download had to be named.
+    "case.document.download",
     "case.document.approve", "case.rule.approve",
     // The library. `doc.delete` destroys an original and sits here alone: it is the one
     // operation in the document pipeline that cannot be undone.
@@ -293,7 +299,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
 
   LAWYER_OR_AUTHORISED_REVIEWER: [
     ...readOnlyOf("case."), "case.view_all", "case.agent.run",
-    "case.document.generate", "case.document.approve",
+    "case.document.download", "case.document.generate", "case.document.approve",
     "case.fact.verify", "case.rule.propose", "case.rule.approve",
     "doc.view", "doc.download",
   ],

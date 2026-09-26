@@ -92,6 +92,7 @@ async function makePrincipal(email: string, roles: string[]): Promise<Principal>
     sessionId: "00000000-0000-0000-0000-000000000000",
     mfaSatisfied: true,
     mustChangePassword: false,
+    mustEnrolMfa: false,
   };
 }
 
@@ -707,6 +708,62 @@ describe("credit notes", () => {
       createCreditNote(db, director, { invoiceId: creditNoteId, reason: "No" }),
     ).rejects.toThrow(/cannot credit a credit note/);
   });
+
+  /**
+   * The route the audit found: the cap was enforced when a credit note was raised and nowhere else.
+   *
+   * `updateInvoice` selected `status, total, created_by` and never `kind`, so the ordinary invoice
+   * edit screen would happily rewrite a draft credit note — a bigger figure, a different customer —
+   * and `issueInvoice` posted the reversal without looking at the cap again. There is no constraint
+   * in the database either. One person could turn a RM 1,000 credit into a RM 10,000 reversal of
+   * revenue against a customer who had never been invoiced.
+   */
+  it("cannot be edited past what is left to credit, or onto another customer", async () => {
+    const invoice = await createInvoice(db, clerk, {
+      customerId,
+      documentDate: "2026-07-05",
+      lines: [{ description: "Search fees", unitPrice: "1000.00", accountCode: "4120" }],
+    });
+    await submitInvoice(db, clerk, invoice.id);
+    await approveInvoice(db, director, invoice.id);
+    await issueInvoice(db, accountant, invoice.id);
+
+    const note = await createCreditNote(db, director, {
+      invoiceId: invoice.id,
+      reason: "Credited in full",
+      lines: [{ description: "Full reversal", unitPrice: "1000.00", accountCode: "4120" }],
+    });
+
+    await expect(
+      updateInvoice(db, clerk, note.id, {
+        customerId,
+        lines: [{ description: "Rather more", unitPrice: "10000.00", accountCode: "4120" }],
+      }),
+    ).rejects.toThrow(/left to credit/);
+
+    await expect(
+      updateInvoice(db, clerk, note.id, {
+        customerId: secondCustomerId,
+        lines: [{ description: "Full reversal", unitPrice: "1000.00", accountCode: "4120" }],
+      }),
+    ).rejects.toThrow(/belongs to the invoice it credits/);
+
+    // Editing it down is fine, and the cap does not count the draft against itself.
+    await updateInvoice(db, clerk, note.id, {
+      customerId,
+      lines: [{ description: "Partial reversal", unitPrice: "600.00", accountCode: "4120" }],
+    });
+    expect((await getInvoice(db, note.id))!.total).toBe(parseAmount("600.00"));
+
+    // And the last gate: issuing re-checks, because that is where it becomes a ledger entry. The
+    // figure is forced past the application checks the way a second process or a later bug would.
+    await db.execute(sql`
+      UPDATE accounting.invoice SET total = 9000, subtotal = 9000 WHERE id = ${note.id}
+    `);
+    await submitInvoice(db, clerk, note.id);
+    await approveInvoice(db, secondDirector, note.id);
+    await expect(issueInvoice(db, accountant, note.id)).rejects.toThrow(/never invoiced/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -804,7 +861,15 @@ describe("quotations", () => {
     const { quotationNo } = await sendQuotation(db, clerk, created.id);
     expect(quotationNo).toMatch(/^QT-2026-\d{5}$/);
 
-    await decideQuotation(db, clerk, created.id, "accepted");
+    // Not the clerk who raised it: recording acceptance needs `accounting.quotation.approve`, which
+    // an accounts executive does not hold. The code asked for `quotation.create` instead, so the
+    // approve capability gated nothing while `MAKER_CHECKER_PAIRS` and the RBAC matrix both said it
+    // did.
+    await expect(decideQuotation(db, clerk, created.id, "accepted")).rejects.toThrow(
+      /accounting\.quotation\.approve/,
+    );
+
+    await decideQuotation(db, accountant, created.id, "accepted");
     const { invoiceId } = await convertQuotationToInvoice(db, accountant, created.id);
 
     const invoice = await getInvoice(db, invoiceId);
@@ -828,6 +893,40 @@ describe("quotations", () => {
     await expect(
       convertQuotationToInvoice(db, accountant, quotations.rows![0]!.id),
     ).rejects.toThrow(/already been converted/);
+  });
+
+  it("cannot be accepted by the person who raised it", async () => {
+    // The accountant holds both capabilities, which is the case the capability check alone does not
+    // catch: one person raising a quotation and then recording that the customer accepted it is one
+    // person turning nothing into a billable invoice.
+    const mine = await createQuotation(db, accountant, {
+      customerId,
+      documentDate: "2026-09-01",
+      lines: feeLines("400.00"),
+    });
+    await sendQuotation(db, accountant, mine.id);
+
+    await expect(decideQuotation(db, accountant, mine.id, "accepted")).rejects.toThrow(
+      /created yourself/i,
+    );
+
+    // Somebody else can, and a decline needs no second pair of hands — it closes the offer rather
+    // than turning it into money.
+    await decideQuotation(db, director, mine.id, "declined", { reason: "Client went elsewhere" });
+    expect((await getQuotation(db, mine.id))!.status).toBe("declined");
+  });
+
+  it("refuses to accept a quotation that has lapsed", async () => {
+    const stale = await createQuotation(db, clerk, {
+      customerId,
+      documentDate: "2020-01-01",
+      lines: feeLines("400.00"),
+    });
+    await sendQuotation(db, clerk, stale.id);
+
+    // `valid_until` was computed, stored, displayed on the screen and read by nothing at all, so a
+    // quotation that expired years ago converted silently at the price it carried then.
+    await expect(decideQuotation(db, accountant, stale.id, "accepted")).rejects.toThrow(/lapsed/);
   });
 
   it("a sent quotation cannot be edited", async () => {

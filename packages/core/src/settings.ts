@@ -99,6 +99,25 @@ export async function listSettings(db: Executor, category?: string): Promise<Set
  * limit, when, and what it was before" is answerable without a backup. Clearing
  * `needs_review` is part of the same act: confirming a value *is* the review.
  */
+/**
+ * Keys that would be a credential rather than a setting.
+ *
+ * `org.setting` is a plain jsonb column, readable by anything with `admin.settings.view`, copied
+ * verbatim into every backup, and — until this pass — copied verbatim into the append-only audit
+ * trail as well, where nothing can scrub it. It is not a secret store and must not become one by
+ * accident: the first MyInvois client secret somebody pastes into a settings field would be in three
+ * places at once, one of them permanent.
+ *
+ * So a key that reads like a credential is refused outright rather than stored carefully. The
+ * platform already has `encryptSecret`/`decryptSecret` for values that genuinely have to live in the
+ * database, and an environment variable for the rest.
+ */
+const CREDENTIAL_LIKE = /(^|[._-])(secret|password|passwd|token|api_?key|private_?key|credential|client_secret)s?([._-]|$)/i;
+
+export function looksLikeACredential(key: string): boolean {
+  return CREDENTIAL_LIKE.test(key);
+}
+
 export async function setSetting(
   db: Executor,
   principal: Principal,
@@ -113,6 +132,16 @@ export async function setSetting(
   `);
   const row = before.rows?.[0];
   if (!row) throw new NotFoundError(`There is no setting called "${key}".`);
+
+  if (looksLikeACredential(key)) {
+    throw new ValidationError(
+      `"${key}" reads like a credential, and settings are not a secret store: the value would sit in ` +
+        "plain text in a table anybody with settings access can read, in every backup, and in the " +
+        "append-only audit trail, where it cannot be scrubbed. Put it in an environment variable, or " +
+        "in a column that is encrypted the way the authenticator secrets are.",
+      "key",
+    );
+  }
 
   // A setting marked `requires_approval` carries statutory or financial weight.
   // The two-person workflow for these arrives with the approval framework in
@@ -140,8 +169,11 @@ export async function setSetting(
     action: AUDIT.SETTING_CHANGED,
     entityType: "setting",
     entityId: key,
-    oldValues: { key, value: row.value },
-    newValues: { key, value },
+    // Belt as well as braces: the refusal above means a credential should never reach this line, and
+    // if a key ever slips past it the audit trail is the one place the value must not land, because
+    // it is the one place it cannot be removed from afterwards.
+    oldValues: { key, value: looksLikeACredential(key) ? "[redacted]" : row.value },
+    newValues: { key, value: looksLikeACredential(key) ? "[redacted]" : value },
     reason: options.reason ?? null,
   });
 }
