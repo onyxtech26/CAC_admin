@@ -95,6 +95,30 @@ export function Shell({
         </header>
 
         <main id="main" tabIndex={-1} className="min-w-0 flex-1 p-4 lg:p-6">
+          {/*
+            The enrolment reminder, on every page rather than only on /account — somebody who never
+            visits their account page would otherwise meet the requirement as a locked door on the
+            day it falls due. It disappears the moment an authenticator is enrolled.
+          */}
+          {principal.mfaRequired && !principal.mustEnrolMfa && (
+            <div className="mb-4 rounded-md border border-[color-mix(in_srgb,var(--color-warn)_35%,transparent)] bg-[var(--color-warn-bg)] px-3 py-2 text-[12px]">
+              This account needs an authenticator by{" "}
+              <strong>
+                {principal.mfaEnrolmentDueAt
+                  ? new Date(principal.mfaEnrolmentDueAt).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                    })
+                  : "the deadline"}
+              </strong>
+              . After that date only your account page opens.{" "}
+              <Link href="/account" className="underline">
+                Set one up
+              </Link>
+              , which takes about a minute.
+            </div>
+          )}
+
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h1 className="text-lg font-semibold text-[var(--color-body)]">{title}</h1>
             {actions}

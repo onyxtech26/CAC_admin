@@ -416,10 +416,9 @@ to `/denied` and can never read, approve, or open the PDF of a letter or a case 
 > tests pass (715 before this pass). Each entry below keeps the original finding and ends with what was done. 11.8 and the
 > items under 11.9 are **not** fixed; 11.8 turned out to be a policy question and is now Q-HR-4.
 >
-> One thing the fix exposed and did not settle: **whether an overtime payment counts as wages** for
-> EPF, SOCSO/EIS and PCB. The engine excludes it from all three bases, which nobody has confirmed and
-> which under-deducts if the answer is that it counts. It is now item 7 of Q-HR-1, and a month
-> containing paid overtime should not be run live until it is answered.
+> One thing the fix exposed, **since settled**: whether an overtime payment counts as wages for EPF,
+> SOCSO/EIS and PCB. Three answers rather than one — not EPF, yes SOCSO and EIS, yes PCB — seeded as
+> settings by migration 0034 and named on every overtime payslip line. See Q-HR-1 item 7.
 
 ### 11.1 A supplementary payroll run pays the whole month a second time
 

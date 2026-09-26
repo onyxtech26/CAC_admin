@@ -120,6 +120,36 @@ const SETTINGS: SettingSeed[] = [
   { key: "hr.break_minutes", value: 60, category: "hr", label: "Unpaid break (minutes)" },
   { key: "hr.work_days", value: [1, 2, 3, 4, 5], category: "hr", label: "Working days", description: "1 = Monday." },
   { key: "hr.late_grace_minutes", value: 10, category: "hr", label: "Late grace period (minutes)", needsReview: true },
+
+  // Whether an overtime payment is "wages", per contribution. Three answers, not one, which is why
+  // these are data. See Q-HR-1 item 7 and migration 0034.
+  {
+    key: "payroll.overtime_is_epf_wages",
+    value: false,
+    category: "hr",
+    label: "Overtime counts as wages for EPF",
+    description:
+      "Off, which is the ordinary treatment: KWSP lists overtime among the payments not subject to contribution. Confirming this is CAC's accountant adopting it.",
+    needsReview: true,
+  },
+  {
+    key: "payroll.overtime_is_socso_wages",
+    value: true,
+    category: "hr",
+    label: "Overtime counts as wages for SOCSO and EIS",
+    description:
+      "On, which is the ordinary treatment: PERKESO includes overtime payments in wages for contribution, and EIS uses the same definition.",
+    needsReview: true,
+  },
+  {
+    key: "payroll.overtime_is_pcb_wages",
+    value: true,
+    category: "hr",
+    label: "Overtime counts as wages for PCB",
+    description:
+      "On, which is the ordinary treatment: overtime is remuneration from employment, so the monthly tax deduction is computed on it.",
+    needsReview: true,
+  },
   { key: "hr.ot_requires_approval", value: true, category: "hr", label: "Overtime requires prior approval" },
   {
     key: "hr.ot_rates",
@@ -150,6 +180,14 @@ const SETTINGS: SettingSeed[] = [
   { key: "security.password_min_length", value: 12, category: "security", label: "Minimum password length" },
   { key: "security.mfa_required_roles", value: ["SUPER_ADMIN", "DIRECTOR", "MANAGEMENT", "ACCOUNTANT", "HR_ADMIN", "HR_MANAGER"], category: "security", label: "Roles requiring MFA" },
   { key: "security.max_failed_attempts", value: 5, category: "security", label: "Failed attempts before lockout" },
+  {
+    key: "security.mfa_enrolment_grace_days",
+    value: 7,
+    category: "security",
+    label: "Days to enrol an authenticator",
+    description:
+      "How long an account required to hold an authenticator may keep working before it is shut out of everything but its own account page. Seven days is the usual rollout window, and the reminder appears on every page until then. Nought enforces immediately.",
+  },
   { key: "security.lockout_minutes", value: 15, category: "security", label: "Lockout duration (minutes)" },
 
   // Cases / AI — see Q-LEGAL-1/2, Q-AI-1

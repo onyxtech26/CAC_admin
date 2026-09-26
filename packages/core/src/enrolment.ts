@@ -200,6 +200,11 @@ export async function confirmMfaEnrolment(
   await db.execute(sql`
     UPDATE auth.mfa_device SET confirmed_at = now(), last_used_at = now() WHERE id = ${deviceId}
   `);
+  // The enrolment clock stops. It restarts from scratch if this device is ever removed, so somebody
+  // who changes phones gets the same warning period rather than being shut out at the next click.
+  await db.execute(sql`
+    UPDATE auth."user" SET mfa_required_since = NULL WHERE id = ${principal.userId}
+  `);
   // Any codes from a previous device are void: they were a way in to an account
   // whose second factor has just changed.
   await db.execute(sql`DELETE FROM auth.recovery_code WHERE user_id = ${principal.userId}`);

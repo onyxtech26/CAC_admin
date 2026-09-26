@@ -412,12 +412,19 @@ export async function resolvePrincipal(
     mfa_satisfied_at: string | null;
     last_seen_at: string;
     must_change_password: boolean;
-    must_enrol_mfa: boolean;
+    mfa_required: boolean;
+    mfa_required_since: string | null;
+    grace_days: number;
     locked_until: string | null;
   }>(sql`
     SELECT s.id AS session_id, s.user_id, u.email, u.full_name, u.employee_id,
            u.status, s.mfa_satisfied_at, s.last_seen_at, u.must_change_password,
-           u.locked_until,
+           u.locked_until, u.mfa_required_since,
+           COALESCE((
+             SELECT (st.value #>> '{}')::int FROM org.setting st
+              WHERE st.key = 'security.mfa_enrolment_grace_days'
+                AND jsonb_typeof(st.value) = 'number'
+           ), 7) AS grace_days,
            -- Required to hold an authenticator and holding none.
            --
            -- Two sources, both of which were decorative before. The mfa_enforced column is set on
@@ -442,7 +449,7 @@ export async function resolvePrincipal(
             ) AND NOT EXISTS (
               SELECT 1 FROM auth.mfa_device d
                WHERE d.user_id = u.id AND d.confirmed_at IS NOT NULL
-            )) AS must_enrol_mfa
+            )) AS mfa_required
     FROM auth.session s JOIN auth."user" u ON u.id = s.user_id
     WHERE s.token_hash = ${tokenHash} AND s.revoked_at IS NULL AND s.expires_at > now()
   `);
@@ -466,6 +473,34 @@ export async function resolvePrincipal(
 
   await db.execute(sql`UPDATE auth.session SET last_seen_at = now() WHERE id = ${row.session_id}`);
 
+  /**
+   * When the authenticator requirement started applying to this account, and when it bites.
+   *
+   * Stamped here rather than taken from `created_at`, because an account created a year ago has not
+   * been under this rule for a year — it has been under it since the day the rule was switched on,
+   * which for most of these accounts is the first time this line runs. Cleared when a device is
+   * confirmed, so removing one later earns the same warning rather than an immediate shut-out.
+   */
+  let requiredSince = row.mfa_required_since;
+  if (row.mfa_required && !requiredSince) {
+    const stamped = await db.execute<{ mfa_required_since: string }>(sql`
+      UPDATE auth."user" SET mfa_required_since = now()
+       WHERE id = ${row.user_id} AND mfa_required_since IS NULL
+      RETURNING mfa_required_since
+    `);
+    requiredSince = stamped.rows?.[0]?.mfa_required_since ?? new Date().toISOString();
+  } else if (!row.mfa_required && requiredSince) {
+    await db.execute(sql`
+      UPDATE auth."user" SET mfa_required_since = NULL WHERE id = ${row.user_id}
+    `);
+    requiredSince = null;
+  }
+
+  const dueAt =
+    row.mfa_required && requiredSince
+      ? new Date(new Date(requiredSince).getTime() + row.grace_days * 86_400_000)
+      : null;
+
   const [capabilities, roles] = await Promise.all([
     resolveCapabilities(db, row.user_id),
     resolveRoles(db, row.user_id),
@@ -481,7 +516,10 @@ export async function resolvePrincipal(
     capabilities,
     mfaSatisfied: row.mfa_satisfied_at !== null,
     mustChangePassword: row.must_change_password,
-    mustEnrolMfa: row.must_enrol_mfa,
+    mfaRequired: row.mfa_required,
+    mfaEnrolmentDueAt: dueAt ? dueAt.toISOString() : null,
+    // The shut-out, which is the requirement plus the grace having run out.
+    mustEnrolMfa: dueAt !== null && dueAt.getTime() <= Date.now(),
   };
 }
 

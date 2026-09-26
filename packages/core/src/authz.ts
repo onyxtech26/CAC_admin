@@ -62,6 +62,17 @@ export interface Principal {
    * nothing else opens until it is.
    */
   mustEnrolMfa: boolean;
+  /**
+   * The account must hold an authenticator, whether or not the grace period has run out.
+   *
+   * `mustEnrolMfa` is the shut-out; this is the requirement. The two are separate so a screen can
+   * say "set one up by Friday" while the person carries on working, which is how every other
+   * organisation rolls a second factor out — and how this one avoided locking every existing account
+   * out of everything at the moment the rule was switched on.
+   */
+  mfaRequired: boolean;
+  /** When the grace period ends, ISO. Null when no authenticator is required of this account. */
+  mfaEnrolmentDueAt: string | null;
 }
 
 /**

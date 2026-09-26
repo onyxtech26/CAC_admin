@@ -173,6 +173,11 @@ export async function runAction(_prev: FormState, form: FormData): Promise<FormS
                 "run can be approved",
             );
           }
+          // Not a problem and not silence: lateness is measured to the minute and deliberately not
+          // deducted, so somebody has to be told it happened.
+          for (const entry of result.notes) {
+            parts.push(`${entry.employeeName}: ${entry.note}`);
+          }
           notice = `${result.runNo}. ${parts.join(". ")}.`;
           break;
         }

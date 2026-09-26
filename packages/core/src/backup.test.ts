@@ -68,6 +68,8 @@ async function makePrincipal(email: string, roles: string[], employee: string | 
     mfaSatisfied: true,
     mustChangePassword: false,
     mustEnrolMfa: false,
+    mfaRequired: false,
+    mfaEnrolmentDueAt: null,
   } satisfies Principal;
 }
 

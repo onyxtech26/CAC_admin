@@ -8,8 +8,14 @@ import { AuthorizationError, resolveCapabilities, type Principal } from "./authz
 
 import { formatAmount, parseAmount } from "./money.js";
 import { createFiscalYear } from "./periods.js";
-import { recordAttendance } from "./attendance.js";
+import {
+  finaliseAttendancePeriod,
+  openAttendancePeriod,
+  recordAttendance,
+} from "./attendance.js";
+import { recalculateAttendance } from "./attendance-engine.js";
 import { trialBalance } from "./ledger.js";
+import { getSetting } from "./settings.js";
 import {
   createDepartment,
   createEmployee,
@@ -105,6 +111,8 @@ async function makePrincipal(
     mfaSatisfied: true,
     mustChangePassword: false,
     mustEnrolMfa: false,
+    mfaRequired: false,
+    mfaEnrolmentDueAt: null,
   };
 }
 
@@ -674,12 +682,25 @@ describe("reproducibility — the point of the whole phase", () => {
     expect(formatAmount(aishah.grossPay)).toBe("97.36");
 
     // The contributions are the month's contributions less what March already contributed — not the
-    // contribution of somebody earning 97.36 a month. On March's 10% band that difference is nil,
-    // and the payslip says so in full rather than leaving a figure unexplained.
+    // contribution of somebody earning 97.36 a month.
+    //
+    // EPF is nil, and for two reasons that both matter: overtime is not EPF wages (Q-HR-1 item 7),
+    // so the base did not move, and on March's 10% band the difference on an unchanged base is
+    // nothing. The payslip says so in full rather than leaving a figure unexplained.
     const epf = full!.lines.find((line) => line.code === "EPF")!;
     expect(epf.basis).toContain("10% of 4500.00");
     expect(epf.basis).toContain("less the 450.00 already contributed on 4,500.00");
     expect(formatAmount(epf.amount)).toBe("0.00");
+
+    // PCB is not nil, because overtime *is* PCB wages. 2% of 4,597.36 is 91.95 against the 90.00
+    // already deducted in March, so 1.95 more is owed — which is the whole reason the difference is
+    // computed on the month's combined wages rather than on this payment alone.
+    const pcb = full!.lines.find((line) => line.code === "PCB")!;
+    expect(formatAmount(pcb.amount)).toBe("1.95");
+    expect(pcb.basis).toContain("less the 90.00 already contributed on 4,500.00");
+
+    // And the overtime line records which contributions it counted towards, because that can change.
+    expect(overtime.basis).toContain("Counts as wages for SOCSO and EIS and PCB");
 
     // And the claim is marked paid only once the run is finalised, by the line that paid it.
     expect((await listOvertime(db, { employeeId: aishahId }))[0]!.paid).toBe(false);
@@ -689,7 +710,8 @@ describe("reproducibility — the point of the whole phase", () => {
 
     const claim = (await listOvertime(db, { employeeId: aishahId }))[0]!;
     expect(claim.paid).toBe(true);
-    expect(formatAmount(aishah.netPay)).toBe("97.36");
+    // 97.36 of overtime, less the 1.95 of PCB it attracts.
+    expect(formatAmount(aishah.netPay)).toBe("95.41");
   });
 
   it("uses the new rate for April, from the same code path", async () => {
@@ -748,16 +770,27 @@ describe("the defects the end-to-end audit found", () => {
       (row) => row.employeeId === aishahId,
     )!;
 
-    // Three days, not five, and not five again in May: the days inside this period, counted in the
-    // same calendar days as the thirty they are out of. Summing the request's own total for every
-    // overlapping period deducted the whole absence twice, once from each month, and in the wrong
-    // unit — working days over calendar days, a fraction whose halves measure different things.
     const full = await getPayslip(db, hrManager, aishah.id);
-    const basic = full!.lines.find((line) => line.code === "BASIC")!;
-    expect(basic.basis).toBe("27 of 30 calendar days, after 3 calendar days of unpaid leave");
 
-    // 6,000 for June, less three days of it.
-    expect(formatAmount(basic.amount)).toBe("5,400.00");
+    // The basic is the full month. Unpaid leave does not shrink it silently — that is how the
+    // platform used to do it, and a payslip showing a smaller number with no line saying why answers
+    // no question. Proration is for a joiner or a leaver, and this person was employed throughout.
+    const basic = full!.lines.find((line) => line.code === "BASIC")!;
+    expect(basic.basis).toBe("full month");
+    expect(formatAmount(basic.amount)).toBe("6,000.00");
+
+    // The days off are their own deduction, at the ordinary rate of pay: monthly wages over 26, which
+    // is the Employment Act's rate for a monthly-rated employee. Not the calendar-day rate — a day
+    // off costs the same in February as in March.
+    const unpaid = full!.lines.find((line) => line.code === "UNPAID")!;
+    expect(unpaid.basis).toContain("3 days at 230.77");
+    expect(unpaid.basis).toContain("6,000.00 over 26");
+    expect(formatAmount(unpaid.amount)).toBe("692.31");
+
+    // Three days, not five, and not five again in May. Summing the request's own total for every
+    // overlapping period deducted the whole absence twice, once from each month; counting calendar
+    // days instead of working days priced it against the wrong denominator.
+    expect(Number(unpaid.quantity)).toBe(3);
   });
 
   it("uses the statutory liabilities that were in force, not the ones in force today", async () => {
@@ -799,6 +832,21 @@ describe("the defects the end-to-end audit found", () => {
     expect(formatAmount(pcb.amount)).toBe(junePcb);
   });
 
+  it("counts overtime as wages for SOCSO, EIS and PCB but not EPF", async () => {
+    // The ordinary Malaysian treatment, and three different answers rather than one: KWSP lists
+    // overtime among the payments not subject to EPF, PERKESO includes it in wages for contribution
+    // and EIS follows SOCSO, and it is remuneration from employment so PCB is computed on it.
+    //
+    // They are settings, seeded with those answers and flagged for review, because that is the common
+    // treatment as this platform understands it rather than anybody qualified reading the statutes —
+    // and because a firm that is told otherwise by its accountant must be able to change it without
+    // a code change.
+    const epf = await getSetting<boolean>(db, "payroll.overtime_is_epf_wages", true);
+    const socso = await getSetting<boolean>(db, "payroll.overtime_is_socso_wages", false);
+    const pcb = await getSetting<boolean>(db, "payroll.overtime_is_pcb_wages", false);
+    expect({ epf, socso, pcb }).toEqual({ epf: false, socso: true, pcb: true });
+  });
+
   it("refuses a correction to a period that has not been paid, and to a different one", async () => {
     const junePayroll = await juneRunId();
 
@@ -827,6 +875,59 @@ describe("the defects the end-to-end audit found", () => {
     await expect(preparePayrollRun(db, hrManager, tooEarly.id)).rejects.toThrow(
       /nothing has gone out to correct/,
     );
+  });
+
+  it("deducts a day absent without leave, and reports lateness without deducting it", async () => {
+    /**
+     * The two halves of Q-HR-4, and they are not the same answer.
+     *
+     * An absent day is deducted at the ordinary rate of pay, which is what every Malaysian employer
+     * does. Lateness is not deducted at all: section 24 of the Employment Act limits what may be
+     * taken out of wages and minutes are not among it, so it goes through the disciplinary process —
+     * but the run must not simply swallow it, because then nobody would know.
+     */
+    await recordAttendance(db, hrManager, {
+      employeeId: aishahId,
+      workDate: "2026-07-01",
+      isAbsent: true,
+      remarks: "Did not come in and did not call",
+    });
+    await recordAttendance(db, hrManager, {
+      employeeId: aishahId,
+      workDate: "2026-07-02",
+      clockIn: "2026-07-02T10:15:00+08:00",
+      clockOut: "2026-07-02T18:00:00+08:00",
+    });
+    await recalculateAttendance(db, hrManager, { from: "2026-07-01", to: "2026-07-31" });
+
+    const period = await openAttendancePeriod(db, hrManager, {
+      periodFrom: "2026-07-01",
+      periodTo: "2026-07-31",
+    });
+    await finaliseAttendancePeriod(db, hrManager, period.id);
+
+    const july = await createPayrollRun(db, hrManager, {
+      periodFrom: "2026-07-01",
+      periodTo: "2026-07-31",
+      payDate: "2026-07-31",
+    });
+    const prepared = await preparePayrollRun(db, hrManager, july.id);
+
+    const aishah = (await listPayslips(db, { runId: july.id })).find(
+      (row) => row.employeeId === aishahId,
+    )!;
+    const full = await getPayslip(db, hrManager, aishah.id);
+
+    const absent = full!.lines.find((line) => line.code === "ABSENT")!;
+    expect(formatAmount(absent.amount)).toBe("230.77");
+    expect(absent.basis).toContain("1 day at 230.77");
+    expect(absent.basis).toContain("2026-07-01");
+
+    // Late, and paid in full for it. The run says so rather than staying silent.
+    expect(full!.lines.some((line) => line.code === "LATE")).toBe(false);
+    const note = prepared.notes.find((entry) => entry.employeeName === "Aishah binti Rahman")!;
+    expect(note.note).toMatch(/Late on 1 day/);
+    expect(note.note).toMatch(/Not deducted/);
   });
 
   it("refuses to compute a month whose attendance is still a draft", async () => {

@@ -16,14 +16,12 @@ import { findColumn, readDelimited } from "./delimited.js";
  * in thirty seconds produces two rows. Every one of those is a route to a wrong
  * figure in somebody's record.
  *
- * What attendance does *not* do, today, is change anybody's pay. An absent day, a
- * late morning and a short afternoon are all recorded and none of them reaches a
- * payslip: payroll deducts unpaid *leave*, because a leave type says in the data
- * whether it is paid, and nothing else. That is Q-HR-4, and it is asked rather than
- * guessed because deducting for an absence is taking money from somebody and what
- * lateness may cost is constrained by the Employment Act. A payroll run does refuse
- * a period whose attendance is still a draft, so the month is closed and looked at
- * before it is paid.
+ * What attendance does to pay, since Q-HR-4 was answered: a day marked absent with no
+ * leave against it is deducted at the ordinary rate of pay, and lateness is not
+ * deducted at all — section 24 of the Employment Act limits what may be taken out of
+ * wages, and minutes are not among it, so it goes through the disciplinary process
+ * instead. Payroll reads both out of this table once the period is finalised, and it
+ * refuses to compute a period that is still a draft.
  *
  * So nothing is written straight through. An import is **staged**, validated
  * row by row, previewed with every rejection and its reason visible, and reaches

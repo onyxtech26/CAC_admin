@@ -51,11 +51,28 @@ export default async function AccountPage() {
   return (
     <Shell principal={principal} title="My account" breadcrumbs={[{ label: "My account" }]}>
       <div className="space-y-4">
-        {mfa.required && !mfa.enrolled && (
-          <Alert tone="danger">
-            <strong>This account requires an authenticator and has none.</strong> Set one up below.
-            Nothing else in the platform opens until you do — until this pass the requirement was
-            displayed here and enforced nowhere, and a password alone reached every screen.
+        {principal.mfaRequired && !mfa.enrolled && (
+          <Alert tone={principal.mustEnrolMfa ? "danger" : "warn"}>
+            {principal.mustEnrolMfa ? (
+              <>
+                <strong>This account requires an authenticator and has none.</strong> The period for
+                setting one up has passed, so nothing else in the platform opens until you do. It
+                takes about a minute: the panel below shows a QR code for any authenticator app.
+              </>
+            ) : (
+              <>
+                <strong>This account needs an authenticator.</strong> Set one up by{" "}
+                {principal.mfaEnrolmentDueAt
+                  ? new Date(principal.mfaEnrolmentDueAt).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : "the deadline"}
+                . You can carry on working until then; after that date this is the only page that
+                opens. It takes about a minute — the panel below shows a QR code.
+              </>
+            )}
           </Alert>
         )}
 

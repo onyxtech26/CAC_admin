@@ -14,6 +14,8 @@ import { amountToSql, formatAmount, parseAmount, type Amount } from "./money.js"
 import { postSourceJournal, reverseJournal } from "./posting.js";
 import { allocateDocumentNumber } from "./sequence.js";
 import { salaryOn } from "./people.js";
+import { countLeaveDays } from "./leave.js";
+import { getSettingState } from "./settings.js";
 import {
   applyRule,
   requireRulesFor,
@@ -49,18 +51,25 @@ import {
  *
  * Two further boundaries, both of them honest rather than incidental.
  *
- * **Attendance changes nobody's pay here.** Unpaid leave is deducted, because a leave
- * type says in the data whether it is paid. An absent day, a late morning and a short
- * afternoon are recorded in `hr.attendance` and reach no payslip: what they should cost
- * is CAC's policy inside the Employment Act's limits, and it is Q-HR-4 rather than
- * something inferred here. A run does refuse a period whose attendance is still a
- * draft, so the month is settled and looked at before it is paid.
+ * **A day not worked is deducted at the ordinary rate of pay**, which for a
+ * monthly-rated employee is the monthly wages over 26 — the Employment Act's figure,
+ * and the one Malaysian payroll uses to price unpaid leave and an unauthorised absence
+ * alike. It is a payslip line of its own rather than a quietly smaller basic, and it
+ * comes out of the statutory wage bases as well, because a contribution is on the
+ * wages actually payable. Proration is a different thing and covers days *not
+ * employed*: the incomplete-month formula for a joiner or a leaver.
  *
- * **Overtime is excluded from all three statutory wage bases.** Whether an overtime
- * payment counts as wages is decided per contribution by statute and differs between
- * them; it is item 7 of Q-HR-1 and is unanswered. Excluding it under-deducts if the
- * answer is that it counts, so a month containing paid overtime is not a month to run
- * live on yet.
+ * **Lateness is not deducted**, deliberately. Section 24 of the Employment Act limits
+ * what may be taken out of wages and minutes are not among it; the disciplinary
+ * process is where lateness belongs. The run reports it as a note rather than
+ * swallowing it. See Q-HR-4.
+ *
+ * **Overtime counts as wages for SOCSO, EIS and PCB, and not for EPF.** Three answers
+ * rather than one, which is why they are settings: KWSP lists overtime among the
+ * payments not subject to contribution, PERKESO includes it in wages and EIS follows
+ * SOCSO, and it is remuneration from employment so PCB is computed on it. Seeded with
+ * those answers, flagged for review until CAC's accountant adopts them, and named on
+ * every overtime payslip line. See Q-HR-1 item 7.
  *
  * And the boundary the whole phase waits on: **no statutory rule is seeded.** EPF is not a percentage,
  * SOCSO and EIS are contribution tables, PCB is a schedule. Preparing a run without
@@ -242,6 +251,14 @@ export interface PrepareResult {
   /** People left out, with why — a leaver, a joiner after the period, no salary. */
   skipped: Array<{ employeeName: string; why: string }>;
   problems: Array<{ employeeName: string; problem: string }>;
+  /**
+   * Things the run saw and did not act on.
+   *
+   * Lateness is the reason this exists: it is measured to the minute and deliberately not deducted,
+   * and a run that simply ignored it would leave nobody any the wiser. A note is not a problem — it
+   * does not block approval — but it is put in front of whoever prepares the run.
+   */
+  notes: Array<{ employeeName: string; note: string }>;
 }
 
 /**
@@ -291,6 +308,32 @@ export async function preparePayrollRun(
    * outstanding gets no payslip and is listed as skipped with the reason.
    */
   const supplementary = run.kind === "supplementary";
+
+  /**
+   * Whether an overtime payment counts as wages, per contribution.
+   *
+   * Not one answer but three, which is why it is data rather than a constant. The ordinary Malaysian
+   * treatment, and what these are seeded with: **not** wages for EPF — KWSP lists overtime among the
+   * payments not subject to contribution — but wages for SOCSO and EIS, whose definition includes
+   * overtime payments, and wages for PCB, since it is remuneration from employment.
+   *
+   * They are flagged for review until CAC's accountant confirms them, because that is the common
+   * treatment as this platform understands it rather than anybody qualified reading the statutes.
+   * Each payslip line says which basis it was computed on, so a payslip can be defended whichever
+   * way the settings stand. See Q-HR-1 item 7.
+   */
+  const [otEpf, otSocso, otPcb] = await Promise.all([
+    getSettingState<boolean>(db, "payroll.overtime_is_epf_wages", false),
+    getSettingState<boolean>(db, "payroll.overtime_is_socso_wages", true),
+    getSettingState<boolean>(db, "payroll.overtime_is_pcb_wages", true),
+  ]);
+  const overtimeIsWagesFor = {
+    epf: otEpf.value,
+    socso: otSocso.value,
+    pcb: otPcb.value,
+    /** True when all three are still the platform's defaults rather than CAC's decision. */
+    unconfirmed: !otEpf.confirmed || !otSocso.confirmed || !otPcb.confirmed,
+  };
 
   /**
    * Attendance for the period has to be settled first.
@@ -481,18 +524,123 @@ export async function preparePayrollRun(
   // Clipping the request to the period and counting calendar days fixes both, and matches the basis
   // the module already applies to joiners and leavers. If CAC prorates on a different divisor,
   // `periodDays` is the single line to change, and every payslip states which basis was used.
-  const unpaidLeave = await db.execute<{ employee_id: string; days: string }>(sql`
-    SELECT r.employee_id,
-           SUM((LEAST(r.ends_on, ${periodTo}::date) - GREATEST(r.starts_on, ${periodFrom}::date)) + 1)
-             AS days
+  /**
+   * The unpaid leave that falls inside this period, counted in working days.
+   *
+   * Three things have been wrong here in turn, and it is worth recording all of them because the
+   * third only looks like a step backwards.
+   *
+   * It began by summing `r.days` — the whole request's length — for any request merely *overlapping*
+   * the period, so leave from 27 February to 4 March was deducted in full from February and again in
+   * full from March.
+   *
+   * The audit fix clipped each request to the period and counted calendar days, which stopped the
+   * double count but priced a day wrongly: the denominator it fed was the days in the month, so a day
+   * off cost 1/31 of a month in March and 1/28 in February.
+   *
+   * What Malaysian payroll actually does is price a day at the ordinary rate of pay — the monthly
+   * wages over 26 — and count the days the person would otherwise have worked. So the clipping stays
+   * and the unit goes back to working days, which is also the unit the leave module already counts
+   * in. The counting is done in TypeScript rather than SQL because "a working day" depends on the
+   * person's schedule and the holiday calendar, and `countLeaveDays` already knows both.
+   */
+  const unpaidLeaveRequests = await db.execute<{
+    employee_id: string;
+    starts_on: string;
+    ends_on: string;
+    half_day_start: boolean;
+    half_day_end: boolean;
+    type_name: string;
+  }>(sql`
+    SELECT r.employee_id, r.starts_on, r.ends_on, r.half_day_start, r.half_day_end,
+           t.name AS type_name
       FROM hr.leave_request r
       JOIN hr.leave_type t ON t.id = r.leave_type_id
      WHERE r.status = 'approved' AND NOT t.is_paid
        AND r.starts_on <= ${periodTo}::date AND r.ends_on >= ${periodFrom}::date
-     GROUP BY r.employee_id
+     ORDER BY r.starts_on
   `);
-  const unpaidByEmployee = new Map(
-    (unpaidLeave.rows ?? []).map((row) => [row.employee_id, Number(row.days)]),
+
+  /**
+   * Days the person was absent without leave, from the attendance the period finalised.
+   *
+   * Payroll read nothing out of `hr.attendance` before this: an absent day cost nothing, which is
+   * not how anybody runs a payroll. Only `is_absent` days with no leave against them count — a day
+   * covered by approved leave is already handled by the leave itself, paid or unpaid.
+   */
+  const absences = await db.execute<{ employee_id: string; days: string; first: string; last: string }>(sql`
+    SELECT employee_id, count(*)::text AS days,
+           min(work_date)::text AS first, max(work_date)::text AS last
+      FROM hr.attendance
+     WHERE work_date BETWEEN ${periodFrom}::date AND ${periodTo}::date
+       AND is_absent AND on_leave_type IS NULL AND leave_request_id IS NULL
+     GROUP BY employee_id
+  `);
+  const absenceByEmployee = new Map(
+    (absences.rows ?? []).map((row) => [
+      row.employee_id,
+      { days: Number(row.days), first: row.first, last: row.last },
+    ]),
+  );
+
+  /** Late minutes in the period, reported rather than deducted. See `deductLateness`. */
+  const lateness = await db.execute<{ employee_id: string; days: string; minutes: string }>(sql`
+    SELECT employee_id, count(*)::text AS days, SUM(late_minutes)::text AS minutes
+      FROM hr.attendance
+     WHERE work_date BETWEEN ${periodFrom}::date AND ${periodTo}::date
+       AND COALESCE(late_minutes, 0) > 0
+     GROUP BY employee_id
+  `);
+  const latenessByEmployee = new Map(
+    (lateness.rows ?? []).map((row) => [
+      row.employee_id,
+      { days: Number(row.days), minutes: Number(row.minutes) },
+    ]),
+  );
+
+  /**
+   * How a day is priced, and whether an absence or a late morning is deducted at all.
+   *
+   * The divisor is the Employment Act's ordinary rate of pay for a monthly-rated employee: monthly
+   * wages over 26. Nought means "the days in that particular month" instead, for a firm that prices
+   * a day on the calendar.
+   *
+   * Lateness is **not** deducted, and that is the ordinary position rather than an omission: section
+   * 24 of the Employment Act limits what may be taken out of wages, and minutes are not among the
+   * deductions it permits without authority. The attendance screens report every late minute and the
+   * disciplinary process is where it belongs. The setting exists so the position is stated, and so a
+   * firm that has the authority can say so.
+   */
+  const [divisorSetting, deductAbsence, deductLateness] = await Promise.all([
+    getSettingState<number>(db, "hr.daily_rate_divisor", 26),
+    getSettingState<boolean>(db, "hr.deduct_unauthorised_absence", true),
+    getSettingState<boolean>(db, "hr.deduct_lateness", false),
+  ]);
+
+  // The calendar a working day is counted against: the holidays in the period, and each person's
+  // own week. Fetched once for the run rather than per request.
+  const holidayRows = await db.execute<{ holiday_on: string }>(sql`
+    SELECT holiday_on FROM hr.public_holiday
+     WHERE holiday_on BETWEEN ${periodFrom}::date AND ${periodTo}::date
+  `);
+  const holidays = (holidayRows.rows ?? []).map((row) => String(row.holiday_on).slice(0, 10));
+
+  const scheduleRows = await db.execute<{ employee_id: string; work_days: number[] | string | null }>(sql`
+    SELECT e.id AS employee_id, COALESCE(ws.work_days, dflt.work_days) AS work_days
+      FROM hr.employee e
+      LEFT JOIN LATERAL (
+        SELECT s.work_schedule_id
+          FROM hr.employee_schedule s
+         WHERE s.employee_id = e.id AND s.effective_from <= ${periodTo}::date
+           AND (s.effective_to IS NULL OR s.effective_to >= ${periodFrom}::date)
+         ORDER BY s.effective_from DESC
+         LIMIT 1
+      ) es ON true
+      LEFT JOIN hr.work_schedule ws ON ws.id = COALESCE(es.work_schedule_id, e.work_schedule_id)
+      LEFT JOIN hr.work_schedule dflt ON dflt.is_default
+  `);
+  const workDaysByEmployee = new Map(
+    (scheduleRows.rows ?? []).map((row) => [row.employee_id, readWorkDays(row.work_days)]),
   );
 
   /**
@@ -577,6 +725,7 @@ export async function preparePayrollRun(
   const periodDays = daysBetween(periodFrom, periodTo);
   const skipped: PrepareResult["skipped"] = [];
   const problems: PrepareResult["problems"] = [];
+  const notes: PrepareResult["notes"] = [];
 
   for (const person of people) {
     const salary = await salaryOn(db, person.id, periodTo);
@@ -600,8 +749,46 @@ export async function preparePayrollRun(
         : periodTo;
     const employedDays = daysBetween(employedFrom, employedTo);
 
-    const unpaidDays = unpaidByEmployee.get(person.id) ?? 0;
-    const payableDays = Math.max(0, employedDays - unpaidDays);
+    /**
+     * Days employed, and days not paid for — kept apart on purpose.
+     *
+     * `payableDays` used to be the employed days less the unpaid leave, so unpaid leave shrank the
+     * basic salary silently and the payslip showed a smaller figure with no line saying why. The
+     * Employment Act's incomplete-month formula — monthly wages over the days in that month, times
+     * the days employed — is right for a joiner or a leaver, and it is not what a day off costs.
+     * Those are now two separate things: the basic is prorated for employment only, and a day not
+     * worked is a deduction of its own, at its own rate, with its own line.
+     */
+    const workDays = workDaysByEmployee.get(person.id) ?? [1, 2, 3, 4, 5];
+
+    let unpaidLeaveDays = 0;
+    const unpaidLeaveNames = new Set<string>();
+    for (const request of unpaidLeaveRequests.rows ?? []) {
+      if (request.employee_id !== person.id) continue;
+      const from = String(request.starts_on).slice(0, 10);
+      const to = String(request.ends_on).slice(0, 10);
+      const clippedFrom = from > periodFrom ? from : periodFrom;
+      const clippedTo = to < periodTo ? to : periodTo;
+      if (clippedTo < clippedFrom) continue;
+
+      const counted = countLeaveDays({
+        startsOn: clippedFrom,
+        endsOn: clippedTo,
+        // A half day at either end only counts as a half if that end is inside the period.
+        halfDayStart: request.half_day_start && clippedFrom === from,
+        halfDayEnd: request.half_day_end && clippedTo === to,
+        workDays,
+        holidays,
+      });
+      if (counted.days > 0) {
+        unpaidLeaveDays += counted.days;
+        unpaidLeaveNames.add(request.type_name);
+      }
+    }
+
+    const absence = absenceByEmployee.get(person.id);
+    const absentDays = deductAbsence.value ? (absence?.days ?? 0) : 0;
+    const payableDays = employedDays;
 
     // Their unclaimed overtime, read before anything is written, because on a supplementary run it
     // decides whether this person is in the run at all.
@@ -702,8 +889,8 @@ export async function preparePayrollRun(
           basis:
             payableDays >= periodDays
               ? "full month"
-              : `${payableDays} of ${periodDays} calendar days` +
-                (unpaidDays > 0 ? `, after ${unpaidDays} calendar days of unpaid leave` : ""),
+              : `${payableDays} of ${periodDays} days employed` +
+                " (Employment Act incomplete-month basis: monthly wages over the days in the month)",
           quantity: String(payableDays),
           accountCode: SYSTEM_ACCOUNTS.salariesExpense,
         });
@@ -768,19 +955,100 @@ export async function preparePayrollRun(
           amount,
           basis:
             `${claim.approved_hours} hours × ${claim.rate_multiple} × hourly rate ` +
-            `${formatAmount(hourly)} (${claim.rate_source ?? "rate source not recorded"})`,
+            `${formatAmount(hourly)} (${claim.rate_source ?? "rate source not recorded"}). ` +
+            `Counts as wages for ${describeWageBases(overtimeIsWagesFor)}.`,
           quantity: claim.approved_hours,
           rate: claim.rate_multiple,
           accountCode: SYSTEM_ACCOUNTS.overtimeExpense,
           overtimeRequestId: claim.id,
         });
 
-        // Deliberately not added to `epfWages`, `socsoWages` or `pcbWages`. Whether an overtime
-        // payment is "wages" is decided per contribution by statute and differs between them — it is
-        // the same question Q-HR-1 already asks about allowances, item 7, and it is not answered
-        // here. Excluding it under-deducts if the answer is that it counts, so a month containing
-        // paid overtime is not a month to run live on until CAC's accountant has answered.
+        // Which bases this reaches is the question Q-HR-1 item 7 asks, and the answer differs per
+        // contribution: ordinarily not EPF, but yes for SOCSO, EIS and PCB.
         gross += amount;
+        if (overtimeIsWagesFor.epf) epfWages += amount;
+        if (overtimeIsWagesFor.socso) socsoWages += amount;
+        if (overtimeIsWagesFor.pcb) pcbWages += amount;
+      }
+
+      /**
+       * A day not worked, priced at the ordinary rate of pay.
+       *
+       * Deducted rather than folded into the basic, because a payslip that simply shows a smaller
+       * number answers no question. The rate is the Employment Act's ordinary rate for a
+       * monthly-rated employee — monthly wages over 26 — not the calendar-day rate, so a day off
+       * costs the same in February as in March.
+       *
+       * It comes out of the statutory wage bases as well as the gross, because a contribution is on
+       * the wages actually payable for the month. Taking it off afterwards would have contributed on
+       * money nobody was paid.
+       */
+      const divisor =
+        divisorSetting.value > 0 ? BigInt(Math.round(divisorSetting.value)) : BigInt(periodDays);
+      const dailyRate = salary / divisor;
+
+      const deductDays = async (code: string, description: string, days: number, note: string) => {
+        if (supplementary || days <= 0) return 0n;
+        const amount = (dailyRate * BigInt(Math.round(days * 100))) / 100n;
+        if (amount <= 0n) return 0n;
+
+        await addLine({
+          kind: "deduction",
+          code,
+          description,
+          amount,
+          basis:
+            `${days} day${days === 1 ? "" : "s"} at ${formatAmount(dailyRate)} — the ordinary rate ` +
+            `of pay, ${formatAmount(salary)} over ${divisor}. ${note}`,
+          quantity: String(days),
+          accountCode: SYSTEM_ACCOUNTS.salariesExpense,
+        });
+        return amount;
+      };
+
+      const unpaidAmount = await deductDays(
+        "UNPAID",
+        unpaidLeaveNames.size > 0
+          ? `Unpaid leave — ${[...unpaidLeaveNames].join(", ")}`
+          : "Unpaid leave",
+        unpaidLeaveDays,
+        "Working days only: a rest day or a public holiday inside the leave is not a day of it.",
+      );
+
+      const absentAmount = await deductDays(
+        "ABSENT",
+        "Absent without leave",
+        absentDays,
+        absence
+          ? `From the finalised attendance for this period${
+              absence.first === absence.last
+                ? `, on ${absence.first}`
+                : `, between ${absence.first} and ${absence.last}`
+            }.`
+          : "From the finalised attendance for this period.",
+      );
+
+      const notPaidFor = unpaidAmount + absentAmount;
+      gross -= notPaidFor;
+      epfWages -= notPaidFor;
+      socsoWages -= notPaidFor;
+      pcbWages -= notPaidFor;
+
+      if (epfWages < 0n) epfWages = 0n;
+      if (socsoWages < 0n) socsoWages = 0n;
+      if (pcbWages < 0n) pcbWages = 0n;
+
+      // Lateness is measured and not deducted. Reported here so that the run does not simply swallow
+      // it: somebody should see it, and the place they see it is not a payslip.
+      const late = latenessByEmployee.get(person.id);
+      if (late && late.minutes > 0 && !deductLateness.value) {
+        notes.push({
+          employeeName: person.full_name,
+          note:
+            `Late on ${late.days} day${late.days === 1 ? "" : "s"}, ${late.minutes} minutes in all. ` +
+            "Not deducted — section 24 of the Employment Act limits what may be taken out of wages, " +
+            "and lateness is handled through the disciplinary process.",
+        });
       }
 
       // --- Statutory deductions -------------------------------------------
@@ -1007,6 +1275,7 @@ export async function preparePayrollRun(
       runNo,
       kind: run.kind,
       correctsRunId: run.corrects_run_id,
+      overtimeWageBasis: overtimeIsWagesFor,
       periodFrom,
       periodTo,
       payslips: people.length - skipped.length,
@@ -1016,7 +1285,45 @@ export async function preparePayrollRun(
     },
   });
 
-  return { runNo, payslips: people.length - skipped.length, skipped, problems };
+  return { runNo, payslips: people.length - skipped.length, skipped, problems, notes };
+}
+
+/**
+ * Which contributions an overtime payment counted towards, in words, for the payslip line.
+ *
+ * On the line rather than in a footnote because it is the part somebody would query, and because the
+ * answer can change: a payslip has to be explicable years later with whatever the settings say then.
+ */
+function describeWageBases(bases: { epf: boolean; socso: boolean; pcb: boolean }): string {
+  const named = [
+    bases.epf ? "EPF" : null,
+    bases.socso ? "SOCSO and EIS" : null,
+    bases.pcb ? "PCB" : null,
+  ].filter((entry): entry is string => entry !== null);
+
+  if (named.length === 0) return "none of EPF, SOCSO, EIS or PCB";
+  if (named.length === 1) return named[0]!;
+  return `${named.slice(0, -1).join(", ")} and ${named[named.length - 1]}`;
+}
+
+/**
+ * A schedule's working days, whatever shape the driver hands them back in.
+ *
+ * `work_days` is `integer[]`, which arrives as an array from one driver and as `{1,2,3,4,5}` from
+ * another. Falling back to Monday–Friday rather than to nothing: a person with no schedule at all
+ * would otherwise have no working days, and every day of unpaid leave would count as zero.
+ */
+function readWorkDays(value: number[] | string | null): number[] {
+  if (Array.isArray(value) && value.length > 0) return value.map(Number);
+  if (typeof value === "string") {
+    const parsed = value
+      .replace(/[{}]/g, "")
+      .split(",")
+      .map((entry) => Number(entry.trim()))
+      .filter((entry) => Number.isFinite(entry));
+    if (parsed.length > 0) return parsed;
+  }
+  return [1, 2, 3, 4, 5];
 }
 
 /** A monthly salary as an hourly rate, on the conventional 26-day, 8-hour basis. */

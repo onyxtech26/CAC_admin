@@ -95,6 +95,8 @@ async function makePrincipal(email: string, roles: string[]): Promise<Principal>
     mfaSatisfied: true,
     mustChangePassword: false,
     mustEnrolMfa: false,
+    mfaRequired: false,
+    mfaEnrolmentDueAt: null,
   };
 }
 

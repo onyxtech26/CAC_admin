@@ -62,6 +62,8 @@ beforeAll(async () => {
     mfaSatisfied: true,
     mustChangePassword: false,
     mustEnrolMfa: false,
+    mfaRequired: false,
+    mfaEnrolmentDueAt: null,
   };
 }, 120_000);
 

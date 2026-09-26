@@ -113,6 +113,8 @@ async function makePrincipal(
     mfaSatisfied: true,
     mustChangePassword: false,
     mustEnrolMfa: false,
+    mfaRequired: false,
+    mfaEnrolmentDueAt: null,
   };
 }
 

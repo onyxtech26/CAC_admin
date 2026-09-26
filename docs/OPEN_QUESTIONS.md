@@ -133,14 +133,23 @@ What is needed, per contribution, is the **table** rather than a rate:
 6. **Which allowances count as wages** for each of the above. Not every allowance does, and
    the platform asks per element rather than assuming.
 7. **Whether an overtime payment counts as wages** for each of the above, which is the same
-   question as item 6 and has a different answer per contribution. *The platform currently
-   excludes overtime from all three wage bases* — EPF, SOCSO/EIS and PCB — which is a position
-   nobody has confirmed, and it under-deducts wherever the answer is that overtime counts. The
-   payslip line for overtime is written and the bases are recorded per payslip, so the answer is
-   a one-line change; until it is given, **a month containing paid overtime is not a month to
-   run live on.**
+   question as item 6 and has a different answer per contribution.
 
-   > **Needed:** per contribution, whether overtime payments are wages, with the citation.
+   **Answered with the ordinary treatment, at CAC's direction, and implemented as settings.**
+   Migration 0034 seeds three: overtime is **not** wages for EPF, **is** wages for SOCSO and EIS,
+   and **is** wages for PCB. That is what Malaysian employers do — KWSP's list of payments not
+   subject to contribution names overtime; PERKESO's definition of wages includes it and EIS
+   follows SOCSO; and it is remuneration from employment, so the monthly tax deduction is computed
+   on it.
+
+   All three are flagged `needs_review`, because the above is the common treatment as this
+   platform understands it rather than a reading of the statutes by anybody qualified. Each
+   overtime payslip line records which bases it counted towards, so a payslip is explicable
+   whichever way the settings stand, and changing one affects future runs only — a past period
+   recomputes with the rules in force for it.
+
+   > **Still wanted:** the accountant's confirmation, which is one click per setting. Until then
+   > the payroll screens show these as the platform's default rather than the firm's position.
 
 Each is entered with the document it came from and approved by a second person; after that
 it is immutable, which is what makes a past payslip reproducible. A rate change is a new
@@ -203,25 +212,39 @@ and the leave screen lists which types are unusable and why. Everything else —
 days against the working week and the holiday calendar, balances derived from approved
 requests, approval by somebody other than the requester — is done and tested.
 
-### Q-HR-4 — What attendance does to pay *(new, raised by the end-to-end audit)*
+### Q-HR-4 — What attendance does to pay *(raised by the end-to-end audit, answered)*
 
-Payroll reads no attendance figure at all. An `is_absent` day does not reduce anybody's pay,
-lateness and early departures do not, and the `approved_ot_minutes` the engine writes onto the
-attendance row is ignored — only a separately approved overtime request is paid. Unpaid *leave*
-is deducted, because a leave type says in the data whether it is paid.
+Payroll read no attendance figure at all: an `is_absent` day did not reduce anybody's pay, lateness
+did not, and only unpaid *leave* was deducted, because a leave type says in the data whether it is
+paid.
 
-This is not obviously wrong, and it is deliberately not guessed at. Deducting a day's pay for an
-unauthorised absence is taking money from somebody, and how a firm treats lateness ranges from
-nothing, through a warning process, to a deduction the Employment Act constrains. It is a policy
-question with a legal boundary, and this platform does not invent either.
+**Answered with the ordinary treatment, at CAC's direction, and implemented as settings**
+(migration 0035). The two halves have different answers, which is the whole reason it needed
+asking.
 
-What was fixed in the meantime: a payroll run now **refuses** to compute a period whose attendance
-is still a draft, which the module claimed to require and did not check. So a month is closed and
-looked at before it is paid, whatever the answer below turns out to be.
+**An absent day is deducted, at the ordinary rate of pay.** For a monthly-rated employee that rate
+is the monthly wages over 26 — the Employment Act's figure — and it is what a day not worked costs,
+whether it is unpaid leave or an absence nobody authorised. It is not the calendar-day rate, which
+is what the platform had been using for unpaid leave: a day off now costs the same in February as
+in March. The deduction is its own payslip line naming the days, rather than a quietly smaller
+basic, and it comes out of the statutory wage bases too, because a contribution is on the wages
+actually payable.
 
-> **Needed:** what an unauthorised absent day does to pay; what lateness does, if anything, and
-> under what process; and whether a day's pay for this purpose is the calendar-day rate the
-> platform already uses for joiners and leavers or a working-day rate.
+**Lateness is not deducted.** Section 24 of the Employment Act limits what may be taken out of
+wages and minutes of lateness are not among the deductions it permits without authority; employers
+use the disciplinary process. The setting exists and is off, so the position is stated rather than
+merely absent, and a firm that has obtained the authority has somewhere to say so. The run reports
+late days and minutes as a note on the prepared run, because measuring something carefully and then
+never mentioning it is its own kind of silence.
+
+**Proration is unchanged and is a different thing.** A joiner or a leaver is paid the Employment
+Act's incomplete-month formula — monthly wages over the days in that particular month, times the
+days employed. That covers days not employed; the deductions above cover days employed and not
+worked. They no longer overlap: the basic prorates for employment only.
+
+> **Still wanted:** confirmation of the divisor. 26 is the Employment Act's ordinary rate for a
+> monthly-rated employee and the usual choice; a firm that prices a day on the calendar month sets
+> `hr.daily_rate_divisor` to 0 instead.
 
 ### Q-FIN-3 — Approval limits, and who may approve what *(referenced by Phases 2–3)*
 Three documents ask the same question and none of them can answer it from the code:

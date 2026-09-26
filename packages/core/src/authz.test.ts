@@ -47,6 +47,8 @@ async function principalFor(userId: string, overrides: Partial<Principal> = {}):
     mfaSatisfied: true,
     mustChangePassword: false,
     mustEnrolMfa: false,
+    mfaRequired: false,
+    mfaEnrolmentDueAt: null,
     ...overrides,
   };
 }

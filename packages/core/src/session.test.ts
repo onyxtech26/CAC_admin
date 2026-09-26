@@ -336,14 +336,31 @@ describe("multi-factor authentication", () => {
     if (result.status !== "ok") return;
 
     const principal = await resolvePrincipal(db, result.token);
-    expect(principal?.mustEnrolMfa).toBe(true);
+
+    // Required, and not yet shut out. The grace period is how an organisation rolls a second factor
+    // out: the requirement starts counting from the day it first applies to you — stamped here, not
+    // taken from the day the account was created — you are told when it falls due, and you keep
+    // working until then. Enforcing it the other way locked every existing account out of everything
+    // at the moment the rule was switched on.
+    expect(principal?.mfaRequired).toBe(true);
+    expect(principal?.mustEnrolMfa).toBe(false);
+    expect(principal?.mfaEnrolmentDueAt).not.toBeNull();
+
+    // Wind the clock back past the window: now it bites.
+    await db.execute(sql`
+      UPDATE auth."user" SET mfa_required_since = now() - interval '30 days' WHERE id = ${userId}
+    `);
+    expect((await resolvePrincipal(db, result.token))?.mustEnrolMfa).toBe(true);
 
     // Enrolling clears it, and nothing else does.
     await db.execute(sql`
       INSERT INTO auth.mfa_device (user_id, secret_enc, confirmed_at)
       VALUES (${userId}, ${encryptSecret(generateSecret())}, now())
     `);
-    expect((await resolvePrincipal(db, result.token))?.mustEnrolMfa).toBe(false);
+    const after = await resolvePrincipal(db, result.token);
+    expect(after?.mfaRequired).toBe(false);
+    expect(after?.mustEnrolMfa).toBe(false);
+    expect(after?.mfaEnrolmentDueAt).toBeNull();
   });
 
   it("requires one for a role the settings say must have it, flag or no flag", async () => {
@@ -355,14 +372,17 @@ describe("multi-factor authentication", () => {
 
     const result = await login(db, "rolemfa@cac.test", PASSWORD);
     if (result.status !== "ok") throw new Error("expected ok");
-    expect((await resolvePrincipal(db, result.token))?.mustEnrolMfa).toBe(true);
+    expect((await resolvePrincipal(db, result.token))?.mfaRequired).toBe(true);
 
     // Somebody whose role is not on the list, and whose flag is off, is not asked.
     const other = await makeUser("noroleneeded@cac.test", { roles: ["EMPLOYEE"] });
     await db.execute(sql`UPDATE auth."user" SET mfa_enforced = false WHERE id = ${other}`);
     const second = await login(db, "noroleneeded@cac.test", PASSWORD);
     if (second.status !== "ok") throw new Error("expected ok");
-    expect((await resolvePrincipal(db, second.token))?.mustEnrolMfa).toBe(false);
+    const other_principal = await resolvePrincipal(db, second.token);
+    expect(other_principal?.mfaRequired).toBe(false);
+    expect(other_principal?.mustEnrolMfa).toBe(false);
+    expect(other_principal?.mfaEnrolmentDueAt).toBeNull();
   });
 });
 
