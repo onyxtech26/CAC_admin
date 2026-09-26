@@ -10,7 +10,8 @@ import { AuthorizationError } from "./authz.js";
 import { amountToSql, formatAmount, parseAmount } from "./money.js";
 import { createFiscalYear } from "./periods.js";
 import { trialBalance } from "./ledger.js";
-import { getJournal } from "./posting.js";
+import { createDraftJournal, getJournal, postJournal } from "./posting.js";
+import { createAccount } from "./accounts.js";
 import { createCustomer } from "./parties.js";
 import { addTaxRate, listTaxCodes, taxFor } from "./tax.js";
 import { setSetting } from "./settings.js";
@@ -850,8 +851,11 @@ describe("quotations", () => {
     const draft = await getQuotation(db, created.id);
     expect(draft!.status).toBe("draft");
     expect(draft!.total).toBe(parseAmount("3500.00"));
-    // Validity comes from the setting, 30 days by default.
-    expect(draft!.validUntil).toBe("2026-10-01");
+    // No validity at all, and deliberately. Thirty days was the platform's convention and nobody's
+    // decision, and it is printed on a customer-facing offer — more pointedly now that accepting a
+    // lapsed quotation is refused, because an invented expiry would start refusing real
+    // acceptances. Until somebody confirms the setting, the offer claims no deadline.
+    expect(draft!.validUntil).toBeNull();
 
     // Cannot convert before it has been accepted.
     await expect(convertQuotationToInvoice(db, accountant, created.id)).rejects.toThrow(
@@ -917,11 +921,18 @@ describe("quotations", () => {
   });
 
   it("refuses to accept a quotation that has lapsed", async () => {
+    // Confirming the setting is what makes a validity date exist at all — and confirming a value is
+    // itself the review, so this one call turns the platform's suggestion into the firm's policy.
+    await setSetting(db, director, "accounting.quotation_validity_days", 30, {
+      reason: "Thirty days, as CAC's accountant confirmed",
+    });
+
     const stale = await createQuotation(db, clerk, {
       customerId,
       documentDate: "2020-01-01",
       lines: feeLines("400.00"),
     });
+    expect((await getQuotation(db, stale.id))!.validUntil).toBe("2020-01-31");
     await sendQuotation(db, clerk, stale.id);
 
     // `valid_until` was computed, stored, displayed on the screen and read by nothing at all, so a
@@ -950,6 +961,50 @@ describe("the financial reports", () => {
     expect(report.netProfit).toBe(report.grossProfit - report.totalExpenses);
     // Revenue reads positive, which is what a reader expects.
     expect(report.revenue.lines.every((line) => line.amount > 0n)).toBe(true);
+  });
+
+  it("keeps a revenue account whose code is outside the numbering", async () => {
+    // The sections used to be chosen by the leading digit of the code alone, and nothing ties a code
+    // to a type. The chart accepts REVENUE coded 3950 — so this account landed in no section, dropped
+    // out of netProfit, and the trial balance still balanced, which left the balance sheet reporting
+    // a difference and pointing the reader at the one report that looked right.
+    await createAccount(db, accountant, {
+      code: "3950",
+      name: "Recoveries, oddly coded",
+      type: "REVENUE",
+    });
+    await createAccount(db, accountant, {
+      code: "MISC-EXP",
+      name: "Sundry, oddly coded",
+      type: "EXPENSE",
+    });
+
+    const before = await profitAndLoss(db, { from: "2026-01-01", to: "2026-12-31" });
+
+    const journal = await createDraftJournal(db, accountant, {
+      entryDate: "2026-11-02",
+      memo: "A recovery and a sundry cost, on accounts outside the numbering",
+      lines: [
+        { accountCode: "MISC-EXP", debit: "300.00", description: "Sundry" },
+        { accountCode: "3950", credit: "300.00", description: "Recovery" },
+      ],
+    });
+    // A second pair of hands, as a manual journal requires.
+    const secondAccountant = await makePrincipal("accountant2@cac.test", ["ACCOUNTANT"]);
+    await postJournal(db, secondAccountant, journal.id);
+
+    const after = await profitAndLoss(db, { from: "2026-01-01", to: "2026-12-31" });
+
+    expect(after.revenue.total).toBe(before.revenue.total + parseAmount("300.00"));
+    expect(after.revenue.lines.some((line) => line.code === "3950")).toBe(true);
+
+    const other = after.expenses.find((group) => group.heading.startsWith("Other expenses"))!;
+    expect(other.lines.some((line) => line.code === "MISC-EXP")).toBe(true);
+
+    // The two cancel, so the profit is unchanged — which is only true because both appear. Before
+    // the fix neither did, and the same arithmetic hid two real figures.
+    expect(after.netProfit).toBe(before.netProfit);
+    expect(after.netProfit).toBe(after.grossProfit - after.totalExpenses);
   });
 
   it("the balance sheet balances, including profit not yet closed to reserves", async () => {

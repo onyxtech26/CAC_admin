@@ -3,7 +3,7 @@ import type { Executor } from "@cac/db";
 import { SYSTEM_ACCOUNTS } from "@cac/db";
 import { parseIsoDate, today, toIsoDate } from "./dates.js";
 import { parseAmount, sumAmounts, type Amount } from "./money.js";
-import { getSetting } from "./settings.js";
+import { getSettingState } from "./settings.js";
 import type { AccountType } from "./accounts.js";
 
 /**
@@ -49,6 +49,14 @@ export interface AgingRow {
 export interface AgingReport {
   asOf: string;
   boundaries: number[];
+  /**
+   * Whether the boundaries are CAC's policy or the platform's suggestion.
+   *
+   * 30/60/90 is a convention, and this report is what a collections conversation starts from — which
+   * invoice somebody rings about first. The figures either side of a boundary do not change, but who
+   * appears in which column does, and the screen should not present a suggestion as the firm's rule.
+   */
+  boundariesConfirmed: boolean;
   rows: AgingRow[];
   totals: {
     current: Amount;
@@ -88,7 +96,8 @@ export async function receivablesAging(
   options: { asOf?: string; customerId?: string } = {},
 ): Promise<AgingReport> {
   const asOf = toIsoDate(options.asOf ? parseIsoDate(options.asOf, "asOf") : today());
-  const boundaries = await getSetting<number[]>(db, "accounting.aging_buckets", [30, 60, 90]);
+  const buckets = await getSettingState<number[]>(db, "accounting.aging_buckets", [30, 60, 90]);
+  const boundaries = buckets.value;
   const sorted = [...boundaries].sort((a, b) => a - b);
 
   // `amount_allocated` on the invoice is what has been settled *today*. For an
@@ -235,6 +244,7 @@ export async function receivablesAging(
   return {
     asOf,
     boundaries: sorted,
+    boundariesConfirmed: buckets.confirmed,
     rows,
     totals: {
       current: sumAmounts(rows.map((row) => row.current)),
@@ -362,20 +372,49 @@ export async function profitAndLoss(
     amount: row.type === "REVENUE" ? -parseAmount(row.net) : parseAmount(row.net),
   }));
 
-  const section = (heading: string, predicate: (code: string) => boolean): ReportSection => {
-    const lines = all.filter((line) => predicate(line.code));
+  /**
+   * Which section a line belongs to.
+   *
+   * Revenue or expense comes from the account's **type**, and only the subdivision of the expenses
+   * comes from the code. That distinction is the fix for a defect worth spelling out: every section
+   * used to be chosen by the leading digit alone, and nothing ties a code to a type. The chart
+   * accepts `REVENUE` coded `3900`, or `REV-ADVISORY`; both are legal, and both used to land in no
+   * section at all — vanishing from the statement and from `netProfit`, while the trial balance
+   * still balanced, so the balance sheet reported a difference and pointed the reader at the one
+   * report that looked correct.
+   *
+   * Nothing can now fall out. Anything whose code does not match a known prefix is an expense, since
+   * its type says so, and it is shown under a heading that says it is unclassified rather than being
+   * dropped.
+   */
+  const toSection = (
+    heading: string,
+    predicate: (line: (typeof all)[number]) => boolean,
+  ): ReportSection => {
+    const lines = all.filter(predicate);
     return { heading, lines, total: sumAmounts(lines.map((line) => line.amount)) };
   };
 
-  // Grouped by the leading digit of the code, which is how the seeded chart is
-  // organised: 4 revenue, 5 direct costs, 6 staff, 7 admin, 8 finance, 9 tax.
-  const revenue = section("Revenue", (code) => code.startsWith("4"));
-  const directCosts = section("Direct costs", (code) => code.startsWith("5"));
+  const revenue = toSection("Revenue", (line) => line.type === "REVENUE");
+
+  const isExpense = (line: (typeof all)[number]) => line.type === "EXPENSE";
+  const directCosts = toSection(
+    "Direct costs",
+    (line) => isExpense(line) && line.code.startsWith("5"),
+  );
+
+  // 6 staff, 7 admin, 8 finance, 9 tax, which is how the seeded chart is organised. The prefixes
+  // group the statement; they do not decide what is in it.
+  const GROUPED = ["5", "6", "7", "8", "9"];
   const expenses = [
-    section("Staff costs", (code) => code.startsWith("6")),
-    section("Administrative expenses", (code) => code.startsWith("7")),
-    section("Finance costs", (code) => code.startsWith("8")),
-    section("Taxation", (code) => code.startsWith("9")),
+    toSection("Staff costs", (line) => isExpense(line) && line.code.startsWith("6")),
+    toSection("Administrative expenses", (line) => isExpense(line) && line.code.startsWith("7")),
+    toSection("Finance costs", (line) => isExpense(line) && line.code.startsWith("8")),
+    toSection("Taxation", (line) => isExpense(line) && line.code.startsWith("9")),
+    toSection(
+      "Other expenses — code outside the numbering",
+      (line) => isExpense(line) && !GROUPED.some((prefix) => line.code.startsWith(prefix)),
+    ),
   ].filter((group) => group.lines.length > 0);
 
   const grossProfit = revenue.total - directCosts.total;

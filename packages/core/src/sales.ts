@@ -15,7 +15,7 @@ import {
 } from "./documents.js";
 import { postSourceJournal, reverseJournal } from "./posting.js";
 import { allocateDocumentNumber } from "./sequence.js";
-import { getSetting } from "./settings.js";
+import { getSetting, getSettingState } from "./settings.js";
 
 /**
  * Quotations, invoices and credit notes.
@@ -117,10 +117,22 @@ export async function createQuotation(
 
   const customer = await requireCustomer(db, input.customerId);
   const date = toIsoDate(input.documentDate ? parseIsoDate(input.documentDate, "documentDate") : today());
-  const validityDays = await getSetting<number>(db, "accounting.quotation_validity_days", 30);
+  /**
+   * A validity date is stated only when somebody has decided what it should be.
+   *
+   * Thirty days is a common convention and was nobody's decision, and it is printed on a
+   * customer-facing offer. It also stopped being cosmetic when accepting a lapsed quotation became a
+   * refusal: an invented expiry would start refusing real acceptances. So an unconfirmed setting
+   * means no `valid_until` at all — the offer makes no claim about when it stops — and the screen
+   * says so rather than the quotation implying a deadline nobody set.
+   */
+  const validity = await getSettingState<number>(db, "accounting.quotation_validity_days", 30);
+  const validityDays = validity.confirmed ? validity.value : null;
   const validUntil = input.dueDate
     ? toIsoDate(parseIsoDate(input.dueDate, "dueDate"))
-    : toIsoDate(addDays(parseIsoDate(date), validityDays));
+    : validityDays === null
+      ? null
+      : toIsoDate(addDays(parseIsoDate(date), validityDays));
 
   const computed = await computeDocumentLines(db, input.lines, date);
 

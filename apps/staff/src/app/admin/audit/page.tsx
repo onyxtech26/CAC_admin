@@ -19,6 +19,7 @@ export default async function AuditPage({
   searchParams: Promise<{ page?: string }>;
 }) {
   const principal = await requireCapability("audit.view");
+  const canExport = principal.capabilities.has("audit.export");
   const db = await getDb();
 
   const { page } = await searchParams;
@@ -50,6 +51,51 @@ export default async function AuditPage({
           them, including by an administrator.
         </Alert>
       </div>
+
+      {canExport && (
+        <div className="mb-4">
+          <Panel
+            title="Export"
+            description="The trail as CSV, for a reviewer or an auditor. Exporting is itself recorded, with the range and the number of rows — an export is the moment the trail leaves the platform."
+          >
+            <form action="/admin/audit/export" method="get" className="flex flex-wrap items-end gap-3">
+              <div>
+                <label htmlFor="from" className="block text-[12px] font-medium">
+                  From
+                </label>
+                <input
+                  id="from"
+                  name="from"
+                  type="date"
+                  className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                />
+              </div>
+              <div>
+                <label htmlFor="to" className="block text-[12px] font-medium">
+                  To
+                </label>
+                <input
+                  id="to"
+                  name="to"
+                  type="date"
+                  className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                />
+              </div>
+              <button
+                type="submit"
+                className="rounded-md border border-[var(--color-navy)] bg-[var(--color-navy)] px-3 py-2 text-[13px] text-white"
+              >
+                Download CSV
+              </button>
+              <p className="basis-full text-[11px] text-[var(--color-muted)]">
+                Leave the dates blank for everything. The old and new values are not included: they
+                are redacted already, and a file of every payload is a file of masked personal data.
+                The reason is included, which is the part that explains a change.
+              </p>
+            </form>
+          </Panel>
+        </div>
+      )}
 
       <Panel title={`${count} event${count === 1 ? "" : "s"}`} description={`Page ${pageNumber}`}>
         {rows.length === 0 ? (

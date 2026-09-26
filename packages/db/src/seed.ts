@@ -47,8 +47,24 @@ const SETTINGS: SettingSeed[] = [
   { key: "accounting.fiscal_year_start_month", value: 1, category: "accounting", label: "Fiscal year starts in month", description: "1 = January. Confirm with CAC's accountant.", needsReview: true },
   { key: "accounting.period_length", value: "monthly", category: "accounting", label: "Accounting period length" },
   { key: "accounting.invoice_terms_days", value: 30, category: "accounting", label: "Default invoice payment terms (days)" },
-  { key: "accounting.quotation_validity_days", value: 30, category: "accounting", label: "Default quotation validity (days)" },
-  { key: "accounting.aging_buckets", value: [30, 60, 90], category: "accounting", label: "AR aging bucket boundaries (days)" },
+  {
+    key: "accounting.quotation_validity_days",
+    value: 30,
+    category: "accounting",
+    label: "Default quotation validity (days)",
+    description:
+      "Printed on the offer, and — since accepting a lapsed quotation is refused — the date it stops being one. Thirty days is the common convention and nobody's decision, so until this is confirmed a quotation states no validity at all rather than implying a deadline CAC never set.",
+    needsReview: true,
+  },
+  {
+    key: "accounting.aging_buckets",
+    value: [30, 60, 90],
+    category: "accounting",
+    label: "AR aging bucket boundaries (days)",
+    description:
+      "Which invoices a collections conversation starts with. 30/60/90 is the common convention rather than CAC's policy; until it is confirmed the aging report says so on its face.",
+    needsReview: true,
+  },
   {
     key: "accounting.journal_requires_second_person",
     value: true,

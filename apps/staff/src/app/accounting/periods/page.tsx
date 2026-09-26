@@ -1,7 +1,7 @@
 import { getDb } from "@cac/db";
 import {
   formatDate,
-  getSetting,
+  getSettingState,
   listFiscalYears,
   listJournals,
   listPeriods,
@@ -11,6 +11,11 @@ import { requireCapability } from "@/lib/auth";
 import { Shell } from "@/components/Shell";
 import { Alert, Badge, DataTable, EmptyState, Panel, Td } from "@/components/ui";
 import { CloseYearForm, FiscalYearForm, PeriodActions } from "./PeriodForms";
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 /**
  * The fiscal calendar.
@@ -28,7 +33,7 @@ export default async function PeriodsPage() {
     listFiscalYears(db),
     listPeriods(db),
     listJournals(db, { status: "draft", limit: 500 }),
-    getSetting<number>(db, "accounting.fiscal_year_start_month", 1),
+    getSettingState<number>(db, "accounting.fiscal_year_start_month", 1),
   ]);
 
   const draftsByPeriod = new Map<string, number>();
@@ -46,7 +51,7 @@ export default async function PeriodsPage() {
   const covered = new Set(years.map((y) => y.startsOn.slice(0, 4)));
   let suggestedYear = currentYear;
   while (covered.has(String(suggestedYear))) suggestedYear += 1;
-  const suggestedStart = `${suggestedYear}-${String(startMonth).padStart(2, "0")}-01`;
+  const suggestedStart = `${suggestedYear}-${String(startMonth.value).padStart(2, "0")}-01`;
 
   return (
     <Shell
@@ -55,11 +60,13 @@ export default async function PeriodsPage() {
       breadcrumbs={[{ label: "Accounting", href: "/accounting" }, { label: "Fiscal calendar" }]}
     >
       <div className="space-y-4">
-        {startMonth === 1 && (
-          <Alert tone="info">
-            The fiscal year is configured to start in January. That is the default, not a confirmed
-            answer — check it with CAC&rsquo;s accountant before the first year end, and change it
-            under Settings if it is wrong.
+        {!startMonth.confirmed && (
+          <Alert tone="warn">
+            The fiscal year is set to start in {MONTH_NAMES[startMonth.value - 1] ?? "January"}, and
+            nobody has confirmed that. The notice used to appear whenever the month was January,
+            which meant it also appeared after somebody had confirmed January and never appeared for
+            a month that was equally unconfirmed. Check it with CAC&rsquo;s accountant before the
+            first year end; confirming it under Settings is what clears this.
           </Alert>
         )}
 

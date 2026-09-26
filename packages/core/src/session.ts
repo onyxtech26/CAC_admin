@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import type { Database } from "@cac/db";
-import { generateToken, hashToken, hashPassword, verifyPassword } from "./password.js";
+import { generateToken, hashToken, verifyPassword } from "./password.js";
 import { normaliseRecoveryCode } from "./password.js";
 import { resolveCapabilities, resolveRoles, type Principal } from "./authz.js";
 import { AUDIT, writeAudit } from "./audit.js";
@@ -526,21 +526,10 @@ export async function revokeAllSessions(db: Database, userId: string, exceptSess
   return count;
 }
 
-export async function changePassword(
-  db: Database,
-  userId: string,
-  newPassword: string,
-  ctx: LoginContext = {},
-): Promise<void> {
-  const hash = await hashPassword(newPassword);
-  await db.execute(sql`
-    UPDATE auth."user" SET password_hash = ${hash}, must_change_password = false WHERE id = ${userId}
-  `);
-  await writeAudit(db, {
-    action: AUDIT.PASSWORD_CHANGED,
-    entityType: "user",
-    entityId: userId,
-    actorUserId: userId,
-    ...ctx,
-  });
-}
+/*
+ * `changePassword` used to live here: no callers anywhere, and it set a new hash without revoking
+ * the sessions the old password had opened — the rule this module's own header states. Removed
+ * rather than fixed, because `changeOwnPassword` in `enrolment.ts` is the one the application uses
+ * and it does revoke them. A second, subtly weaker way to do the same thing is how the weaker one
+ * eventually gets called.
+ */

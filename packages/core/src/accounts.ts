@@ -122,11 +122,6 @@ export async function listPostableAccounts(db: Executor): Promise<AccountRow[]> 
   return all.filter((a) => a.isPostable);
 }
 
-export async function getAccount(db: Executor, idOrCode: string): Promise<AccountRow | null> {
-  const all = await listAccounts(db, { includeInactive: true });
-  return all.find((a) => a.id === idOrCode || a.code === idOrCode) ?? null;
-}
-
 export interface AccountInput {
   code: string;
   name: string;

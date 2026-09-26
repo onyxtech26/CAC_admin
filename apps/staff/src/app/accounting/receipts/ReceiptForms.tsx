@@ -238,6 +238,7 @@ export function AllocationForm({
   available,
   openInvoices,
   existing,
+  suggested = {},
 }: {
   receiptId?: string;
   creditNoteId?: string;
@@ -245,6 +246,8 @@ export function AllocationForm({
   available: string;
   openInvoices: OpenInvoice[];
   existing: Record<string, string>;
+  /** Oldest first, from `suggestAllocation` on the server. Empty when there is nothing to suggest. */
+  suggested?: Record<string, string>;
 }) {
   const [state, action, pending] = useActionState(allocateAction, initial);
   const [amounts, setAmounts] = useState<Record<string, string>>(existing);
@@ -260,20 +263,19 @@ export function AllocationForm({
     return { allocated, remaining: availableAmount - allocated, available: availableAmount };
   }, [amounts, available]);
 
-  const suggest = () => {
-    // Oldest first, until the money runs out. The same rule the server suggests.
-    let remaining = totals.available;
-    const next: Record<string, string> = {};
-    const ordered = [...openInvoices].sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-    for (const invoice of ordered) {
-      if (remaining <= 0n) break;
-      const outstanding = parseAmount(invoice.outstanding);
-      const take = outstanding < remaining ? outstanding : remaining;
-      next[invoice.id] = formatAmount(take, { grouped: false });
-      remaining -= take;
-    }
-    setAmounts(next);
-  };
+  /**
+   * The server's suggestion, applied to the form.
+   *
+   * This used to be worked out here, and wrongly. It sorted by `dueDate`, which arrives already
+   * formatted for display — "4 June 2026" — so `localeCompare` ordered the invoices alphabetically
+   * by month name: April, August, December, February. "Oldest first" put December before February.
+   *
+   * `suggestAllocation` in the core does the same thing in SQL, ordered by the actual date, and had
+   * no callers outside its own test: the feature was built, tested, and never offered. Now it is the
+   * only implementation, which is also why the button does nothing when the suggestion is empty
+   * rather than falling back to a second guess.
+   */
+  const suggest = () => setAmounts({ ...suggested });
 
   if (openInvoices.length === 0) {
     return (
@@ -370,7 +372,8 @@ export function AllocationForm({
           <button
             type="button"
             onClick={suggest}
-            className="rounded-md border border-[var(--color-line-strong)] px-3 py-2 text-[13px] hover:bg-[var(--color-canvas)]"
+            disabled={Object.keys(suggested).length === 0}
+            className="rounded-md border border-[var(--color-line-strong)] px-3 py-2 text-[13px] hover:bg-[var(--color-canvas)] disabled:opacity-50"
           >
             Suggest oldest first
           </button>

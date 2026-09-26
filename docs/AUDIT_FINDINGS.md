@@ -211,7 +211,7 @@ join the sensitive-key list that `redact()` works from.
 - **No customer-facing document for a quotation, receipt, voucher or purchase order.** Only invoices, payslips, letters and case documents have a PDF route. A quotation advances to `sent` and an issued PO commits the firm to a supplier, with nothing to send.
 - **e-Invoice has no submission path at all.** `buildEInvoiceDocument` (`einvoice.ts:496`) has zero callers repo-wide; `provider.submit()` is called only from tests. Beyond the documented Q-FIN-2 refusal: even with a TIN, client id, secret and environment supplied, nothing invokes the provider, no column records a submission id or status, and the invoice line form has no classification code field the adapter requires.
 - **Revenue cannot be attributed to a case from any screen.** `invoice_line.case_id` and `quotation_line.case_id` are accepted, computed, persisted and carried through conversions and credit notes — and `readLines` never reads a `caseId`, no form renders one, and no report uses it. For a firm that bills per matter, this is the missing link between the two halves of the platform.
-- **`audit.export` gates nothing.** No export control or CSV route exists on `/admin/audit`, though three roles are granted the capability.
+- ~~**`audit.export` gates nothing.**~~ No export control or CSV route exists on `/admin/audit`, though three roles are granted the capability. **Fixed:** a date-ranged CSV route and the control that reaches it. The export is itself audited with the range and the row count, because an export is the moment the trail leaves the platform. Old and new values are left out — they are redacted already, and a file of every payload is a file of masked personal data; the reason, which is the part that explains a change, is included. Cells beginning `=`, `+`, `-` or `@` are prefixed, so a reason somebody typed cannot execute in the reviewer's spreadsheet.
 - ~~**An authorisation denial is never recorded**~~, while `apps/staff/src/app/denied/page.tsx:27` tells the user "The request has been recorded." There is no `ACCESS_DENIED` audit action. **Fixed:** there is one now, written by both route guards, with the capability and the caller's roles. A failure to write it is swallowed — a denial that cannot be logged must still be a denial.
 - ~~**`AUDIT.SESSION_REVOKED` is declared and unused**~~ — `revokeSession` writes `LOGOUT`, so a user killing a suspicious device is indistinguishable from that device signing out. **Fixed:** `revokeSession` takes a reason, and the device list passes "revoked". The two are different events: one is somebody leaving, the other is somebody noticing.
 - ~~**No audit row on successful MFA, or on a recovery code being spent**~~ — the success paths return before `writeAudit`. **Fixed:** `MFA_SATISFIED` records which of the two was used. Failures without successes are unreadable, since there is nothing to compare them against.
@@ -236,11 +236,16 @@ nothing is a line in the matrix that is not true.
 `needs_review` settings are seeded deliberately null. So any call site passing a non-null fallback
 silently defeats the "refuse rather than guess" discipline:
 
+> **Three of the five are fixed**, and the fix is in two parts: `getSettingState` tells a caller
+> whether a value was actually confirmed, and `needs_review` — which several of these carry and
+> which nothing downstream ever read — now reaches the screens. Migration 0032 flags the two that
+> leave the platform.
+
 | Setting | Fallback | What it silently asserts |
 |---|---|---|
-| `accounting.fiscal_year_start_month` | `1` | A January fiscal year for a company whose year may start in any month |
-| `accounting.aging_buckets` | `[30,60,90]` | CAC's receivables policy, on a report that drives collections |
-| `accounting.quotation_validity_days` | `30` | A contractual date on a customer-facing offer |
+| `accounting.fiscal_year_start_month` | `1` | A January fiscal year for a company whose year may start in any month — **fixed:** the notice now appears when the month is unconfirmed rather than when it happens to be January, which was both a false alarm and a missed one |
+| `accounting.aging_buckets` | `[30,60,90]` | CAC's receivables policy, on a report that drives collections — **fixed:** the report carries `boundariesConfirmed` and says on its face when the boundaries are the platform's suggestion |
+| `accounting.quotation_validity_days` | `30` | A contractual date on a customer-facing offer — **fixed:** an unconfirmed setting means the quotation states *no* validity, rather than implying a deadline nobody set. That mattered more once accepting a lapsed quotation became a refusal |
 | `company.registration_no` | `""` | A statutory payslip issued with no registration number |
 | `company.name` / `company.address` | hardcoded / `""` | A court-facing estate document emitted with an empty address |
 
@@ -250,10 +255,10 @@ high-value capability; `cases.age_of_majority` → null disables the age check;
 
 ## 6. Unreachable code
 
-- `packages/core/src/accounts.ts:125` — `getAccount`, no callers repo-wide.
-- `packages/core/src/receipts.ts:411` — `suggestAllocation`, referenced only by its test. The "here are the invoices this receipt probably pays" suggestion is built, tested, and never offered.
+- ~~`packages/core/src/accounts.ts:125` — `getAccount`, no callers repo-wide.~~ **Removed.**
+- `packages/core/src/receipts.ts:411` — `suggestAllocation`, referenced only by its test. The "here are the invoices this receipt probably pays" suggestion is built, tested, and never offered. **Fixed, and it was worse than unreachable:** the allocation form had its own copy of the rule, which sorted on the *formatted* date — so "oldest first" ordered the invoices alphabetically by month name and put December before February. The client copy is gone and the button applies the server's suggestion.
 - `packages/core/src/einvoice.ts:496` — `buildEInvoiceDocument`, no callers including tests.
-- `packages/core/src/session.ts:326` — `changePassword`, no callers, and it writes a new hash **without revoking sessions**, violating the rule its own module documents.
+- ~~`packages/core/src/session.ts:326` — `changePassword`, no callers, and it writes a new hash **without revoking sessions**, violating the rule its own module documents.~~ **Removed** rather than fixed: `changeOwnPassword` is the one in use and it does revoke them. A second, subtly weaker way to do the same thing is how the weaker one eventually gets called.
 - `apps/staff/src/lib/nav.ts:21` — the `phase` field and its comment are now dead; no entry carries a marker.
 
 ## 7. Lower-severity findings
@@ -270,7 +275,7 @@ high-value capability; `cases.age_of_majority` → null disables the age check;
 - **No Content-Security-Policy or HSTS** on the staff app. Four other security headers are set; §7 requires a nonce-based CSP. **Fixed:** `apps/staff/src/middleware.ts` sets a nonce-based CSP with `strict-dynamic`, and HSTS only over HTTPS — sending it on a plain-HTTP development origin would pin localhost for a year. `style-src` keeps `unsafe-inline` because React writes inline style attributes and a nonce does not cover attributes; `'unsafe-eval'` is added in development only, for React Refresh. Verified in the browser: the page hydrates, the server action returns, and the console is clean.
 - **`netTotal` escapes the audit mask list** (`payroll.ts:753`, `:812`, `:955`) — `netpay`/`net_pay` are masked, `nettotal` is not, so a run's aggregate net pay is stored unmasked.
 - **`reason` bypasses `redact()` entirely.** Every reason field is free text a user types, and `resetMfa` makes one mandatory; an identification number pasted into one lands unredacted in an append-only table. **Fixed:** `redactFreeText` removes the two shapes that are unmistakable and irreversible — a Malaysian NRIC, and a run of ten or more digits — and nothing else. Narrow on purpose: a filter that mangled ordinary sentences would make people write less rather than less sensitive.
-- **The P&L buckets accounts by the leading digit of the code**, and nothing ties a code to its type. A `REVENUE` account coded `3900` or `REV-ADVISORY` — both accepted — lands in no section and vanishes from `netProfit`, while the trial balance still balances. The balance sheet then reports a difference and points the reader at the one report that looks correct.
+- **The P&L buckets accounts by the leading digit of the code**, and nothing ties a code to its type. A `REVENUE` account coded `3900` or `REV-ADVISORY` — both accepted — lands in no section and vanishes from `netProfit`, while the trial balance still balances. The balance sheet then reports a difference and points the reader at the one report that looks correct. **Fixed:** revenue and expense come from the account's *type*, and the code only subdivides the expenses. Anything outside the numbering appears under a heading that says so, so nothing can fall out of the statement.
 - **`maskValue` returns the last four characters of a stringified number**, so `basic_salary: "3500.00"` masks to `***0.00` — weaker than the shape §4 describes. **Fixed:** an amount, or any run of fewer than ten digits, is masked whole. The last four of an account or an NRIC stay, because that is a deliberate partial identifier and the reason `bank_account_last4` is a column.
 - **The breached-password check named in §2 is absent**, and the code says so.
 - **A stale banner after enrolment.** The action's returned page still says no authenticator is enrolled; a reload is correct. Cosmetic. **Addressed rather than fixed:** revalidating would re-render the page and take the one-time recovery codes with it, which is worse. The codes panel now says the banner above is out of date and why, beside the link that refreshes.

@@ -156,8 +156,16 @@ export default async function AgingPage({
 
         <p className="text-[11px] text-[var(--color-muted)]">
           Buckets come from the setting <span className="font-mono">accounting.aging_buckets</span>,
-          currently {aging.boundaries.join(", ")} days. &ldquo;On account&rdquo; is money received and
-          not yet matched to an invoice; it reduces what the customer really owes.
+          currently {aging.boundaries.join(", ")} days.{" "}
+          {!aging.boundariesConfirmed && (
+            <strong>
+              Nobody at CAC has confirmed those boundaries — they are the common convention, not the
+              firm&rsquo;s policy, so which column an invoice falls into is the platform&rsquo;s
+              suggestion. Confirm them under Settings and this note goes.
+            </strong>
+          )}{" "}
+          &ldquo;On account&rdquo; is money received and not yet matched to an invoice; it reduces
+          what the customer really owes.
         </p>
       </div>
     </Shell>

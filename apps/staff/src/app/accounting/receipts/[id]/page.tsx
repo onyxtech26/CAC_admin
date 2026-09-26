@@ -8,6 +8,7 @@ import {
   getReceipt,
   listInvoices,
   parseAmount,
+  suggestAllocation,
 } from "@cac/core";
 import { requireCapability } from "@/lib/auth";
 import { salesFormOptions } from "@/lib/accounting-options";
@@ -44,6 +45,13 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
         limit: 200,
       })
     : [];
+
+  // Oldest first, worked out by the core rather than in the browser: the client copy sorted on the
+  // formatted date, so it ordered by month name.
+  const suggestion =
+    receipt.status === "posted" && canAllocate ? await suggestAllocation(db, receipt.id) : [];
+  const suggested: Record<string, string> = {};
+  for (const line of suggestion) suggested[line.invoiceId] = line.amount;
 
   const existing: Record<string, string> = {};
   for (const allocation of receipt.allocations) {
@@ -181,6 +189,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
                     daysOverdue: invoice.daysOverdue,
                   }))}
                   existing={existing}
+                  suggested={suggested}
                 />
               </Panel>
             )}

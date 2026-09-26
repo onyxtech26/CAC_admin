@@ -43,6 +43,30 @@ export async function getSetting<T>(db: Executor, key: string, fallback: T): Pro
 }
 
 /**
+ * A setting, and whether anybody has actually said so.
+ *
+ * `getSetting` cannot tell a confirmed answer from a default, because it returns the fallback for a
+ * row that is absent *and* for one whose value is null — and the settings that need an answer are
+ * seeded null on purpose. Worse, some carry a plausible figure and a `needs_review` flag that
+ * nothing downstream ever read, so a suggestion looked exactly like a decision.
+ *
+ * `confirmed` is false when the value is absent, null, or still flagged for review. A screen that
+ * prints a figure somebody will act on should say which it is.
+ */
+export async function getSettingState<T>(
+  db: Executor,
+  key: string,
+  fallback: T,
+): Promise<{ value: T; confirmed: boolean }> {
+  const result = await db.execute<{ value: unknown; needs_review: boolean }>(sql`
+    SELECT value, needs_review FROM org.setting WHERE key = ${key}
+  `);
+  const row = result.rows?.[0];
+  if (!row || row.value === null) return { value: fallback, confirmed: false };
+  return { value: row.value as T, confirmed: !row.needs_review };
+}
+
+/**
  * Reads several settings at once.
  *
  * One query rather than N: a page that needs eight settings should not make
