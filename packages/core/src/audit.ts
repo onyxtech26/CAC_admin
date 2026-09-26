@@ -243,6 +243,9 @@ export const AUDIT = {
   /** Written with no actor: an enquiry arrives from the public site, where nobody is signed in. */
   ENQUIRY_RECEIVED: "ENQUIRY_RECEIVED",
   ENQUIRY_HANDLED: "ENQUIRY_HANDLED",
+  /** Sent to LHDN, and withdrawn from it. Both are conversations with a tax authority. */
+  EINVOICE_SUBMITTED: "EINVOICE_SUBMITTED",
+  EINVOICE_CANCELLED: "EINVOICE_CANCELLED",
   SESSION_REVOKED: "SESSION_REVOKED",
   /**
    * A capability check that refused.

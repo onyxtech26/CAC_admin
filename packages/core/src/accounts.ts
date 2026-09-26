@@ -45,6 +45,15 @@ export interface AccountRow {
   depth: number;
   /** Number of posted lines. Zero means the account is still free to change. */
   postings: number;
+  /**
+   * LHDN's classification code for what this account represents.
+   *
+   * On the account rather than on the invoice line, because the taxonomy classifies what was sold
+   * and what CAC sells is its six services — which are already the accounts a line credits. So it is
+   * answered once per service instead of typed on every invoice. Null until CAC maps them, and a
+   * submission refuses rather than guessing. See Q-FIN-2.
+   */
+  einvoiceClassificationCode: string | null;
 }
 
 type RawAccount = {
@@ -63,6 +72,7 @@ type RawAccount = {
   description: string | null;
   depth: number;
   postings: number;
+  einvoice_classification_code: string | null;
 };
 
 const toAccount = (row: RawAccount): AccountRow => ({
@@ -81,6 +91,7 @@ const toAccount = (row: RawAccount): AccountRow => ({
   description: row.description,
   depth: Number(row.depth),
   postings: Number(row.postings),
+  einvoiceClassificationCode: row.einvoice_classification_code,
 });
 
 /**
@@ -106,7 +117,7 @@ export async function listAccounts(
     )
     SELECT a.id, a.code, a.name, a.type, a.subtype, a.parent_id, a.normal_side,
            a.is_postable, a.is_active, a.is_system, a.is_contra, a.currency, a.description,
-           t.depth,
+           a.einvoice_classification_code, t.depth,
            (SELECT count(*) FROM accounting.journal_line l WHERE l.account_id = a.id)::int AS postings
       FROM accounting.account a
       JOIN tree t ON t.id = a.id
@@ -220,7 +231,18 @@ export async function updateAccount(
   db: Executor,
   principal: Principal,
   accountId: string,
-  input: { name: string; subtype?: string | null; description?: string | null },
+  input: {
+    name: string;
+    subtype?: string | null;
+    description?: string | null;
+    /**
+     * LHDN's classification code for this account, or null to clear it.
+     *
+     * `undefined` leaves it alone, so a caller that does not know about e-Invoicing cannot wipe it
+     * by omission — which is the difference between an optional field and a destructive default.
+     */
+    einvoiceClassificationCode?: string | null;
+  },
   context?: AuditContext,
 ): Promise<void> {
   requireCapability(principal, "accounting.coa.manage");
@@ -237,7 +259,13 @@ export async function updateAccount(
   await db.execute(sql`
     UPDATE accounting.account
        SET name = ${name}, subtype = ${input.subtype?.trim() || null},
-           description = ${input.description?.trim() || null}, updated_by = ${principal.userId}
+           description = ${input.description?.trim() || null},
+           einvoice_classification_code = ${
+             input.einvoiceClassificationCode === undefined
+               ? sql.raw("einvoice_classification_code")
+               : sql`${input.einvoiceClassificationCode?.trim() || null}`
+           },
+           updated_by = ${principal.userId}
      WHERE id = ${accountId}
   `);
 

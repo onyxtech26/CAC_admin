@@ -14,6 +14,7 @@ import {
   createQuotation,
   createReceipt,
   decideQuotation,
+  cancelSubmission,
   deleteInvoice,
   deleteQuotation,
   deleteReceipt,
@@ -23,6 +24,7 @@ import {
   returnInvoiceToDraft,
   sendQuotation,
   submitInvoice,
+  submitInvoiceToAuthority,
   updateInvoice,
   updateQuotation,
   updateReceipt,
@@ -414,6 +416,62 @@ export async function allocateAction(_prev: FormState, form: FormData): Promise<
   if (creditNoteId) revalidatePath(`/accounting/invoices/${creditNoteId}`);
   revalidatePath("/accounting/invoices");
   return { notice: "Allocation saved." };
+}
+
+/**
+ * Submits an issued invoice to LHDN.
+ *
+ * The refusals come back as the user's own message, including the not-configured one — which is not
+ * an error to hide but the answer to "why is this greyed out": it names what CAC still has to
+ * supply.
+ */
+export async function submitToAuthorityAction(
+  _prev: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const invoiceId = text(form, "invoiceId");
+  let notice = "Submitted.";
+
+  try {
+    const { principal, db, context } = await begin("accounting.einvoice.submit");
+    await db.transaction(async (tx) => {
+      const result = await submitInvoiceToAuthority(tx, principal, invoiceId, { context });
+      notice =
+        result.status === "valid"
+          ? `Accepted by LHDN. Identifier ${result.uuid}.`
+          : result.status === "invalid"
+            ? `Rejected: ${result.messages.join(" ")}`
+            : `Submitted. LHDN has it as ${result.uuid} and has not validated it yet.`;
+    });
+  } catch (error) {
+    return toFormState(error, "The invoice could not be submitted.");
+  }
+
+  revalidatePath(`/accounting/invoices/${invoiceId}`);
+  revalidatePath("/accounting/einvoice");
+  return { notice };
+}
+
+export async function cancelSubmissionAction(
+  _prev: FormState,
+  form: FormData,
+): Promise<FormState> {
+  const invoiceId = text(form, "invoiceId");
+
+  try {
+    const { principal, db, context } = await begin("accounting.einvoice.cancel");
+    await db.transaction(async (tx) => {
+      await cancelSubmission(tx, principal, text(form, "submissionId"), text(form, "reason"), {
+        context,
+      });
+    });
+  } catch (error) {
+    return toFormState(error, "The submission could not be cancelled.");
+  }
+
+  revalidatePath(`/accounting/invoices/${invoiceId}`);
+  revalidatePath("/accounting/einvoice");
+  return { notice: "Cancelled with the authority." };
 }
 
 export async function removeAllocationAction(_prev: FormState, form: FormData): Promise<FormState> {

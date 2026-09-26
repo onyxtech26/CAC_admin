@@ -1,7 +1,8 @@
 import { sql } from "drizzle-orm";
 import type { Executor } from "@cac/db";
 import { requireCapability, type Principal } from "./authz.js";
-import { ConflictError, ValidationError } from "./errors.js";
+import { AUDIT, writeAudit, type AuditContext } from "./audit.js";
+import { ConflictError, NotFoundError, ValidationError } from "./errors.js";
 import { getSetting } from "./settings.js";
 import { formatAmount, type Amount } from "./money.js";
 
@@ -500,7 +501,7 @@ export async function buildEInvoiceDocument(
   const header = await db.execute<{
     id: string;
     invoice_no: string | null;
-    issue_date: string;
+    invoice_date: string;
     currency: string;
     subtotal: string;
     tax_total: string;
@@ -511,7 +512,7 @@ export async function buildEInvoiceDocument(
     email: string | null;
     address: string | null;
   }>(sql`
-    SELECT i.id, i.invoice_no, i.issue_date, i.currency, i.subtotal, i.tax_total, i.total,
+    SELECT i.id, i.invoice_no, i.invoice_date, i.currency, i.subtotal, i.tax_total, i.total,
            c.name AS customer_name, c.tax_identifier, c.registration_no, c.email, c.address
       FROM accounting.invoice i
       JOIN accounting.customer c ON c.id = i.customer_id
@@ -526,9 +527,16 @@ export async function buildEInvoiceDocument(
     unit_price: string;
     tax_amount: string;
     line_total: string;
+    classification_code: string | null;
   }>(sql`
-    SELECT description, quantity, unit_price, tax_amount, line_total
-      FROM accounting.invoice_line WHERE invoice_id = ${invoiceId} ORDER BY line_no
+    SELECT l.description, l.quantity, l.unit_price, l.tax_amount, l.line_total,
+           -- LHDN classifies what was sold, and what CAC sells is its services — which are the
+           -- accounts a line credits. So the code lives on the account and is answered once per
+           -- service rather than typed on every invoice. Null until Q-FIN-2 is answered.
+           a.einvoice_classification_code AS classification_code
+      FROM accounting.invoice_line l
+      JOIN accounting.account a ON a.id = l.account_id
+     WHERE l.invoice_id = ${invoiceId} ORDER BY l.line_no
   `);
 
   const { parseAmount } = await import("./money.js");
@@ -536,7 +544,7 @@ export async function buildEInvoiceDocument(
   return {
     invoiceId: row.id,
     invoiceNo: row.invoice_no ?? "",
-    issuedOn: String(row.issue_date).slice(0, 10),
+    issuedOn: String(row.invoice_date).slice(0, 10),
     currency: row.currency,
     subtotal: parseAmount(row.subtotal),
     taxTotal: parseAmount(row.tax_total),
@@ -554,9 +562,287 @@ export async function buildEInvoiceDocument(
       unitPrice: parseAmount(line.unit_price),
       taxAmount: parseAmount(line.tax_amount),
       lineTotal: parseAmount(line.line_total),
-      classificationCode: null,
+      classificationCode: line.classification_code,
     })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Submitting
+// ---------------------------------------------------------------------------
+
+export interface SubmissionRecord {
+  id: string;
+  invoiceId: string;
+  invoiceNo: string | null;
+  uuid: string | null;
+  longId: string | null;
+  status: "submitted" | "valid" | "invalid" | "cancelled";
+  messages: string[];
+  provider: string;
+  environment: string | null;
+  submittedAt: string;
+  submittedByName: string | null;
+  checkedAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+}
+
+/**
+ * Everything that would stop *this* invoice being submitted.
+ *
+ * Separate from `submissionReadiness`, which surveys the whole ledger for the planning screen. This
+ * is the check made at the moment somebody presses the button, and it refuses rather than sending a
+ * document a tax authority will reject — or, worse, accept with a guessed classification on it.
+ */
+export async function invoiceSubmissionBlockers(
+  db: Executor,
+  invoiceId: string,
+): Promise<string[]> {
+  const document = await buildEInvoiceDocument(db, invoiceId);
+  if (!document) return ["That invoice no longer exists."];
+
+  const blockers: string[] = [];
+  if (!document.invoiceNo) {
+    blockers.push("The invoice has not been issued, so it has no number to submit.");
+  }
+  if (!document.buyer.tin?.trim()) {
+    blockers.push(
+      `${document.buyer.name} has no tax identification number recorded. MyInvois rejects an ` +
+        "invoice without the buyer's.",
+    );
+  }
+
+  const unclassified = document.lines.filter((line) => !line.classificationCode?.trim());
+  if (unclassified.length > 0) {
+    blockers.push(
+      `${unclassified.length} line${unclassified.length === 1 ? "" : "s"} credit an account with no ` +
+        "LHDN classification code. The code is set on the account, once per service — see Q-FIN-2.",
+    );
+  }
+
+  return blockers;
+}
+
+/**
+ * Submits an issued invoice to the authority, and records what came back.
+ *
+ * The path that did not exist. `buildEInvoiceDocument` had no callers, `provider.submit()` was
+ * reached only from tests, and no column recorded a submission — so the seam refused honestly and
+ * there was nothing behind it to refuse *for*.
+ *
+ * Three refusals before anything is sent, and the order matters. Not configured comes first and
+ * raises `EInvoiceNotConfiguredError`, which is a question for CAC rather than a document to
+ * correct. Then the document's own problems, which are CAC's data to fix. Then the invoice's state,
+ * because submitting the same document twice is how a duplicate reaches a tax authority.
+ */
+export async function submitInvoiceToAuthority(
+  db: Executor,
+  principal: Principal,
+  invoiceId: string,
+  options: {
+    context?: AuditContext;
+    /**
+     * The provider to use, when the caller has already resolved one.
+     *
+     * The invoice screen resolves it to decide what to show, so passing it here avoids resolving
+     * twice; the tests pass a recording one, which is how the platform's half of the exchange —
+     * the refusals, their order, what is written down — is proven without claiming anything about
+     * LHDN. Omitted, it resolves from the settings and the environment as normal.
+     */
+    provider?: EInvoiceProvider;
+  } = {},
+): Promise<SubmissionResult> {
+  requireCapability(principal, "accounting.einvoice.submit");
+
+  const context = options.context;
+  const provider = options.provider ?? (await resolveProvider(db)).provider;
+  if (!provider.configured) {
+    // Raised, not returned. A caller that ignored a failure value would tell the user their invoice
+    // was rejected by LHDN, which is a different thing entirely from this platform not being
+    // connected to LHDN at all.
+    throw new EInvoiceNotConfiguredError(provider.blockers);
+  }
+
+  const blockers = await invoiceSubmissionBlockers(db, invoiceId);
+  if (blockers.length > 0) {
+    throw new ValidationError(
+      `This invoice cannot be submitted yet. ${blockers.join(" ")}`,
+      "invoiceId",
+    );
+  }
+
+  const existing = await db.execute<{ status: string }>(sql`
+    SELECT status FROM accounting.einvoice_submission
+     WHERE invoice_id = ${invoiceId} AND status IN ('submitted', 'valid')
+     FOR UPDATE
+  `);
+  if (existing.rows?.[0]) {
+    throw new ConflictError(
+      `This invoice has already been submitted and is ${existing.rows[0]!.status}. Submitting it ` +
+        "again would put a duplicate in front of the authority.",
+    );
+  }
+
+  const document = (await buildEInvoiceDocument(db, invoiceId))!;
+  const result = await provider.submit(document);
+
+  await db.execute(sql`
+    INSERT INTO accounting.einvoice_submission
+      (invoice_id, uuid, long_id, status, messages, provider, environment, submitted_by)
+    VALUES (${invoiceId}, ${result.uuid}, ${result.longId}, ${result.status},
+            ${JSON.stringify(result.messages)}::jsonb, ${provider.name},
+            ${provider.environment}, ${principal.userId})
+  `);
+
+  await writeAudit(db, {
+    ...context,
+    actorUserId: principal.userId,
+    actorLabel: principal.email,
+    action: AUDIT.EINVOICE_SUBMITTED,
+    entityType: "invoice",
+    entityId: invoiceId,
+    newValues: {
+      invoiceNo: document.invoiceNo,
+      uuid: result.uuid,
+      status: result.status,
+      provider: provider.name,
+      environment: provider.environment,
+    },
+  });
+
+  return result;
+}
+
+/** Asks the authority what it now thinks, and records the answer. */
+export async function refreshSubmission(
+  db: Executor,
+  principal: Principal,
+  submissionId: string,
+  options: { provider?: EInvoiceProvider } = {},
+): Promise<StatusResult> {
+  requireCapability(principal, "accounting.einvoice.view");
+
+  const provider = options.provider ?? (await resolveProvider(db)).provider;
+  if (!provider.configured) throw new EInvoiceNotConfiguredError(provider.blockers);
+
+  const found = await db.execute<{ uuid: string | null; invoice_id: string }>(sql`
+    SELECT uuid, invoice_id FROM accounting.einvoice_submission WHERE id = ${submissionId}
+  `);
+  const submission = found.rows?.[0];
+  if (!submission) throw new NotFoundError("That submission no longer exists.");
+  if (!submission.uuid) {
+    throw new ConflictError("That submission has no identifier to ask about.");
+  }
+
+  const result = await provider.status(submission.uuid);
+
+  await db.execute(sql`
+    UPDATE accounting.einvoice_submission
+       SET status = ${result.status}, messages = ${JSON.stringify(result.messages)}::jsonb,
+           checked_at = now()
+     WHERE id = ${submissionId}
+  `);
+
+  return result;
+}
+
+/**
+ * Cancels a submitted document with the authority.
+ *
+ * A separate capability from submitting, because cancelling a valid e-Invoice is undoing something
+ * the authority has accepted and the customer may already have.
+ */
+export async function cancelSubmission(
+  db: Executor,
+  principal: Principal,
+  submissionId: string,
+  reason: string,
+  options: { context?: AuditContext; provider?: EInvoiceProvider } = {},
+): Promise<StatusResult> {
+  requireCapability(principal, "accounting.einvoice.cancel");
+
+  const context = options.context;
+
+  if (!reason?.trim()) {
+    throw new ValidationError(
+      "Say why it is being cancelled. LHDN records the reason and so does this.",
+      "reason",
+    );
+  }
+
+  const provider = options.provider ?? (await resolveProvider(db)).provider;
+  if (!provider.configured) throw new EInvoiceNotConfiguredError(provider.blockers);
+
+  const found = await db.execute<{ uuid: string | null; status: string; invoice_id: string }>(sql`
+    SELECT uuid, status, invoice_id FROM accounting.einvoice_submission
+     WHERE id = ${submissionId} FOR UPDATE
+  `);
+  const submission = found.rows?.[0];
+  if (!submission) throw new NotFoundError("That submission no longer exists.");
+  if (submission.status === "cancelled") {
+    throw new ConflictError("That submission has already been cancelled.");
+  }
+  if (!submission.uuid) throw new ConflictError("That submission has no identifier to cancel.");
+
+  const result = await provider.cancel(submission.uuid, reason.trim());
+
+  await db.execute(sql`
+    UPDATE accounting.einvoice_submission
+       SET status = ${result.status}, messages = ${JSON.stringify(result.messages)}::jsonb,
+           checked_at = now(), cancelled_at = now(), cancelled_by = ${principal.userId},
+           cancel_reason = ${reason.trim()}
+     WHERE id = ${submissionId}
+  `);
+
+  await writeAudit(db, {
+    ...context,
+    actorUserId: principal.userId,
+    actorLabel: principal.email,
+    action: AUDIT.EINVOICE_CANCELLED,
+    entityType: "invoice",
+    entityId: submission.invoice_id,
+    newValues: { uuid: submission.uuid, status: result.status },
+    reason: reason.trim(),
+  });
+
+  return result;
+}
+
+/** Every submission for an invoice, newest first. The history, not the latest state. */
+export async function listSubmissions(
+  db: Executor,
+  principal: Principal,
+  options: { invoiceId?: string; limit?: number } = {},
+): Promise<SubmissionRecord[]> {
+  requireCapability(principal, "accounting.einvoice.view");
+
+  const result = await db.execute<Record<string, unknown>>(sql`
+    SELECT s.*, i.invoice_no, u.full_name AS submitted_by_name
+      FROM accounting.einvoice_submission s
+      JOIN accounting.invoice i ON i.id = s.invoice_id
+      LEFT JOIN auth."user" u ON u.id = s.submitted_by
+     WHERE (${options.invoiceId ?? null}::uuid IS NULL OR s.invoice_id = ${options.invoiceId ?? null})
+     ORDER BY s.submitted_at DESC
+     LIMIT ${Math.min(Math.max(options.limit ?? 100, 1), 500)}
+  `);
+
+  return (result.rows ?? []).map((row) => ({
+    id: String(row.id),
+    invoiceId: String(row.invoice_id),
+    invoiceNo: (row.invoice_no as string) ?? null,
+    uuid: (row.uuid as string) ?? null,
+    longId: (row.long_id as string) ?? null,
+    status: row.status as SubmissionRecord["status"],
+    messages: Array.isArray(row.messages) ? (row.messages as string[]) : [],
+    provider: String(row.provider),
+    environment: (row.environment as string) ?? null,
+    submittedAt: new Date(String(row.submitted_at)).toISOString(),
+    submittedByName: (row.submitted_by_name as string) ?? null,
+    checkedAt: row.checked_at ? new Date(String(row.checked_at)).toISOString() : null,
+    cancelledAt: row.cancelled_at ? new Date(String(row.cancelled_at)).toISOString() : null,
+    cancelReason: (row.cancel_reason as string) ?? null,
+  }));
 }
 
 /**
@@ -572,6 +858,8 @@ export async function submissionReadiness(
 ): Promise<{
   invoices: number;
   customersWithoutTin: Array<{ id: string; code: string; name: string; invoices: number }>;
+  /** Revenue accounts with no LHDN classification code — the other half of Q-FIN-2's data. */
+  accountsWithoutClassification: Array<{ id: string; code: string; name: string }>;
   companyTinRecorded: boolean;
 }> {
   requireCapability(principal, "accounting.einvoice.view");
@@ -596,9 +884,19 @@ export async function submissionReadiness(
 
   const tin = (await getSetting<string>(db, "tax.tin", "")) || "";
 
+  // Revenue accounts with no classification code. The other half of the data CAC has to supply, and
+  // the half nothing surfaced before: a TIN per customer was listed, and the codes were not.
+  const unclassified = await db.execute<{ id: string; code: string; name: string }>(sql`
+    SELECT id, code, name FROM accounting.account
+     WHERE type = 'REVENUE' AND is_postable AND is_active
+       AND (einvoice_classification_code IS NULL OR btrim(einvoice_classification_code) = '')
+     ORDER BY code
+  `);
+
   return {
     invoices: issued.rows?.[0]?.count ?? 0,
     customersWithoutTin: missing.rows ?? [],
+    accountsWithoutClassification: unclassified.rows ?? [],
     companyTinRecorded: tin.trim() !== "",
   };
 }

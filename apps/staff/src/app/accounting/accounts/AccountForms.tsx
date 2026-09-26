@@ -1,7 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { createAccountAction, toggleAccountAction, type FormState } from "../actions";
+import {
+  createAccountAction,
+  toggleAccountAction,
+  updateAccountAction,
+  type FormState,
+} from "../actions";
 import { Alert, Button, Field, Select, Textarea } from "@/components/ui";
 
 const initial: FormState = {};
@@ -125,6 +130,69 @@ export function AccountToggle({
       >
         {isActive ? "Retire" : "Restore"}
       </button>
+    </form>
+  );
+}
+
+/**
+ * Editing an account's descriptive fields.
+ *
+ * `updateAccount` existed in the core and `updateAccountAction` existed in the server actions, and
+ * no screen reached either — so the chart could be created and retired and never corrected. It is
+ * offered here rather than on the list because the list is long and an edit box on every row is an
+ * invitation to change the wrong one.
+ *
+ * The code, the type and the normal side are not here and are not editable: they are what every
+ * posted line means, and changing them would restate history. A wrong one is retired and replaced.
+ */
+export function EditAccountForm({
+  accountId,
+  name,
+  subtype,
+  description,
+  einvoiceClassificationCode,
+  isRevenue,
+}: {
+  accountId: string;
+  name: string;
+  subtype: string | null;
+  description: string | null;
+  einvoiceClassificationCode: string | null;
+  isRevenue: boolean;
+}) {
+  const [state, action, pending] = useActionState(updateAccountAction, initial);
+
+  return (
+    <form action={action} className="space-y-3">
+      <input type="hidden" name="accountId" value={accountId} />
+      {state.error && <Alert tone="danger">{state.error}</Alert>}
+      {state.notice && <Alert tone="ok">{state.notice}</Alert>}
+
+      <Field label="Name" name="name" required defaultValue={name} />
+      <Field
+        label="Subtype"
+        name="subtype"
+        defaultValue={subtype ?? ""}
+        hint="Optional tag used by reports, e.g. bank."
+      />
+      <Textarea label="Description" name="description" defaultValue={description ?? ""} />
+
+      {isRevenue && (
+        <Field
+          label="LHDN classification code"
+          name="einvoiceClassificationCode"
+          defaultValue={einvoiceClassificationCode ?? ""}
+          hint={
+            "From LHDN's own taxonomy, for e-Invoicing. Set once per service rather than typed on " +
+            "every invoice line. Left blank, a submission naming this account refuses rather than " +
+            "guessing — see Q-FIN-2."
+          }
+        />
+      )}
+
+      <Button type="submit" variant="primary" disabled={pending}>
+        {pending ? "Saving…" : "Save"}
+      </Button>
     </form>
   );
 }

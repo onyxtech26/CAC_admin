@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@cac/db";
-import { accountLedger, formatAmount, formatDate } from "@cac/core";
+import { accountLedger, formatAmount, formatDate, listAccounts } from "@cac/core";
+import { EditAccountForm } from "../AccountForms";
 import { requireCapability } from "@/lib/auth";
 import { Shell } from "@/components/Shell";
 import { Badge, DataTable, EmptyState, Panel, StatTile, Td, TotalRow } from "@/components/ui";
@@ -33,6 +34,13 @@ export default async function AccountLedgerPage({
   });
   if (!ledger) notFound();
 
+  // The account's own record, for the edit panel. `accountLedger` returns the postings and the
+  // identity, not the descriptive fields.
+  const account = (await listAccounts(db, { includeInactive: true })).find(
+    (row) => row.code === ledger.code,
+  );
+  const canManage = principal.capabilities.has("accounting.coa.manage");
+
   const totalDebit = ledger.entries.reduce((sum, entry) => sum + entry.debit, 0n);
   const totalCredit = ledger.entries.reduce((sum, entry) => sum + entry.credit, 0n);
 
@@ -47,6 +55,22 @@ export default async function AccountLedgerPage({
       ]}
     >
       <div className="space-y-4">
+        {canManage && account && (
+          <Panel
+            title="This account"
+            description="The code, the type and the normal side are what every posted line means, so they are not editable. A wrong one is retired and replaced."
+          >
+            <EditAccountForm
+              accountId={account.id}
+              name={account.name}
+              subtype={account.subtype}
+              description={account.description}
+              einvoiceClassificationCode={account.einvoiceClassificationCode}
+              isRevenue={account.type === "REVENUE"}
+            />
+          </Panel>
+        )}
+
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile label="Type" value={ledger.type.toLowerCase()} hint={`${ledger.normalSide}-normal`} />
           <StatTile

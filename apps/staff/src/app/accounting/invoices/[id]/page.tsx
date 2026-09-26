@@ -4,6 +4,9 @@ import { getDb } from "@cac/db";
 import {
   amountToSql,
   approvalCapabilityFor,
+  invoiceSubmissionBlockers,
+  listSubmissions,
+  resolveProvider,
   formatAmount,
   formatDate,
   getInvoice,
@@ -21,6 +24,7 @@ import {
   TotalRow,
 } from "@/components/ui";
 import { DeleteInvoiceDraft, InvoiceActions } from "./InvoiceActions";
+import { EInvoiceSubmission } from "./EInvoiceSubmission";
 
 const STATUS_TONE = {
   draft: "neutral",
@@ -58,6 +62,24 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
     listAllocations(db, { invoiceId: id }),
     approvalCapabilityFor(db, invoice.total),
   ]);
+
+  /**
+   * What is true about this invoice and the tax authority.
+   *
+   * Three separate questions, deliberately: whether the integration exists at all, whether this
+   * document could be sent, and what has already been sent. Collapsing them into one "can submit"
+   * boolean is how a screen ends up saying nothing useful about why it cannot.
+   */
+  const einvoice =
+    (invoice.status === "issued" || invoice.status === "paid") &&
+    invoice.kind === "invoice" &&
+    principal.capabilities.has("accounting.einvoice.view")
+      ? {
+          status: await resolveProvider(db),
+          invoiceBlockers: await invoiceSubmissionBlockers(db, id),
+          submissions: await listSubmissions(db, principal, { invoiceId: id }),
+        }
+      : { status: null, invoiceBlockers: [], submissions: [] };
 
   const noun = invoice.kind === "credit_note" ? "credit note" : "invoice";
   const permissions = {
@@ -316,6 +338,26 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 )}
               </Panel>
             )}
+
+            {/* Only for a document that exists as far as a tax authority is concerned. */}
+            {(invoice.status === "issued" || invoice.status === "paid") &&
+              invoice.kind === "invoice" &&
+              principal.capabilities.has("accounting.einvoice.view") && (
+                <Panel
+                  title="e-Invoice"
+                  description="MyInvois. What is here is what has actually been sent and what came back — nothing is marked compliant that has not been."
+                >
+                  <EInvoiceSubmission
+                    invoiceId={invoice.id}
+                    configured={einvoice.status?.provider.configured ?? false}
+                    blockers={einvoice.status?.blockers ?? []}
+                    invoiceBlockers={einvoice.invoiceBlockers}
+                    submissions={einvoice.submissions}
+                    canSubmit={principal.capabilities.has("accounting.einvoice.submit")}
+                    canCancel={principal.capabilities.has("accounting.einvoice.cancel")}
+                  />
+                </Panel>
+              )}
 
             <Panel title="What happens next">
               <InvoiceActions

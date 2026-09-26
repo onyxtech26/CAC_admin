@@ -152,14 +152,43 @@ export default async function EInvoicePage() {
             <div>
               <p className="text-[13px] font-medium">
                 A classification code for each service CAC sells{" "}
-                <Badge tone="warn">not started</Badge>
+                {readiness.accountsWithoutClassification.length === 0 ? (
+                  <Badge tone="ok">complete</Badge>
+                ) : (
+                  <Badge tone="warn">
+                    {readiness.accountsWithoutClassification.length} missing
+                  </Badge>
+                )}
               </p>
-              <p className="mt-1 text-[12px] text-[var(--color-muted)]">
+              <p className="mb-2 mt-1 text-[12px] text-[var(--color-muted)]">
                 LHDN requires a code per invoice line from its own taxonomy. Mapping CAC&rsquo;s six
                 services onto it is a judgement about what the firm does, not something to guess: a
                 wrong code is a rejected submission whose cause is buried in LHDN&rsquo;s response.
-                The adapter refuses to send a line without one.
+                A submission refuses while any line lacks one.
+                {" "}The code is recorded against the revenue account, so it is answered once per
+                service rather than typed on every invoice.
               </p>
+              {readiness.accountsWithoutClassification.length > 0 && (
+                <DataTable
+                  columns={["Account", ""]}
+                  caption="Revenue accounts with no classification code"
+                >
+                  {readiness.accountsWithoutClassification.map((account) => (
+                    <tr key={account.id}>
+                      <Td>
+                        <Link
+                          href="/accounting/accounts"
+                          className="text-[var(--color-info)] hover:underline"
+                        >
+                          <span className="font-mono text-[11px]">{account.code}</span>{" "}
+                          {account.name}
+                        </Link>
+                      </Td>
+                      <Td>{""}</Td>
+                    </tr>
+                  ))}
+                </DataTable>
+              )}
             </div>
           </div>
         </Panel>

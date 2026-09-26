@@ -339,6 +339,11 @@ export async function updateAccountAction(_prev: FormState, form: FormData): Pro
           name: text(form, "name"),
           subtype: optional(form, "subtype"),
           description: optional(form, "description"),
+          // Only when the form carried the field. A form that does not offer it must not clear it
+          // by saying nothing — `undefined` leaves it alone, `null` clears it deliberately.
+          einvoiceClassificationCode: form.has("einvoiceClassificationCode")
+            ? optional(form, "einvoiceClassificationCode")
+            : undefined,
         },
         context,
       );

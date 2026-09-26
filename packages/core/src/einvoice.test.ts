@@ -10,9 +10,28 @@ import {
   EInvoiceNotConfiguredError,
   MyInvoisProvider,
   NotConfiguredProvider,
+  cancelSubmission,
+  invoiceSubmissionBlockers,
+  listSubmissions,
   resolveProvider,
   submissionReadiness,
+  submitInvoiceToAuthority,
+  type EInvoiceDocument,
+  type EInvoiceProvider,
+  type StatusResult,
+  type SubmissionResult,
 } from "./einvoice.js";
+import { listAccounts, updateAccount } from "./accounts.js";
+import { createCustomer, updateCustomer } from "./parties.js";
+import { createFiscalYear } from "./periods.js";
+import {
+  approveInvoice,
+  createInvoice,
+  issueInvoice,
+  submitInvoice,
+} from "./sales.js";
+
+
 
 /**
  * Phase 4: the e-Invoice boundary.
@@ -32,6 +51,37 @@ import {
 let db: Database;
 let close: () => Promise<void>;
 let accountant: Principal;
+/** A second pair of hands: an invoice is approved by somebody other than its maker. */
+let director: Principal;
+
+async function makePrincipal(email: string, roles: string[]): Promise<Principal> {
+  const hash = await hashPassword("correct-horse-battery-staple");
+  const created = await db.execute<{ id: string }>(sql`
+    INSERT INTO auth."user" (email, password_hash, full_name)
+    VALUES (${email}, ${hash}, ${email}) RETURNING id
+  `);
+  const userId = created.rows![0]!.id;
+  for (const role of roles) {
+    await db.execute(sql`
+      INSERT INTO auth.user_role (user_id, role_id)
+      SELECT ${userId}, id FROM auth.role WHERE key = ${role}
+    `);
+  }
+  return {
+    userId,
+    email,
+    fullName: email,
+    roles,
+    capabilities: await resolveCapabilities(db, userId),
+    employeeId: null,
+    sessionId: "00000000-0000-0000-0000-000000000000",
+    mfaSatisfied: true,
+    mustChangePassword: false,
+    mustEnrolMfa: false,
+    mfaRequired: false,
+    mfaEnrolmentDueAt: null,
+  };
+}
 
 beforeAll(async () => {
   const created = await createTestDb();
@@ -65,6 +115,8 @@ beforeAll(async () => {
     mfaRequired: false,
     mfaEnrolmentDueAt: null,
   };
+
+  director = await makePrincipal("ei-director@cac.test", ["DIRECTOR"]);
 }, 120_000);
 
 afterAll(async () => {
@@ -245,5 +297,160 @@ describe("readiness", () => {
     expect(readiness.companyTinRecorded).toBe(false);
     expect(readiness.invoices).toBe(0);
     expect(Array.isArray(readiness.customersWithoutTin)).toBe(true);
+  });
+
+  it("lists the revenue accounts with no classification code", async () => {
+    // The other half of Q-FIN-2's data, and the half nothing surfaced before: a TIN per customer
+    // was listed, and the codes were not, so the work looked half as big as it is.
+    const readiness = await submissionReadiness(db, accountant);
+    expect(readiness.accountsWithoutClassification.length).toBeGreaterThan(0);
+    expect(readiness.accountsWithoutClassification.every((row) => row.code.startsWith("4"))).toBe(
+      true,
+    );
+  });
+});
+
+/**
+ * The submission path.
+ *
+ * It did not exist: `buildEInvoiceDocument` had no callers, `provider.submit()` was reached only
+ * from tests, and no column recorded a submission — so the honest refusal at the seam was refusing
+ * on behalf of nothing.
+ *
+ * These tests use a provider that records what it was asked and answers as configured. That is not
+ * a pretend integration: the point is to prove the platform's own half — the refusals, the ordering
+ * of them, what is written down and what cannot be written twice — without claiming anything about
+ * LHDN. What the real adapter sends is tested separately, against its request shapes.
+ */
+describe("submitting to the authority", () => {
+  class RecordingProvider implements EInvoiceProvider {
+    readonly name = "Recording (test)";
+    readonly environment = "sandbox" as const;
+    readonly configured = true;
+    readonly blockers: string[] = [];
+    sent: EInvoiceDocument[] = [];
+
+    constructor(private readonly answer: SubmissionResult["status"] = "valid") {}
+
+    async submit(document: EInvoiceDocument): Promise<SubmissionResult> {
+      this.sent.push(document);
+      return {
+        uuid: `UUID-${this.sent.length}`,
+        longId: "LONG-1",
+        status: this.answer,
+        submittedAt: new Date(),
+        messages: this.answer === "invalid" ? ["Buyer TIN not recognised."] : [],
+      };
+    }
+
+    async status(uuid: string): Promise<StatusResult> {
+      return { uuid, status: "valid", messages: [] };
+    }
+
+    async cancel(uuid: string): Promise<StatusResult> {
+      return { uuid, status: "cancelled", messages: [] };
+    }
+  }
+
+  let invoiceId: string;
+  let customerId: string;
+
+  beforeAll(async () => {
+    await createFiscalYear(db, director, { startsOn: "2026-01-01" });
+    customerId = (
+      await createCustomer(db, accountant, {
+        code: "SUBMIT",
+        name: "Submitting Client Sdn Bhd",
+      })
+    ).id;
+
+    const created = await createInvoice(db, accountant, {
+      customerId,
+      documentDate: "2026-05-04",
+      lines: [{ description: "Land search", unitPrice: "1200.00", accountCode: "4120" }],
+    });
+    invoiceId = created.id;
+    await submitInvoice(db, accountant, invoiceId);
+    await approveInvoice(db, director, invoiceId);
+    await issueInvoice(db, accountant, invoiceId);
+  }, 60_000);
+
+  it("refuses because the integration does not exist, before looking at the invoice", async () => {
+    // The order matters. "Not configured" is a question for CAC; "this invoice has no buyer TIN" is
+    // CAC's data. Reporting the second when the first is true would send somebody to fix the wrong
+    // thing — and it raises rather than returning, so a caller cannot report it as an LHDN
+    // rejection.
+    await expect(submitInvoiceToAuthority(db, accountant, invoiceId)).rejects.toBeInstanceOf(
+      EInvoiceNotConfiguredError,
+    );
+
+    const none = await listSubmissions(db, accountant, { invoiceId });
+    expect(none).toHaveLength(0);
+  });
+
+  it("refuses an invoice whose buyer has no TIN and whose service has no code", async () => {
+    const blockers = await invoiceSubmissionBlockers(db, invoiceId);
+    expect(blockers.some((entry) => entry.includes("tax identification number"))).toBe(true);
+    expect(blockers.some((entry) => entry.includes("classification code"))).toBe(true);
+  });
+
+  it("submits once the data is there, and records what came back", async () => {
+    await updateCustomer(db, accountant, customerId, {
+      code: "SUBMIT",
+      name: "Submitting Client Sdn Bhd",
+      taxIdentifier: "C1234567890",
+    });
+    const account = (await listAccounts(db)).find((row) => row.code === "4120")!;
+    await updateAccount(db, accountant, account.id, {
+      name: account.name,
+      einvoiceClassificationCode: "022",
+    });
+
+    expect(await invoiceSubmissionBlockers(db, invoiceId)).toHaveLength(0);
+
+    const provider = new RecordingProvider();
+    const result = await submitInvoiceToAuthority(db, accountant, invoiceId, { provider });
+
+    expect(result.status).toBe("valid");
+    expect(provider.sent).toHaveLength(1);
+    // The document carried the code from the account, which is the point of putting it there.
+    expect(provider.sent[0]!.lines[0]!.classificationCode).toBe("022");
+    expect(provider.sent[0]!.buyer.tin).toBe("C1234567890");
+
+    const recorded = await listSubmissions(db, accountant, { invoiceId });
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0]!.status).toBe("valid");
+    expect(recorded[0]!.environment).toBe("sandbox");
+    expect(recorded[0]!.submittedByName).toBe("einvoice@cac.test");
+  });
+
+  it("will not put the same invoice in front of the authority twice", async () => {
+    const provider = new RecordingProvider();
+    await expect(
+      submitInvoiceToAuthority(db, accountant, invoiceId, { provider }),
+    ).rejects.toThrow(/already been submitted/);
+    expect(provider.sent).toHaveLength(0);
+  });
+
+  it("cancels with a reason, and keeps the submission", async () => {
+    const submission = (await listSubmissions(db, accountant, { invoiceId }))[0]!;
+    const provider = new RecordingProvider();
+
+    await expect(
+      cancelSubmission(db, accountant, submission.id, "   ", { provider }),
+    ).rejects.toThrow(/why it is being cancelled/);
+
+    await cancelSubmission(db, accountant, submission.id, "Raised against the wrong company.", {
+      provider,
+    });
+
+    const after = (await listSubmissions(db, accountant, { invoiceId }))[0]!;
+    expect(after.status).toBe("cancelled");
+    expect(after.cancelReason).toMatch(/wrong company/);
+
+    // A conversation with a tax authority is not deleted.
+    await expect(
+      db.execute(sql`DELETE FROM accounting.einvoice_submission WHERE id = ${submission.id}`),
+    ).rejects.toThrow(/not deleted/);
   });
 });
