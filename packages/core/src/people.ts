@@ -817,12 +817,19 @@ export async function createEmployee(
 
   // The first event, so the history is complete from the beginning rather than
   // starting at whatever the first change happens to be.
+  //
+  // It carries the four statutory liability flags for the same reason it carries the salary: payroll
+  // reads them as at the end of the period being paid, so that recomputing a past month cannot pick
+  // up a liability that was switched on afterwards.
   await db.execute(sql`
     INSERT INTO hr.employment_event
       (employee_id, kind, effective_from, basic_salary, position_id, department_id,
-       employment_type, status, reason, created_by)
+       employment_type, status, epf_applicable, socso_applicable, eis_applicable, pcb_applicable,
+       reason, created_by)
     VALUES (${id}, 'hired', ${joinedOn}, ${amountToSql(salary)}, ${input.positionId ?? null},
             ${input.departmentId ?? null}, ${input.employmentType ?? "permanent"}, 'active',
+            ${input.epfApplicable ?? true}, ${input.socsoApplicable ?? true},
+            ${input.eisApplicable ?? true}, ${input.pcbApplicable ?? true},
             'Joined the company', ${principal.userId})
   `);
 
@@ -973,6 +980,31 @@ export async function updateEmployee(
         (employee_id, kind, effective_from, basic_salary, reason, created_by)
       VALUES (${employeeId}, 'salary_changed', ${toIsoDate(today())}, ${amountToSql(salary)},
               'Changed on the employee record', ${principal.userId})
+    `);
+  }
+
+  // A change to a statutory liability is dated history, not a property of the person as they stand.
+  // Payroll reads these as at the end of the period it is paying, so without an event the change
+  // would take effect for every past month as well — and, worse, once the opening event exists, a
+  // change recorded only on the employee row would not take effect at all, because the opening event
+  // would go on answering for every period after the joining day.
+  const epf = input.epfApplicable ?? before.epf_applicable;
+  const socso = input.socsoApplicable ?? before.socso_applicable;
+  const eis = input.eisApplicable ?? before.eis_applicable;
+  const pcb = input.pcbApplicable ?? before.pcb_applicable;
+
+  if (
+    epf !== before.epf_applicable ||
+    socso !== before.socso_applicable ||
+    eis !== before.eis_applicable ||
+    pcb !== before.pcb_applicable
+  ) {
+    await db.execute(sql`
+      INSERT INTO hr.employment_event
+        (employee_id, kind, effective_from, epf_applicable, socso_applicable, eis_applicable,
+         pcb_applicable, reason, created_by)
+      VALUES (${employeeId}, 'statutory_changed', ${toIsoDate(today())}, ${epf}, ${socso}, ${eis},
+              ${pcb}, 'Changed on the employee record', ${principal.userId})
     `);
   }
 

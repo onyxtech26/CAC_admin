@@ -132,6 +132,15 @@ What is needed, per contribution, is the **table** rather than a rate:
    by Phase 6, which can approve hours without a rate and leaves them unpaid).
 6. **Which allowances count as wages** for each of the above. Not every allowance does, and
    the platform asks per element rather than assuming.
+7. **Whether an overtime payment counts as wages** for each of the above, which is the same
+   question as item 6 and has a different answer per contribution. *The platform currently
+   excludes overtime from all three wage bases* — EPF, SOCSO/EIS and PCB — which is a position
+   nobody has confirmed, and it under-deducts wherever the answer is that overtime counts. The
+   payslip line for overtime is written and the bases are recorded per payslip, so the answer is
+   a one-line change; until it is given, **a month containing paid overtime is not a month to
+   run live on.**
+
+   > **Needed:** per contribution, whether overtime payments are wages, with the citation.
 
 Each is entered with the document it came from and approved by a second person; after that
 it is immutable, which is what makes a past payslip reproducible. A rate change is a new
@@ -193,6 +202,26 @@ request against a type with no entitlement is refused with a message naming this
 and the leave screen lists which types are unusable and why. Everything else — counting
 days against the working week and the holiday calendar, balances derived from approved
 requests, approval by somebody other than the requester — is done and tested.
+
+### Q-HR-4 — What attendance does to pay *(new, raised by the end-to-end audit)*
+
+Payroll reads no attendance figure at all. An `is_absent` day does not reduce anybody's pay,
+lateness and early departures do not, and the `approved_ot_minutes` the engine writes onto the
+attendance row is ignored — only a separately approved overtime request is paid. Unpaid *leave*
+is deducted, because a leave type says in the data whether it is paid.
+
+This is not obviously wrong, and it is deliberately not guessed at. Deducting a day's pay for an
+unauthorised absence is taking money from somebody, and how a firm treats lateness ranges from
+nothing, through a warning process, to a deduction the Employment Act constrains. It is a policy
+question with a legal boundary, and this platform does not invent either.
+
+What was fixed in the meantime: a payroll run now **refuses** to compute a period whose attendance
+is still a draft, which the module claimed to require and did not check. So a month is closed and
+looked at before it is paid, whatever the answer below turns out to be.
+
+> **Needed:** what an unauthorised absent day does to pay; what lateness does, if anything, and
+> under what process; and whether a day's pay for this purpose is the calendar-day rate the
+> platform already uses for joiners and leavers or a working-day rate.
 
 ### Q-FIN-3 — Approval limits, and who may approve what *(referenced by Phases 2–3)*
 Three documents ask the same question and none of them can answer it from the code:

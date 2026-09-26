@@ -40,6 +40,7 @@ import {
   reopenAttendancePeriod,
   stageAttendanceImport,
 } from "./attendance.js";
+import { recalculateAttendance } from "./attendance-engine.js";
 
 /**
  * Phase 5: the people, and getting attendance out of a device.
@@ -903,6 +904,16 @@ describe("correcting and finalising", () => {
       remarks: "Left for a site visit and did not return to the office",
       reason: "Explaining the missing scan",
     });
+
+    // Nothing has been calculated yet, and finalising is the act that makes these figures the ones
+    // payroll reads. Freezing a day the engine has never seen would make "final" mean "nobody worked
+    // this out" — and a correction clears the figures on purpose, so the same refusal covers a day
+    // corrected after the last calculation.
+    await expect(finaliseAttendancePeriod(db, hrManager, period.id)).rejects.toThrow(
+      /no calculated figures/,
+    );
+
+    await recalculateAttendance(db, hrAdmin, { from: "2026-07-01", to: "2026-07-31" });
 
     const result = await finaliseAttendancePeriod(db, hrManager, period.id);
     expect(result.finalised).toBeGreaterThan(0);

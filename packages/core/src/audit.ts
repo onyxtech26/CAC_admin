@@ -62,6 +62,13 @@ const MASKED_KEYS = new Set([
   "net_pay",
   "grosspay",
   "gross_pay",
+  // A run total, which is an aggregate right up until the run has one person in it — and a
+  // one-person supplementary run is the ordinary case. The run row holds the figure; the audit trail
+  // does not need to repeat it to record who approved what and when.
+  "nettotal",
+  "net_total",
+  "grosstotal",
+  "gross_total",
   // Phase 9. An estate case holds identifying numbers for people who are not
   // employees — the deceased, the beneficiaries — and for their holdings. The
   // estate module additionally keeps names, descriptions and figures out of audit
@@ -317,6 +324,8 @@ export const AUDIT = {
   OVERTIME_REQUESTED: "OVERTIME_REQUESTED",
   OVERTIME_SUBMITTED: "OVERTIME_SUBMITTED",
   OVERTIME_APPROVED: "OVERTIME_APPROVED",
+  /** A rate supplied after approval, once Q-HR-1 answered what it should be. */
+  OVERTIME_RATED: "OVERTIME_RATED",
   OVERTIME_REJECTED: "OVERTIME_REJECTED",
   TIMEOFF_REQUESTED: "TIMEOFF_REQUESTED",
   TIMEOFF_DECIDED: "TIMEOFF_DECIDED",

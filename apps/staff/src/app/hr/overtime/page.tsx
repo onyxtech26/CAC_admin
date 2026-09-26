@@ -22,6 +22,7 @@ import {
 } from "@/components/ui";
 import {
   OvertimeDecision,
+  OvertimeRate,
   OvertimeRequestForm,
   RecalculateForm,
   TimeoffDecision,
@@ -111,7 +112,8 @@ export default async function OvertimePage({
             {approvedWithoutRate.length === 1 ? " has" : "s have"} no rate recorded, so payroll will
             not pay {approvedWithoutRate.length === 1 ? "it" : "them"}. The Malaysian multiples
             depend on the kind of day and come from the Employment Act, which CAC has not yet
-            supplied — see Q-HR-1. The hours are agreed; only the rate is missing.
+            supplied — see Q-HR-1. The hours are agreed; only the rate is missing, and the last
+            column records it once CAC has answered: the hours and the approver stay as they were.
           </Alert>
         )}
 
@@ -287,6 +289,14 @@ export default async function OvertimePage({
                             canDecide={
                               canApprove && request.employeeId !== principal.employeeId
                             }
+                          />
+                        ) : request.status === "approved" &&
+                          request.rateMultiple === null &&
+                          !request.paid ? (
+                          <OvertimeRate
+                            requestId={request.id}
+                            dayKind={request.dayKind}
+                            canRate={canApprove && request.employeeId !== principal.employeeId}
                           />
                         ) : (
                           ""

@@ -13,8 +13,17 @@ import { findColumn, readDelimited } from "./delimited.js";
  * The importer is the reason this module is careful. A device export is somebody
  * else's file: the columns vary by model and firmware, the date format varies, the
  * device identifies people by its own number, and the same person scanning twice
- * in thirty seconds produces two rows. Attendance feeds payroll, so every one of
- * those is a route to a wrong payslip.
+ * in thirty seconds produces two rows. Every one of those is a route to a wrong
+ * figure in somebody's record.
+ *
+ * What attendance does *not* do, today, is change anybody's pay. An absent day, a
+ * late morning and a short afternoon are all recorded and none of them reaches a
+ * payslip: payroll deducts unpaid *leave*, because a leave type says in the data
+ * whether it is paid, and nothing else. That is Q-HR-4, and it is asked rather than
+ * guessed because deducting for an absence is taking money from somebody and what
+ * lateness may cost is constrained by the Employment Act. A payroll run does refuse
+ * a period whose attendance is still a draft, so the month is closed and looked at
+ * before it is paid.
  *
  * So nothing is written straight through. An import is **staged**, validated
  * row by row, previewed with every rejection and its reason visible, and reaches
@@ -1082,6 +1091,26 @@ export async function finaliseAttendancePeriod(
       `${missing} day${missing === 1 ? "" : "s"} in this period have a clock-in and no clock-out, ` +
         "with nothing said about why. Correct them, or add a remark explaining each, before " +
         "finalising — payroll cannot defend a figure nobody has looked at.",
+    );
+  }
+
+  // A day the engine has never seen has no figures at all, and finalising it would make "final" mean
+  // "nobody computed this". `worked_minutes` is null in exactly two cases: the engine has not run for
+  // that row, or somebody corrected the row afterwards, which deliberately clears the figures so that
+  // a stale number cannot be mistaken for a fresh one. Both need the engine run again before this
+  // period becomes the statement payroll reads.
+  const uncalculated = await db.execute<{ count: number }>(sql`
+    SELECT count(*)::int AS count FROM hr.attendance
+     WHERE work_date BETWEEN ${from}::date AND ${to}::date
+       AND status = 'draft' AND worked_minutes IS NULL
+  `);
+  const uncomputed = uncalculated.rows?.[0]?.count ?? 0;
+  if (uncomputed > 0) {
+    throw new ConflictError(
+      `${uncomputed} day${uncomputed === 1 ? " has" : "s have"} no calculated figures — either the ` +
+        "attendance engine has not been run since they were recorded, or they were corrected " +
+        "afterwards and the figures were cleared. Run the calculation for this period first: " +
+        "finalising would freeze days that nothing has worked out.",
     );
   }
 

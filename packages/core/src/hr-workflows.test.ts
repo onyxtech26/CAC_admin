@@ -36,6 +36,7 @@ import {
   decideOvertime,
   decideTimeoff,
   listOvertime,
+  rateOvertime,
   requestOvertime,
   requestTimeoff,
   submitOvertime,
@@ -901,6 +902,108 @@ describe("overtime, kept separate from extra time", () => {
     await expect(
       db.execute(sql`UPDATE hr.overtime_request SET approved_hours = 9 WHERE id = ${overtimeId}`),
     ).rejects.toThrow(/has been paid/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("a refused claim, and a rate that arrives late", () => {
+  let rejectedId: string;
+  let unratedId: string;
+
+  it("lets a refused day be claimed again, because there is no other way back", async () => {
+    const first = await requestOvertime(db, staff, {
+      employeeId: aishahId,
+      workDate: "2026-06-15",
+      requestedHours: "2",
+      reason: "Late filing",
+    });
+    rejectedId = first.id;
+    await submitOvertime(db, staff, first.id);
+    await decideOvertime(db, manager, first.id, "rejected", {
+      note: "Say which client's filing, and who asked you to stay",
+    });
+
+    // Refused for a fixable reason. A decided request cannot be edited or returned to the queue —
+    // deliberately — so if a refused one also held the date, that evening could never be claimed at
+    // all. Both the check here and the unique constraint behind it used to do exactly that.
+    const second = await requestOvertime(db, staff, {
+      employeeId: aishahId,
+      workDate: "2026-06-15",
+      requestedHours: "2",
+      reason: "Ng estate distribution, filed Tuesday; Mr Mohaan asked me to finish it",
+    });
+    expect(second.id).not.toBe(rejectedId);
+
+    // One *live* claim, though: the guarantee that matters is still there.
+    await expect(
+      requestOvertime(db, staff, {
+        employeeId: aishahId,
+        workDate: "2026-06-15",
+        requestedHours: "2",
+        reason: "A third",
+      }),
+    ).rejects.toThrow(/already a draft overtime request/);
+
+    await submitOvertime(db, staff, second.id);
+    await decideOvertime(db, manager, second.id, "approved", {
+      approvedHours: "2",
+      note: "Agreed. The rate is not settled yet — see Q-HR-1.",
+    });
+    unratedId = second.id;
+  });
+
+  it("records a rate on a claim that was approved without one", async () => {
+    const before = (await listOvertime(db, { employeeId: aishahId })).find(
+      (row) => row.id === unratedId,
+    )!;
+    expect(before.approvedHours).toBe(2);
+    expect(before.rateMultiple).toBeNull();
+
+    await rateOvertime(db, manager, unratedId, {
+      rateMultiple: "1.5",
+      rateSource: "Employment Act 1955 s.60A(3)(a), as advised by CAC",
+    });
+
+    const after = (await listOvertime(db, { employeeId: aishahId })).find(
+      (row) => row.id === unratedId,
+    )!;
+    expect(Number(after.rateMultiple)).toBe(1.5);
+    expect(after.rateSource).toContain("s.60A(3)(a)");
+    // The decision itself is untouched: the hours were not reopened and the approver stands.
+    expect(after.approvedHours).toBe(2);
+    expect(after.status).toBe("approved");
+  });
+
+  it("still refuses a rate with no source, and a rate on nothing", async () => {
+    await expect(
+      rateOvertime(db, manager, unratedId, { rateMultiple: "2", rateSource: "  " }),
+    ).rejects.toThrow(/where the rate comes from/);
+
+    await expect(
+      rateOvertime(db, manager, unratedId, { rateMultiple: "0", rateSource: "Anywhere" }),
+    ).rejects.toThrow(/not a rate multiple/);
+
+    await expect(
+      rateOvertime(db, manager, rejectedId, { rateMultiple: "1.5", rateSource: "Anywhere" }),
+    ).rejects.toThrow(/nothing to rate/);
+  });
+
+  it("refuses to change the rate on overtime payroll has already paid", async () => {
+    // The June run an earlier test created: a real row, because `payroll_run_id` is a foreign key and
+    // a made-up uuid would only prove the fixture can invent one.
+    const run = await db.execute<{ id: string }>(
+      sql`SELECT id FROM hr.payroll_run WHERE period_from = '2026-06-01'`,
+    );
+    await db.execute(sql`
+      UPDATE hr.overtime_request SET payroll_run_id = ${run.rows![0]!.id} WHERE id = ${unratedId}
+    `);
+
+    await expect(
+      rateOvertime(db, manager, unratedId, {
+        rateMultiple: "2",
+        rateSource: "Employment Act 1955 s.60A(3)(b)",
+      }),
+    ).rejects.toThrow(/supplementary run/);
   });
 });
 

@@ -174,7 +174,7 @@ they are not all met.
 | Case checklists | **Q-LEGAL-1, Q-LEGAL-2.** No requirement rule is seeded. A matter's checklist is empty, and correctly says why. |
 | Approving any legal document | **Q-LEGAL-1.** Refused until an administrator confirms a named, qualified reviewer has been appointed — including for a director. |
 | Leave entitlements | **Q-HR-3.** Nullable, with a required source. Nothing is seeded. |
-| Overtime rates | **Q-HR-1.** A claim can be approved with hours agreed and no rate; payroll then refuses to pay it. |
+| Overtime rates | **Q-HR-1.** A claim can be approved with hours agreed and no rate; payroll then refuses to pay it, putting a nil line on the payslip saying why. When CAC answers, the rate is recorded on the approved claim without reopening the decision, and a supplementary run pays it on that month's rules. |
 | e-Invoice submission | **Q-FIN-2.** The boundary exists; the provider refuses. |
 | Anything needing a malware scan, OCR or semantic search | **Q-AI-1, Q-DATA-2.** Each refuses rather than pretending. |
 | Approval thresholds | **Q-FIN-3.** Unset. |

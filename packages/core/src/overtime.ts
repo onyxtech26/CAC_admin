@@ -133,8 +133,14 @@ export async function requestOvertime(
     );
   }
 
+  // One *live* claim per day. A rejected one does not count, and used to: the check had no status
+  // filter, so a Tuesday claim refused for a missing reason blocked that Tuesday permanently, with no
+  // route back — the request could not be edited once decided and could not be replaced. The unique
+  // constraint behind it said the same thing, and migration 0028 narrowed both to the same rule.
   const existing = await db.execute<{ id: string; status: string }>(
-    sql`SELECT id, status FROM hr.overtime_request WHERE employee_id = ${input.employeeId} AND work_date = ${workDate}::date`,
+    sql`SELECT id, status FROM hr.overtime_request
+         WHERE employee_id = ${input.employeeId} AND work_date = ${workDate}::date
+           AND status <> 'rejected'`,
   );
   if (existing.rows?.[0]) {
     throw new ConflictError(
@@ -336,6 +342,93 @@ export async function decideOvertime(
       rateRecorded: Boolean(rate),
     },
     reason: options.note ?? null,
+  });
+}
+
+/**
+ * Records the rate on a claim that was approved without one.
+ *
+ * This is the missing half of the Q-HR-1 design. Approving hours with no rate is deliberate and
+ * correct — the hours are a fact somebody witnessed, the multiple is a legal question nobody had
+ * answered — and payroll duly refuses to pay such a claim, putting an OT-UNRATED line on the payslip
+ * saying so. But `decideOvertime` was the only writer of `rate_multiple` and it refuses anything that
+ * is not still `submitted`, so once the answer arrived there was no way to apply it. Every claim
+ * approved during the months Q-HR-1 was open was unpayable for good, and the platform's own message
+ * told the employee their overtime existed and would not be paid.
+ *
+ * Deliberately not a re-approval: the hours are not reopened, the approver is not re-recorded, and the
+ * decision that was made stands. Only the rate and its source change, and only while payroll has not
+ * taken the claim — after that the database refuses, and the correction is a supplementary run.
+ */
+export async function rateOvertime(
+  db: Executor,
+  principal: Principal,
+  requestId: string,
+  options: { rateMultiple: string; rateSource: string; context?: AuditContext },
+): Promise<void> {
+  requireCapability(principal, "hr.overtime.approve");
+
+  const request = await lockOvertime(db, requestId);
+
+  if (request.status !== "approved") {
+    throw new ConflictError(
+      request.status === "rejected"
+        ? "That request was refused, so there is nothing to rate."
+        : "A rate belongs on an approved request. Approve the hours first — the rate can be supplied " +
+          "at the same time or afterwards.",
+    );
+  }
+  if (request.payroll_run_id) {
+    throw new ConflictError(
+      "Payroll has already paid this claim at the rate it had. Changing it here would leave the " +
+        "payslip and the record disagreeing; correct it with a supplementary run.",
+    );
+  }
+  // The same rule as approving. The multiple is a legal figure rather than a discretionary one, but
+  // it is still the difference between being paid and not, and nobody settles that for themselves.
+  if (request.employee_id === principal.employeeId) {
+    throw new ConflictError(
+      "You cannot put a rate on your own overtime. Somebody else has to record it.",
+    );
+  }
+
+  const multiple = Number(options.rateMultiple?.trim());
+  if (!Number.isFinite(multiple) || multiple <= 0 || multiple > 10) {
+    throw new ValidationError("That is not a rate multiple.", "rateMultiple");
+  }
+  if (!options.rateSource?.trim()) {
+    throw new ValidationError(
+      "Say where the rate comes from — the Employment Act section, or the company policy that " +
+        "exceeds it. A rate without a source is a rate nobody can defend, and this one multiplies " +
+        "somebody's hourly pay.",
+      "rateSource",
+    );
+  }
+
+  await db.execute(sql`
+    UPDATE hr.overtime_request
+       SET rate_multiple = ${options.rateMultiple.trim()},
+           rate_source = ${options.rateSource.trim()},
+           updated_by = ${principal.userId}
+     WHERE id = ${requestId}
+  `);
+
+  await writeAudit(db, {
+    ...options.context,
+    actorUserId: principal.userId,
+    actorLabel: principal.email,
+    action: AUDIT.OVERTIME_RATED,
+    entityType: "overtime_request",
+    entityId: requestId,
+    oldValues: { rateMultiple: request.rate_multiple, rateSource: request.rate_source },
+    newValues: {
+      requestNo: request.request_no,
+      dayKind: request.day_kind,
+      approvedHours: request.approved_hours,
+      rateMultiple: options.rateMultiple.trim(),
+      rateSource: options.rateSource.trim(),
+    },
+    reason: options.rateSource.trim(),
   });
 }
 
@@ -652,14 +745,19 @@ interface LockedOvertime extends Record<string, unknown> {
   employee_id: string;
   work_date: string;
   requested_hours: string;
+  approved_hours: string | null;
   status: RequestStatus;
   day_kind: DayKind;
+  rate_multiple: string | null;
+  rate_source: string | null;
+  payroll_run_id: string | null;
   request_no: string | null;
 }
 
 async function lockOvertime(db: Executor, requestId: string): Promise<LockedOvertime> {
   const result = await db.execute<LockedOvertime>(sql`
-    SELECT id, employee_id, work_date, requested_hours, status, day_kind, request_no
+    SELECT id, employee_id, work_date, requested_hours, approved_hours, status, day_kind,
+           rate_multiple, rate_source, payroll_run_id, request_no
       FROM hr.overtime_request WHERE id = ${requestId} FOR UPDATE
   `);
   const row = result.rows?.[0];

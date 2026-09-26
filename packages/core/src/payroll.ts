@@ -19,6 +19,7 @@ import {
   requireRulesFor,
   STATUTORY_LABELS,
   type StatutoryKind,
+  type StatutoryResult,
 } from "./statutory.js";
 
 /**
@@ -36,11 +37,32 @@ import {
  * current version — the one whose effective dates cover the pay date. Those versions
  * are immutable once approved, so the answer cannot drift.
  *
+ * **And the four liability flags come from dated employment history too**, not from
+ * the employee row, because they decide which contributions are computed at all.
+ * Reading them from the row was a reproducibility hole with the same shape as reading
+ * the salary from it: switching somebody's PCB liability on today gave every earlier
+ * month a deduction it never had.
+ *
  * **Every payslip line records the rule version that produced it.** So a payslip can
  * be explained years later without re-deriving anything, and a recomputation can be
  * checked against what was actually used.
  *
- * And the honest boundary: **no statutory rule is seeded.** EPF is not a percentage,
+ * Two further boundaries, both of them honest rather than incidental.
+ *
+ * **Attendance changes nobody's pay here.** Unpaid leave is deducted, because a leave
+ * type says in the data whether it is paid. An absent day, a late morning and a short
+ * afternoon are recorded in `hr.attendance` and reach no payslip: what they should cost
+ * is CAC's policy inside the Employment Act's limits, and it is Q-HR-4 rather than
+ * something inferred here. A run does refuse a period whose attendance is still a
+ * draft, so the month is settled and looked at before it is paid.
+ *
+ * **Overtime is excluded from all three statutory wage bases.** Whether an overtime
+ * payment counts as wages is decided per contribution by statute and differs between
+ * them; it is item 7 of Q-HR-1 and is unanswered. Excluding it under-deducts if the
+ * answer is that it counts, so a month containing paid overtime is not a month to run
+ * live on yet.
+ *
+ * And the boundary the whole phase waits on: **no statutory rule is seeded.** EPF is not a percentage,
  * SOCSO and EIS are contribution tables, PCB is a schedule. Preparing a run without
  * them raises `StatutoryRulesMissingError`, which names what is missing and why it is
  * not guessed at. That is Q-HR-1, and until it is answered this phase stops here —
@@ -179,9 +201,9 @@ export async function createPayrollRun(
     }
   }
 
-  // Attendance for the period has to be settled. Payroll reads final days, and a
-  // month still being corrected is a month whose figures are not yet anybody's
-  // statement.
+  // How much of the period's attendance is still open, recorded on the run's audit entry. Creating a
+  // run while a month is still being corrected is reasonable — preparing it is not, and that is where
+  // it is refused.
   const openPeriods = await db.execute<{ count: number }>(sql`
     SELECT count(*)::int AS count FROM hr.attendance
      WHERE work_date BETWEEN ${periodFrom}::date AND ${periodTo}::date AND status = 'draft'
@@ -253,6 +275,92 @@ export async function preparePayrollRun(
   const periodTo = String(run.period_to).slice(0, 10);
   const payDate = String(run.pay_date).slice(0, 10);
 
+  /**
+   * A supplementary run pays what the run it corrects missed — and nothing else.
+   *
+   * This function used to ignore `kind` altogether. A supplementary run recomputed the whole month
+   * for everybody: full basic salary, full recurring allowances, full statutory deductions. Posting
+   * it paid the month a second time. The payroll screen describes a supplementary run as how a
+   * correction is made, so the advertised correction mechanism was a duplicate payment, and nothing
+   * in the run's own figures would have looked wrong.
+   *
+   * What a correction is, in practice, is wages the earlier run left out — overtime approved without
+   * a rate, given one after the payslips had gone out. So that is what a supplementary run pays: the
+   * overtime for the period that no run has claimed, plus the statutory contributions those
+   * additional wages attract, and no basic salary or allowance at all. Anybody with nothing
+   * outstanding gets no payslip and is listed as skipped with the reason.
+   */
+  const supplementary = run.kind === "supplementary";
+
+  /**
+   * Attendance for the period has to be settled first.
+   *
+   * The module said this and did not check it: the draft-day count was read once, put in an audit
+   * payload, and never acted on. A month still being corrected is a month whose figures are not yet
+   * anybody's statement, and a payslip computed from it is a figure somebody will be asked to defend.
+   *
+   * It matters more than it looks, because of what payroll does *not* read. Absence, lateness and
+   * short days change nothing in a payslip — see Q-HR-4, which asks what CAC's policy is, since
+   * deducting for an unauthorised absence is taking money from somebody and is not a rule this
+   * platform may invent. Until that is answered, the one protection is that the month is closed and
+   * looked at before it is paid.
+   */
+  const stillDraft = await db.execute<{ count: number }>(sql`
+    SELECT count(*)::int AS count FROM hr.attendance
+     WHERE work_date BETWEEN ${periodFrom}::date AND ${periodTo}::date AND status = 'draft'
+  `);
+  const draftDays = stillDraft.rows?.[0]?.count ?? 0;
+  if (draftDays > 0) {
+    throw new ConflictError(
+      `${draftDays} attendance day${draftDays === 1 ? "" : "s"} in this period ${
+        draftDays === 1 ? "is" : "are"
+      } still a draft. Finalise the attendance period first: a month that is still being corrected ` +
+        "is not yet anybody's statement of what happened, and a payslip computed from it is a figure " +
+        "somebody will have to defend.",
+    );
+  }
+
+  if (supplementary) {
+    if (!run.corrects_run_id) {
+      throw new ConflictError(
+        "This supplementary run does not say which run it corrects, so there is nothing to work a " +
+          "difference out from.",
+      );
+    }
+    const corrected = await db.execute<{
+      run_no: string | null;
+      status: string;
+      period_from: string;
+      period_to: string;
+    }>(sql`
+      SELECT run_no, status, period_from, period_to
+        FROM hr.payroll_run WHERE id = ${run.corrects_run_id}
+    `);
+    const target = corrected.rows?.[0];
+    if (!target) {
+      throw new NotFoundError("The run this one corrects no longer exists.");
+    }
+    if (
+      String(target.period_from).slice(0, 10) !== periodFrom ||
+      String(target.period_to).slice(0, 10) !== periodTo
+    ) {
+      throw new ConflictError(
+        `${target.run_no ?? "The run being corrected"} covers ` +
+          `${String(target.period_from).slice(0, 10)} to ${String(target.period_to).slice(0, 10)}, ` +
+          `not ${periodFrom} to ${periodTo}. A correction has to be for the same period, because the ` +
+          "contributions it works out are the month's contributions less what that month has already " +
+          "had.",
+      );
+    }
+    if (target.status !== "finalised" && target.status !== "posted") {
+      throw new ConflictError(
+        `${target.run_no ?? "The run being corrected"} is ${target.status}, so nothing has gone out ` +
+          "to correct. Prepare that run again instead — re-preparing replaces its figures, which is " +
+          "the cheaper correction while it is still unfinalised.",
+      );
+    }
+  }
+
   const employees = await db.execute<{
     id: string;
     employee_no: string;
@@ -273,8 +381,29 @@ export async function preparePayrollRun(
     SELECT e.id, e.employee_no, e.full_name, e.date_of_birth, e.joined_on, e.last_day, e.status,
            d.name AS department_name, p.title AS position_title,
            e.bank_name, e.bank_account_last4,
-           e.epf_applicable, e.socso_applicable, e.eis_applicable, e.pcb_applicable
+           -- The four liability flags as they stood at the end of the period, from dated employment
+           -- history rather than from the employee row.
+           --
+           -- Reading them from the row made a past run irreproducible in exactly the way this module
+           -- exists to prevent: switching somebody's PCB liability on today gave every earlier month
+           -- a deduction it never had, silently, while the salary and the rates a few lines away were
+           -- being sourced from dated records. Migration 0027 put the flags on employment_event and
+           -- gave everybody an opening event dated to their joining day, so the COALESCE only falls
+           -- back to the row for an employee with no history at all.
+           COALESCE(f.epf_applicable, e.epf_applicable) AS epf_applicable,
+           COALESCE(f.socso_applicable, e.socso_applicable) AS socso_applicable,
+           COALESCE(f.eis_applicable, e.eis_applicable) AS eis_applicable,
+           COALESCE(f.pcb_applicable, e.pcb_applicable) AS pcb_applicable
       FROM hr.employee e
+      LEFT JOIN LATERAL (
+        SELECT v.epf_applicable, v.socso_applicable, v.eis_applicable, v.pcb_applicable
+          FROM hr.employment_event v
+         WHERE v.employee_id = e.id
+           AND v.effective_from <= ${periodTo}::date
+           AND v.epf_applicable IS NOT NULL
+         ORDER BY v.effective_from DESC, v.created_at DESC
+         LIMIT 1
+      ) f ON true
       LEFT JOIN hr.department d ON d.id = e.department_id
       LEFT JOIN hr.position p ON p.id = e.position_id
      WHERE e.joined_on <= ${periodTo}::date
@@ -339,8 +468,23 @@ export async function preparePayrollRun(
        AND work_date BETWEEN ${periodFrom}::date AND ${periodTo}::date
   `);
 
+  // The unpaid days that fall *inside* this period, counted the way the proration denominator is
+  // counted.
+  //
+  // This summed `r.days` -- the whole request's length -- for any request merely overlapping the
+  // period, so unpaid leave from 27 February to 4 March was deducted in full from February and then
+  // in full again from March. It also mixed units: `r.days` counts working days, because it excludes
+  // rest days and holidays, while `periodDays` and `employedDays` are calendar days, so the
+  // numerator and the denominator of one fraction were measuring different things and a week of
+  // unpaid leave cost five days' pay out of thirty-one rather than seven.
+  //
+  // Clipping the request to the period and counting calendar days fixes both, and matches the basis
+  // the module already applies to joiners and leavers. If CAC prorates on a different divisor,
+  // `periodDays` is the single line to change, and every payslip states which basis was used.
   const unpaidLeave = await db.execute<{ employee_id: string; days: string }>(sql`
-    SELECT r.employee_id, SUM(r.days) AS days
+    SELECT r.employee_id,
+           SUM((LEAST(r.ends_on, ${periodTo}::date) - GREATEST(r.starts_on, ${periodFrom}::date)) + 1)
+             AS days
       FROM hr.leave_request r
       JOIN hr.leave_type t ON t.id = r.leave_type_id
      WHERE r.status = 'approved' AND NOT t.is_paid
@@ -351,13 +495,88 @@ export async function preparePayrollRun(
     (unpaidLeave.rows ?? []).map((row) => [row.employee_id, Number(row.days)]),
   );
 
+  /**
+   * What this period has already paid each person, for a supplementary run.
+   *
+   * A contribution is on the month's wages, not on a payment. EPF is a flat percentage, so a
+   * percentage of the additional wages happens to give the right answer; SOCSO and EIS are *read out
+   * of a band table*, and the band covering RM 300 of overtime is not the difference between two
+   * bands of the month's total — it would deduct a few sen where tens of ringgit are owed. PCB is a
+   * table too. The only figure that is right for all of them is the contribution on the combined
+   * wages less what has already been contributed, which is why migration 0028 records the wage base
+   * each contribution was computed on.
+   *
+   * Summed across every finalised run for the period rather than only the one named, so a second
+   * correction corrects the month and not one earlier run.
+   */
+  interface PriorPay {
+    epfWages: Amount;
+    socsoWages: Amount;
+    pcbWages: Amount;
+    /** Already contributed, by payslip line code: EPF, EPF-ER, SOCSO, SOCSO-ER, EIS, EIS-ER, PCB. */
+    paid: Map<string, Amount>;
+    /**
+     * True when a payslip for the period predates migration 0028 and so does not record the wages
+     * its contributions were computed on. The difference cannot be worked out, and a supplementary
+     * run says so on the payslip rather than computing a wrong one.
+     */
+    basesMissing: boolean;
+  }
+
+  const priorByEmployee = new Map<string, PriorPay>();
+
+  if (supplementary) {
+    const bases = await db.execute<{
+      employee_id: string;
+      epf_wages: string | null;
+      socso_wages: string | null;
+      pcb_wages: string | null;
+      payslips: number;
+      with_bases: number;
+    }>(sql`
+      SELECT s.employee_id,
+             SUM(s.epf_wages) AS epf_wages,
+             SUM(s.socso_wages) AS socso_wages,
+             SUM(s.pcb_wages) AS pcb_wages,
+             count(*)::int AS payslips,
+             count(s.epf_wages)::int AS with_bases
+        FROM hr.payslip s
+        JOIN hr.payroll_run r ON r.id = s.run_id
+       WHERE r.period_from = ${periodFrom}::date AND r.period_to = ${periodTo}::date
+         AND r.status IN ('finalised', 'posted') AND r.id <> ${runId}
+       GROUP BY s.employee_id
+    `);
+
+    const paid = await db.execute<{ employee_id: string; code: string; amount: string }>(sql`
+      SELECT s.employee_id, l.code, SUM(l.amount) AS amount
+        FROM hr.payslip_line l
+        JOIN hr.payslip s ON s.id = l.payslip_id
+        JOIN hr.payroll_run r ON r.id = s.run_id
+       WHERE r.period_from = ${periodFrom}::date AND r.period_to = ${periodTo}::date
+         AND r.status IN ('finalised', 'posted') AND r.id <> ${runId}
+       GROUP BY s.employee_id, l.code
+    `);
+
+    for (const row of bases.rows ?? []) {
+      priorByEmployee.set(row.employee_id, {
+        epfWages: row.epf_wages === null ? 0n : parseAmount(row.epf_wages),
+        socsoWages: row.socso_wages === null ? 0n : parseAmount(row.socso_wages),
+        pcbWages: row.pcb_wages === null ? 0n : parseAmount(row.pcb_wages),
+        paid: new Map(),
+        basesMissing: row.with_bases < row.payslips,
+      });
+    }
+    for (const row of paid.rows ?? []) {
+      priorByEmployee.get(row.employee_id)?.paid.set(row.code, parseAmount(row.amount));
+    }
+  }
+
   // Clear any previous attempt: preparing twice replaces, it does not add.
   await db.execute(sql`DELETE FROM hr.payslip WHERE run_id = ${runId}`);
 
   const periodDays = daysBetween(periodFrom, periodTo);
   const skipped: PrepareResult["skipped"] = [];
   const problems: PrepareResult["problems"] = [];
-  const paidOvertimeIds: string[] = [];
 
   for (const person of people) {
     const salary = await salaryOn(db, person.id, periodTo);
@@ -384,6 +603,18 @@ export async function preparePayrollRun(
     const unpaidDays = unpaidByEmployee.get(person.id) ?? 0;
     const payableDays = Math.max(0, employedDays - unpaidDays);
 
+    // Their unclaimed overtime, read before anything is written, because on a supplementary run it
+    // decides whether this person is in the run at all.
+    const theirs = (overtime.rows ?? []).filter((row) => row.employee_id === person.id);
+
+    if (supplementary && !theirs.some((claim) => claim.rate_multiple !== null)) {
+      skipped.push({
+        employeeName: person.full_name,
+        why: "there is no unpaid rated overtime for this period, so a correction would pay nothing",
+      });
+      continue;
+    }
+
     const payslip = await db.execute<{ id: string }>(sql`
       INSERT INTO hr.payslip
         (run_id, employee_id, employee_no, employee_name, department_name, position_title,
@@ -391,7 +622,12 @@ export async function preparePayrollRun(
       VALUES (${runId}, ${person.id}, ${person.employee_no}, ${person.full_name},
               ${person.department_name}, ${person.position_title},
               ${person.bank_name}, ${person.bank_account_last4},
-              ${amountToSql(salary)}, ${String(payableDays)}, ${String(periodDays)})
+              -- basic_salary is the salary on record, which a supplementary run still needs: the
+              -- hourly rate its overtime is paid at is derived from it. payable_days is nought on a
+              -- correction, because no days are being paid -- the days were paid by the run being
+              -- corrected, and repeating them here is what made a supplementary run a second payment.
+              ${amountToSql(salary)}, ${String(supplementary ? 0 : payableDays)},
+              ${String(periodDays)})
       RETURNING id
     `);
     const payslipId = payslip.rows![0]!.id;
@@ -408,39 +644,70 @@ export async function preparePayrollRun(
       accountCode?: string | null;
       contraAccountCode?: string | null;
       statutoryRuleId?: string | null;
+      /**
+       * The overtime claim an overtime line paid.
+       *
+       * Finalisation reads it back, so a run can claim only the overtime it actually put on a
+       * payslip. A unique index makes a second line for the same claim impossible.
+       */
+      overtimeRequestId?: string | null;
     }) => {
       lineNo += 1;
       await db.execute(sql`
         INSERT INTO hr.payslip_line
           (payslip_id, line_no, kind, code, description, basis, quantity, rate, amount,
-           account_code, contra_account_code, statutory_rule_id)
+           account_code, contra_account_code, statutory_rule_id, overtime_request_id)
         VALUES (${payslipId}, ${lineNo}, ${line.kind}, ${line.code}, ${line.description},
                 ${line.basis ?? null}, ${line.quantity ?? null}, ${line.rate ?? null},
                 ${amountToSql(line.amount)}, ${line.accountCode ?? null},
-                ${line.contraAccountCode ?? null}, ${line.statutoryRuleId ?? null})
+                ${line.contraAccountCode ?? null}, ${line.statutoryRuleId ?? null},
+                ${line.overtimeRequestId ?? null})
       `);
     };
 
+    const prior = priorByEmployee.get(person.id);
+
     try {
+      if (supplementary && (!prior || prior.basesMissing)) {
+        // Recorded on the payslip rather than thrown out of the whole run: the run keeps going, this
+        // person's payslip carries the reason, and a run with any problem cannot be approved.
+        throw new ValidationError(
+          !prior
+            ? "There is no finalised payslip for this person in this period, so there is nothing to " +
+                "correct. A supplementary run pays the difference against a month that has already " +
+                "been paid."
+            : "A payslip for this period does not record the wages its statutory contributions were " +
+                "computed on, so the difference cannot be worked out. Contributions are on the " +
+                "month's wages, and guessing the earlier base would produce a figure nobody could " +
+                "check.",
+          "correctsRunId",
+        );
+      }
+
       // --- Earnings -------------------------------------------------------
-      const prorated =
-        payableDays >= periodDays
+      // A correction starts from nothing: the basic salary and the recurring allowances were paid by
+      // the run being corrected.
+      const prorated = supplementary
+        ? 0n
+        : payableDays >= periodDays
           ? salary
           : (salary * BigInt(Math.round(payableDays * 100))) / BigInt(Math.round(periodDays * 100));
 
-      await addLine({
-        kind: "earning",
-        code: "BASIC",
-        description: "Basic salary",
-        amount: prorated,
-        basis:
-          payableDays >= periodDays
-            ? "full month"
-            : `${payableDays} of ${periodDays} days` +
-              (unpaidDays > 0 ? `, after ${unpaidDays} days unpaid leave` : ""),
-        quantity: String(payableDays),
-        accountCode: SYSTEM_ACCOUNTS.salariesExpense,
-      });
+      if (!supplementary) {
+        await addLine({
+          kind: "earning",
+          code: "BASIC",
+          description: "Basic salary",
+          amount: prorated,
+          basis:
+            payableDays >= periodDays
+              ? "full month"
+              : `${payableDays} of ${periodDays} calendar days` +
+                (unpaidDays > 0 ? `, after ${unpaidDays} calendar days of unpaid leave` : ""),
+          quantity: String(payableDays),
+          accountCode: SYSTEM_ACCOUNTS.salariesExpense,
+        });
+      }
 
       // EPF-liable wages start as the basic; each allowance says whether it counts.
       let epfWages = prorated;
@@ -448,28 +715,29 @@ export async function preparePayrollRun(
       let pcbWages = prorated;
       let gross = prorated;
 
-      for (const element of (elements.rows ?? []).filter((row) => row.employee_id === person.id)) {
-        const amount = parseAmount(element.amount);
-        if (element.kind === "earning") {
-          await addLine({
-            kind: "earning",
-            code: element.code,
-            description: element.description,
-            amount,
-            basis: "recurring allowance",
-            accountCode: element.account_code ?? SYSTEM_ACCOUNTS.allowancesExpense,
-          });
-          gross += amount;
-          if (element.is_epf_liable) epfWages += amount;
-          if (element.is_socso_liable) socsoWages += amount;
-          if (element.is_pcb_liable) pcbWages += amount;
+      if (!supplementary) {
+        for (const element of (elements.rows ?? []).filter((row) => row.employee_id === person.id)) {
+          const amount = parseAmount(element.amount);
+          if (element.kind === "earning") {
+            await addLine({
+              kind: "earning",
+              code: element.code,
+              description: element.description,
+              amount,
+              basis: "recurring allowance",
+              accountCode: element.account_code ?? SYSTEM_ACCOUNTS.allowancesExpense,
+            });
+            gross += amount;
+            if (element.is_epf_liable) epfWages += amount;
+            if (element.is_socso_liable) socsoWages += amount;
+            if (element.is_pcb_liable) pcbWages += amount;
+          }
         }
       }
 
       // Approved overtime, at the rate somebody recorded. No rate means it is not
       // paid — the hours are agreed, the multiple is not known, and inventing one
       // would be inventing what the person is owed.
-      const theirs = (overtime.rows ?? []).filter((row) => row.employee_id === person.id);
       const hourly = hourlyRateFrom(salary);
 
       for (const claim of theirs) {
@@ -504,19 +772,87 @@ export async function preparePayrollRun(
           quantity: claim.approved_hours,
           rate: claim.rate_multiple,
           accountCode: SYSTEM_ACCOUNTS.overtimeExpense,
+          overtimeRequestId: claim.id,
         });
 
+        // Deliberately not added to `epfWages`, `socsoWages` or `pcbWages`. Whether an overtime
+        // payment is "wages" is decided per contribution by statute and differs between them — it is
+        // the same question Q-HR-1 already asks about allowances, item 7, and it is not answered
+        // here. Excluding it under-deducts if the answer is that it counts, so a month containing
+        // paid overtime is not a month to run live on until CAC's accountant has answered.
         gross += amount;
-        paidOvertimeIds.push(claim.id);
       }
 
       // --- Statutory deductions -------------------------------------------
       const age = ageOn(person.date_of_birth, payDate);
       const used: Partial<Record<StatutoryKind, string>> = {};
 
+      /**
+       * A contribution on this payslip's wages — or, on a correction, the month's contribution less
+       * what the month has already had.
+       *
+       * The second form is the only correct one for a supplementary run. SOCSO, EIS and PCB are read
+       * out of band tables, so applying the table to RM 300 of overtime gives the contribution of
+       * somebody earning RM 300 a month rather than the extra owed by somebody earning RM 4,800 and
+       * then RM 5,100. EPF is a percentage and comes out the same either way; it goes through here
+       * too so that one rule governs all four.
+       *
+       * `codes` names the payslip line codes the earlier runs recorded, per side, so "already
+       * contributed" is read from what was actually paid rather than recomputed.
+       */
+      const contribute = (
+        kind: StatutoryKind,
+        wagesNow: Amount,
+        wagesBefore: Amount,
+        codes: { employee?: string; employer?: string },
+        options: { age?: number | null } = {},
+      ): StatutoryResult => {
+        const rule = rules.get(kind)!;
+        if (!supplementary) return applyRule(rule, wagesNow, options);
+
+        const combined = wagesBefore + wagesNow;
+        const total = applyRule(rule, combined, options);
+        const paidEmployee = codes.employee ? (prior!.paid.get(codes.employee) ?? 0n) : 0n;
+        const paidEmployer = codes.employer ? (prior!.paid.get(codes.employer) ?? 0n) : 0n;
+        const employee = total.employee - paidEmployee;
+        const employer = total.employer - paidEmployer;
+
+        if (employee < 0n || employer < 0n) {
+          throw new ValidationError(
+            `The ${STATUTORY_LABELS[kind]} already contributed for this period is more than the ` +
+              `contribution due on the corrected wages of ${formatAmount(combined)}, so this run ` +
+              "would have to take money back. Payroll does not do that on its own: the run that " +
+              "over-contributed has to be reversed.",
+            "wages",
+          );
+        }
+
+        return {
+          employee,
+          employer,
+          basis:
+            `${total.basis} on the period's wages of ${formatAmount(combined)}, less the ` +
+            `${formatAmount(paidEmployee + paidEmployer)} already contributed on ` +
+            `${formatAmount(wagesBefore)}`,
+          ruleId: total.ruleId,
+        };
+      };
+
       if (person.epf_applicable) {
-        const employeeShare = applyRule(rules.get("epf_employee")!, epfWages, { age });
-        const employerShare = applyRule(rules.get("epf_employer")!, epfWages, { age });
+        const employeeShare = contribute(
+          "epf_employee",
+          epfWages,
+          prior?.epfWages ?? 0n,
+          { employee: "EPF" },
+          { age },
+        );
+        const employerShare = contribute(
+          "epf_employer",
+          epfWages,
+          prior?.epfWages ?? 0n,
+          { employer: "EPF-ER" },
+          { age },
+        );
 
         await addLine({
           kind: "deduction",
@@ -545,7 +881,10 @@ export async function preparePayrollRun(
       }
 
       if (person.socso_applicable) {
-        const socso = applyRule(rules.get("socso")!, socsoWages);
+        const socso = contribute("socso", socsoWages, prior?.socsoWages ?? 0n, {
+          employee: "SOCSO",
+          employer: "SOCSO-ER",
+        });
         await addLine({
           kind: "deduction",
           code: "SOCSO",
@@ -569,7 +908,10 @@ export async function preparePayrollRun(
       }
 
       if (person.eis_applicable) {
-        const eis = applyRule(rules.get("eis")!, socsoWages);
+        const eis = contribute("eis", socsoWages, prior?.socsoWages ?? 0n, {
+          employee: "EIS",
+          employer: "EIS-ER",
+        });
         await addLine({
           kind: "deduction",
           code: "EIS",
@@ -593,7 +935,7 @@ export async function preparePayrollRun(
       }
 
       if (person.pcb_applicable) {
-        const pcb = applyRule(rules.get("pcb")!, pcbWages);
+        const pcb = contribute("pcb", pcbWages, prior?.pcbWages ?? 0n, { employee: "PCB" });
         await addLine({
           kind: "deduction",
           code: "PCB",
@@ -620,13 +962,20 @@ export async function preparePayrollRun(
         });
       }
 
+      // The wage bases are recorded whether or not the contribution applied to this person, because
+      // "no EPF wages" and "no EPF liability" are different facts and a later correction has to tell
+      // them apart. They are also what makes a payslip line's "11% of 4,500.00" a queryable figure
+      // rather than only a sentence.
       await db.execute(sql`
         UPDATE hr.payslip SET
           epf_employee_rule_id = ${used.epf_employee ?? null},
           epf_employer_rule_id = ${used.epf_employer ?? null},
           socso_rule_id = ${used.socso ?? null},
           eis_rule_id = ${used.eis ?? null},
-          pcb_rule_id = ${used.pcb ?? null}
+          pcb_rule_id = ${used.pcb ?? null},
+          epf_wages = ${amountToSql(epfWages)},
+          socso_wages = ${amountToSql(socsoWages)},
+          pcb_wages = ${amountToSql(pcbWages)}
         WHERE id = ${payslipId}
       `);
     } catch (error) {
@@ -647,10 +996,6 @@ export async function preparePayrollRun(
      WHERE id = ${runId}
   `);
 
-  // Overtime is claimed by the run only when it is finalised, not here — preparing
-  // twice must not strand the claims of the first attempt.
-  void paidOvertimeIds;
-
   await writeAudit(db, {
     ...context,
     actorUserId: principal.userId,
@@ -660,6 +1005,8 @@ export async function preparePayrollRun(
     entityId: runId,
     newValues: {
       runNo,
+      kind: run.kind,
+      correctsRunId: run.corrects_run_id,
       periodFrom,
       periodTo,
       payslips: people.length - skipped.length,
@@ -782,17 +1129,29 @@ export async function finalisePayrollRun(
     );
   }
 
-  const periodFrom = String(run.period_from).slice(0, 10);
-  const periodTo = String(run.period_to).slice(0, 10);
-
-  // Claim the overtime this run paid, so it cannot be claimed by another. Done here
-  // rather than at preparation so that re-preparing does not strand anything.
-  await db.execute(sql`
-    UPDATE hr.overtime_request
+  /**
+   * Claim the overtime this run paid, so no other run can pay it again. Done here rather than at
+   * preparation, so that re-preparing does not strand the claims of the first attempt.
+   *
+   * Read from the payslip lines, not from the period. Matching by date claimed every rated, unclaimed
+   * request whose work date fell in the period *as at finalise time* — which is not the set the run
+   * computed. A claim given its rate after the run was prepared got stamped with this run's id,
+   * vanished from every future run's unclaimed filter, and was then paid by nothing at all. The hours
+   * were lost, no screen showed it, and the employee's only evidence was a payslip that did not
+   * mention them. Migration 0027 put the claim's id on the line that paid it, so this claims exactly
+   * what went out, and the period no longer comes into it.
+   */
+  const claimed = await db.execute<{ id: string }>(sql`
+    UPDATE hr.overtime_request o
        SET payroll_run_id = ${runId}, updated_by = ${principal.userId}
-     WHERE status = 'approved' AND approved_hours IS NOT NULL AND payroll_run_id IS NULL
-       AND rate_multiple IS NOT NULL
-       AND work_date BETWEEN ${periodFrom}::date AND ${periodTo}::date
+     WHERE o.payroll_run_id IS NULL
+       AND o.id IN (
+         SELECT l.overtime_request_id
+           FROM hr.payslip_line l
+           JOIN hr.payslip s ON s.id = l.payslip_id
+          WHERE s.run_id = ${runId} AND l.overtime_request_id IS NOT NULL
+       )
+    RETURNING o.id
   `);
 
   await db.execute(sql`
@@ -809,7 +1168,11 @@ export async function finalisePayrollRun(
     action: AUDIT.PAYROLL_RUN_FINALISED,
     entityType: "payroll_run",
     entityId: runId,
-    newValues: { runNo: run.run_no, netTotal: run.net_total },
+    newValues: {
+      runNo: run.run_no,
+      netTotal: run.net_total,
+      overtimeClaimsPaid: (claimed.rows ?? []).length,
+    },
   });
 }
 
@@ -1337,6 +1700,7 @@ interface LockedRun extends Record<string, unknown> {
   period_to: string;
   pay_date: string;
   kind: string;
+  corrects_run_id: string | null;
   status: RunStatus;
   prepared_by: string | null;
   journal_id: string | null;
@@ -1346,8 +1710,8 @@ interface LockedRun extends Record<string, unknown> {
 
 async function lockRun(db: Executor, runId: string): Promise<LockedRun> {
   const result = await db.execute<LockedRun>(sql`
-    SELECT id, run_no, period_from, period_to, pay_date, kind, status, prepared_by, journal_id,
-           net_total, employee_count
+    SELECT id, run_no, period_from, period_to, pay_date, kind, corrects_run_id, status,
+           prepared_by, journal_id, net_total, employee_count
       FROM hr.payroll_run WHERE id = ${runId} FOR UPDATE
   `);
   const row = result.rows?.[0];

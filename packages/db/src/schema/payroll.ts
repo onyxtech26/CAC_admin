@@ -164,6 +164,18 @@ export const payslip = hrSchema.table(
     /** The employer's own contributions: a cost, not part of net pay. */
     employerCost: money("employer_cost").notNull().default("0"),
 
+    /**
+     * The wages each contribution was computed on.
+     *
+     * Recorded because a contribution is on the month's wages, not on a payment: a supplementary run
+     * owes the contribution on the combined wages less what has already been contributed, and without
+     * the earlier base that difference cannot be worked out. Null on a payslip prepared before
+     * migration 0028, which a correction refuses to guess past.
+     */
+    epfWages: money("epf_wages"),
+    socsoWages: money("socso_wages"),
+    pcbWages: money("pcb_wages"),
+
     epfEmployeeRuleId: uuid("epf_employee_rule_id").references(() => statutoryRuleVersion.id),
     epfEmployerRuleId: uuid("epf_employer_rule_id").references(() => statutoryRuleVersion.id),
     socsoRuleId: uuid("socso_rule_id").references(() => statutoryRuleVersion.id),
@@ -214,6 +226,15 @@ export const payslipLine = hrSchema.table(
      */
     contraAccountCode: text("contra_account_code"),
     statutoryRuleId: uuid("statutory_rule_id").references(() => statutoryRuleVersion.id),
+    /**
+     * The overtime claim this line paid.
+     *
+     * Declared without `.references()` on purpose: `overtimeRequest` lives in `hr-workflows.ts`,
+     * which already imports from here, and pointing back at it would make the two modules circular.
+     * The foreign key and the one-line-per-claim unique index are in migration 0027, which is where
+     * the guarantee actually lives.
+     */
+    overtimeRequestId: uuid("overtime_request_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => ({

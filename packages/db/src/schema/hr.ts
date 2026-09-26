@@ -228,6 +228,18 @@ export const employmentEvent = hrSchema.table(
     departmentId: uuid("department_id").references(() => department.id),
     employmentType: text("employment_type"),
     status: text("status"),
+    /**
+     * Which statutory contributions the person is liable for, from this date.
+     *
+     * Dated for the same reason the salary is: these four decide whether a contribution is computed
+     * at all, and reading them from the employee row made re-running a past month produce deductions
+     * that month never had. Null means the event says nothing about them, so the last event that did
+     * still stands. Added by migration 0027.
+     */
+    epfApplicable: boolean("epf_applicable"),
+    socsoApplicable: boolean("socso_applicable"),
+    eisApplicable: boolean("eis_applicable"),
+    pcbApplicable: boolean("pcb_applicable"),
     reason: text("reason"),
     notes: text("notes"),
     /** The letter that authorised it, once Phase 8 generates them. */

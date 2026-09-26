@@ -8,8 +8,15 @@ import { AuthorizationError, resolveCapabilities, type Principal } from "./authz
 
 import { formatAmount, parseAmount } from "./money.js";
 import { createFiscalYear } from "./periods.js";
+import { recordAttendance } from "./attendance.js";
 import { trialBalance } from "./ledger.js";
-import { createDepartment, createEmployee, createWorkSchedule, recordEmploymentEvent } from "./people.js";
+import {
+  createDepartment,
+  createEmployee,
+  createWorkSchedule,
+  recordEmploymentEvent,
+  updateEmployee,
+} from "./people.js";
 import {
   StatutoryRulesMissingError,
   applyRule,
@@ -22,6 +29,13 @@ import {
   validateStatutoryTable,
   type RuleVersion,
 } from "./statutory.js";
+import {
+  decideOvertime,
+  listOvertime,
+  rateOvertime,
+  requestOvertime,
+  submitOvertime,
+} from "./overtime.js";
 import {
   abandonPayrollRun,
   approvePayrollRun,
@@ -60,6 +74,8 @@ let employeeUser: Principal; // sees their own payslip and nothing else
 
 let aishahId: string;
 let faizalId: string;
+/** Approved hours with no rate: the honest state while Q-HR-1 is open. */
+let unratedOvertimeId: string;
 
 async function makePrincipal(
   email: string,
@@ -424,6 +440,21 @@ describe("a run, once the rules exist", () => {
     await approveRule("eis", eis, "2026-01-01");
     await approveRule("pcb", pcb, "2026-01-01");
 
+    // Three hours of overtime on a Tuesday in March, approved with no rate — which is what Q-HR-1
+    // being open looks like on a real record. Payroll must not pay it and must not hide it.
+    const claim = await requestOvertime(db, hrManager, {
+      employeeId: aishahId,
+      workDate: "2026-03-10",
+      requestedHours: "3.00",
+      reason: "Filing deadline for a client's estate distribution",
+    });
+    await submitOvertime(db, hrManager, claim.id);
+    await decideOvertime(db, director, claim.id, "approved", {
+      approvedHours: "3.00",
+      note: "Hours confirmed with the office log. Rate not yet known — see Q-HR-1.",
+    });
+    unratedOvertimeId = claim.id;
+
     const existing = await db.execute<{ id: string }>(
       sql`SELECT id FROM hr.payroll_run WHERE period_from = '2026-03-01'`,
     );
@@ -472,6 +503,12 @@ describe("a run, once the rules exist", () => {
     const socsoLine = full!.lines.find((line) => line.code === "SOCSO")!;
     // The wording matters: it says which band, because there is no calculation.
     expect(socsoLine.basis).toContain("contribution table band");
+
+    // The approved hours appear, at nil, saying why. A payslip that simply omitted them would leave
+    // the employee with no evidence that anybody knew about the evening they worked.
+    const unrated = full!.lines.find((line) => line.code === "OT-UNRATED")!;
+    expect(formatAmount(unrated.amount)).toBe("0.00");
+    expect(unrated.basis).toContain("Q-HR-1");
   });
 
   it("needs a second person to approve it", async () => {
@@ -580,8 +617,18 @@ describe("reproducibility — the point of the whole phase", () => {
     expect((marchRule!.table as { bands: Array<{ ratePercent: string }> }).bands[0]!.ratePercent).toBe("10");
     expect((aprilRule!.table as { bands: Array<{ ratePercent: string }> }).bands[0]!.ratePercent).toBe("20");
 
-    // Now re-prepare March. A supplementary run is the honest way to recompute a
-    // finalised period, and it must produce March's figures — not today's.
+    // Q-HR-1 is answered, months late, and the rate goes onto the claim that was approved without
+    // one. This is the step that did not exist: `decideOvertime` refuses anything that is not still
+    // submitted, so an approved claim could never be given a rate, and every hour approved while the
+    // question was open was unpayable for good.
+    await rateOvertime(db, hrManager, unratedOvertimeId, {
+      rateMultiple: "1.5",
+      rateSource: FIXTURE_SOURCE,
+    });
+
+    // March is closed and posted, so the way to pay it is a supplementary run: it pays what March
+    // missed, and *nothing else*. It used to recompute the whole month for everybody, which is a
+    // second payment of every salary.
     const marchRun = (
       await db.execute<{ id: string }>(
         sql`SELECT id FROM hr.payroll_run WHERE period_from = '2026-03-01' AND kind = 'regular'`,
@@ -594,22 +641,54 @@ describe("reproducibility — the point of the whole phase", () => {
       payDate: "2026-03-31",
       kind: "supplementary",
       correctsRunId: marchRun,
-      notes: "Recomputation, to prove the figures are reproducible",
+      notes: "The overtime rate arrived after the month closed",
     });
 
-    await preparePayrollRun(db, hrManager, rerun.id);
+    const prepared = await preparePayrollRun(db, hrManager, rerun.id);
+
+    // Faizal has nothing outstanding, so he gets no payslip at all — not a second salary.
+    expect(prepared.payslips).toBe(1);
+    expect(prepared.skipped.map((row) => row.employeeName)).toContain("Faizal bin Omar");
+    expect(prepared.skipped[0]!.why).toContain("no unpaid rated overtime");
 
     const payslips = await listPayslips(db, { runId: rerun.id });
+    expect(payslips).toHaveLength(1);
     const aishah = payslips.find((row) => row.employeeId === aishahId)!;
 
-    // The whole exit criterion, in three assertions: March's salary, March's EPF
-    // rate, and therefore March's figures — after both changed.
+    // The exit criterion. Aishah's salary is 6,000 today and the EPF rate is 20% today; March's run
+    // uses 4,500 and 10%, because the salary comes from dated employment history and the rule from the
+    // version in force for the pay date.
     expect(formatAmount(aishah.basicSalary)).toBe("4,500.00");
-    expect(formatAmount(aishah.grossPay)).toBe("4,500.00");
-    expect(formatAmount(aishah.netPay)).toBe("3,932.00");
 
     const full = await getPayslip(db, hrManager, aishah.id);
-    expect(full!.lines.find((line) => line.code === "EPF")!.basis).toBe("10% of 4500.00");
+
+    // 3 hours at 1.5x on 4,500 a month: 4,500 / 208 = 21.6346 an hour, so 97.3557.
+    const overtime = full!.lines.find((line) => line.code === "OT")!;
+    expect(formatAmount(overtime.amount)).toBe("97.36");
+    expect(overtime.basis).toContain("hourly rate 21.63");
+    expect(overtime.basis).toContain(FIXTURE_SOURCE);
+
+    // No basic salary, no allowance: March paid those.
+    expect(full!.lines.find((line) => line.code === "BASIC")).toBeUndefined();
+    expect(formatAmount(aishah.grossPay)).toBe("97.36");
+
+    // The contributions are the month's contributions less what March already contributed — not the
+    // contribution of somebody earning 97.36 a month. On March's 10% band that difference is nil,
+    // and the payslip says so in full rather than leaving a figure unexplained.
+    const epf = full!.lines.find((line) => line.code === "EPF")!;
+    expect(epf.basis).toContain("10% of 4500.00");
+    expect(epf.basis).toContain("less the 450.00 already contributed on 4,500.00");
+    expect(formatAmount(epf.amount)).toBe("0.00");
+
+    // And the claim is marked paid only once the run is finalised, by the line that paid it.
+    expect((await listOvertime(db, { employeeId: aishahId }))[0]!.paid).toBe(false);
+
+    await approvePayrollRun(db, director, rerun.id);
+    await finalisePayrollRun(db, director, rerun.id);
+
+    const claim = (await listOvertime(db, { employeeId: aishahId }))[0]!;
+    expect(claim.paid).toBe(true);
+    expect(formatAmount(aishah.netPay)).toBe("97.36");
   });
 
   it("uses the new rate for April, from the same code path", async () => {
@@ -632,6 +711,163 @@ describe("reproducibility — the point of the whole phase", () => {
     await abandonPayrollRun(db, hrManager, aprilRun.id, "Test fixture, not a real run");
   });
 });
+
+// ---------------------------------------------------------------------------
+describe("the defects the end-to-end audit found", () => {
+  /**
+   * Each of these is a figure that was wrong in a way 711 passing tests did not see, because each one
+   * lives in the join between two pieces that are individually correct.
+   */
+
+  it("counts only the unpaid leave that falls inside the period, in the period's own unit", async () => {
+    // Unpaid leave from 28 May to 3 June: seven calendar days, three of them in June. The request
+    // records 5 working days, because that is what leave is counted in.
+    const type = await db.execute<{ id: string }>(sql`
+      INSERT INTO hr.leave_type (code, name, is_paid, created_by)
+      VALUES ('UNPAID', 'Unpaid leave', false, ${hrManager.userId})
+      RETURNING id
+    `);
+    await db.execute(sql`
+      INSERT INTO hr.leave_request
+        (request_no, employee_id, leave_type_id, starts_on, ends_on, days, status, reason,
+         submitted_at, decided_at, decided_by, created_by)
+      VALUES ('LV-2026-TEST-1', ${aishahId}, ${type.rows![0]!.id}, '2026-05-28', '2026-06-03', 5,
+              'approved', 'Family matter abroad', now(), now(), ${director.userId},
+              ${hrManager.userId})
+    `);
+
+    const june = await createPayrollRun(db, hrManager, {
+      periodFrom: "2026-06-01",
+      periodTo: "2026-06-30",
+      payDate: "2026-06-30",
+    });
+    await preparePayrollRun(db, hrManager, june.id);
+
+    const aishah = (await listPayslips(db, { runId: june.id })).find(
+      (row) => row.employeeId === aishahId,
+    )!;
+
+    // Three days, not five, and not five again in May: the days inside this period, counted in the
+    // same calendar days as the thirty they are out of. Summing the request's own total for every
+    // overlapping period deducted the whole absence twice, once from each month, and in the wrong
+    // unit — working days over calendar days, a fraction whose halves measure different things.
+    const full = await getPayslip(db, hrManager, aishah.id);
+    const basic = full!.lines.find((line) => line.code === "BASIC")!;
+    expect(basic.basis).toBe("27 of 30 calendar days, after 3 calendar days of unpaid leave");
+
+    // 6,000 for June, less three days of it.
+    expect(formatAmount(basic.amount)).toBe("5,400.00");
+  });
+
+  it("uses the statutory liabilities that were in force, not the ones in force today", async () => {
+    // Aishah stops being liable for PCB from today. Nothing about June changes.
+    const junePcb = formatAmount(
+      (await getPayslip(
+        db,
+        hrManager,
+        (await listPayslips(db, { runId: (await juneRunId()) })).find(
+          (row) => row.employeeId === aishahId,
+        )!.id,
+      ))!.lines.find((line) => line.code === "PCB")!.amount,
+    );
+    expect(junePcb).not.toBe("0.00");
+
+    // A full update, as the edit screen posts one: the name and the salary are unchanged, and only
+    // the PCB liability is switched off.
+    await updateEmployee(db, hrManager, aishahId, {
+      fullName: "Aishah binti Rahman",
+      joinedOn: "2026-01-01",
+      pcbApplicable: false,
+    });
+
+    // The change is dated history, so it answers for periods after it and not before.
+    const events = await db.execute<{ kind: string; effective_from: string }>(sql`
+      SELECT kind, effective_from FROM hr.employment_event
+       WHERE employee_id = ${aishahId} AND pcb_applicable = false
+    `);
+    expect(events.rows).toHaveLength(1);
+
+    // Re-preparing June produces June's figures: the deduction it had.
+    await preparePayrollRun(db, hrManager, await juneRunId());
+    const again = (await listPayslips(db, { runId: await juneRunId() })).find(
+      (row) => row.employeeId === aishahId,
+    )!;
+    const pcb = (await getPayslip(db, hrManager, again.id))!.lines.find(
+      (line) => line.code === "PCB",
+    )!;
+    expect(formatAmount(pcb.amount)).toBe(junePcb);
+  });
+
+  it("refuses a correction to a period that has not been paid, and to a different one", async () => {
+    const junePayroll = await juneRunId();
+
+    const wrongPeriod = await createPayrollRun(db, hrManager, {
+      periodFrom: "2026-07-01",
+      periodTo: "2026-07-31",
+      payDate: "2026-07-31",
+      kind: "supplementary",
+      correctsRunId: junePayroll,
+      notes: "A correction pointed at the wrong month",
+    });
+    await expect(preparePayrollRun(db, hrManager, wrongPeriod.id)).rejects.toThrow(
+      /has to be for the same period/,
+    );
+
+    // June is still only prepared, so there is nothing to correct: re-preparing it is the cheaper
+    // correction, and saying so is more use than computing a second payment.
+    const tooEarly = await createPayrollRun(db, hrManager, {
+      periodFrom: "2026-06-01",
+      periodTo: "2026-06-30",
+      payDate: "2026-06-30",
+      kind: "supplementary",
+      correctsRunId: junePayroll,
+      notes: "Premature",
+    });
+    await expect(preparePayrollRun(db, hrManager, tooEarly.id)).rejects.toThrow(
+      /nothing has gone out to correct/,
+    );
+  });
+
+  it("refuses to compute a month whose attendance is still a draft", async () => {
+    await recordAttendance(db, hrManager, {
+      employeeId: aishahId,
+      workDate: "2026-08-03",
+      clockIn: "2026-08-03T09:00:00+08:00",
+      clockOut: "2026-08-03T18:00:00+08:00",
+    });
+
+    const august = await createPayrollRun(db, hrManager, {
+      periodFrom: "2026-08-01",
+      periodTo: "2026-08-31",
+      payDate: "2026-08-31",
+    });
+
+    // The module said attendance had to be settled and then did not check: the count of draft days was
+    // read, put in an audit payload, and ignored. It matters the more because absence and lateness
+    // change nothing in a payslip — see Q-HR-4 — so a closed month somebody has looked at is the only
+    // protection there is.
+    await expect(preparePayrollRun(db, hrManager, august.id)).rejects.toThrow(/still a draft/);
+  });
+
+  it("keeps a run total out of the audit trail, because a one-person run is one person's pay", async () => {
+    const events = await db.execute<{ new_values: unknown }>(sql`
+      SELECT new_values FROM audit.event
+       WHERE action = 'PAYROLL_RUN_FINALISED' ORDER BY created_at DESC LIMIT 1
+    `);
+    const payload = events.rows![0]!.new_values as Record<string, unknown>;
+    expect(payload.runNo).toBeTruthy();
+    // Masked, not removed: that the figure existed is part of the record.
+    expect(String(payload.netTotal)).toMatch(/^\*+/);
+  });
+});
+
+async function juneRunId(): Promise<string> {
+  const found = await db.execute<{ id: string }>(
+    sql`SELECT id FROM hr.payroll_run
+         WHERE period_from = '2026-06-01' AND kind = 'regular' AND status <> 'abandoned'`,
+  );
+  return found.rows![0]!.id;
+}
 
 // ---------------------------------------------------------------------------
 describe("payslips are private", () => {

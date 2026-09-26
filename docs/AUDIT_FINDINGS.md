@@ -323,6 +323,18 @@ to `/denied` and can never read, approve, or open the PDF of a letter or a case 
 
 ## 11. Further blocking defects — HR and payroll (Phases 5–7)
 
+> **Fixed, in the pass after this audit.** 11.1 through 11.7 are all repaired, with migrations 0027,
+> 0028 and 0029 and regression tests in `packages/core/src/payroll.test.ts` ("the defects the
+> end-to-end audit found", and the rewritten reproducibility test) and
+> `packages/core/src/hr-workflows.test.ts` ("a refused claim, and a rate that arrives late"). 724
+> tests pass (715 before this pass). Each entry below keeps the original finding and ends with what was done. 11.8 and the
+> items under 11.9 are **not** fixed; 11.8 turned out to be a policy question and is now Q-HR-4.
+>
+> One thing the fix exposed and did not settle: **whether an overtime payment counts as wages** for
+> EPF, SOCSO/EIS and PCB. The engine excludes it from all three bases, which nobody has confirmed and
+> which under-deducts if the answer is that it counts. It is now item 7 of Q-HR-1, and a month
+> containing paid overtime should not be run live until it is answered.
+
 ### 11.1 A supplementary payroll run pays the whole month a second time
 
 `packages/core/src/payroll.ts:237` — `preparePayrollRun` never reads `run.kind` or
@@ -334,6 +346,22 @@ supplementary run naming it, and prepare produces a fresh **full** payslip for e
 March — full basic, full allowances, full statutory deductions. Posting debits salaries again. The
 advertised correction mechanism is a double payment.
 
+**Fixed.** A supplementary run now pays only what the run it corrects missed: the period's unclaimed
+rated overtime, and the statutory contributions those additional wages attract. No basic salary, no
+allowances, `payable_days` nought, and anybody with nothing outstanding is skipped with the reason
+rather than given a payslip. It also validates what it is correcting — same period, and a run that has
+actually been finalised or posted.
+
+The contributions are the harder half. A contribution is on the month's wages, not on a payment, and
+SOCSO, EIS and PCB are read out of band tables: applying the table to RM 300 of overtime gives the
+contribution of somebody earning RM 300 a month. So migration 0028 records on each payslip the wage
+base each contribution was computed on (`epf_wages`, `socso_wages`, `pcb_wages` — also a
+reproducibility gap in its own right), and a correction computes the contribution on the combined
+wages and subtracts what the period has already contributed, summed across every finalised run for
+that period so a second correction corrects the month rather than one earlier run. Where a payslip
+predates 0028 and has no base, the correction **refuses** and says so on the payslip rather than
+guessing.
+
 ### 11.2 Finalising claims overtime the run never paid
 
 `packages/core/src/payroll.ts:788` — the `UPDATE hr.overtime_request SET payroll_run_id = …` matches
@@ -341,6 +369,11 @@ every approved, rated, unclaimed claim in the period **at finalise time**, not t
 on a payslip. A claim rated after the run was prepared is stamped with that run's id, becomes
 invisible to every future run's `payroll_run_id IS NULL` filter, and is never paid. The hours are
 silently lost and no screen shows it.
+
+**Fixed.** Migration 0027 puts `overtime_request_id` on `hr.payslip_line`, with a foreign key, a
+partial unique index so one claim can be paid by one line only, and a CHECK that only an earning line
+may name a claim. `preparePayrollRun` records it; `finalisePayrollRun` claims exactly the ids its own
+payslip lines name, and the period no longer comes into it. The count claimed goes on the audit entry.
 
 ### 11.3 An approved overtime claim can never be given a rate
 
@@ -353,6 +386,13 @@ This is not the documented Q-HR-1 refusal. Approving hours without a rate is cor
 once CAC supplies the multiples is not. Every claim approved before the answer arrives is
 permanently unpayable.
 
+**Fixed.** `rateOvertime` in `packages/core/src/overtime.ts`, with `rateOvertimeAction` and an
+`OvertimeRate` control in the last column of the overtime table, where the "not set" badge already
+was. It is deliberately not a re-approval: the hours are not reopened and the approver is not
+re-recorded, only the multiple and its source, and only while payroll has not taken the claim — after
+that the database refuses and the route is a supplementary run. The same self-approval rule applies as
+for deciding.
+
 ### 11.4 Unpaid leave across a month boundary is deducted twice
 
 `packages/core/src/payroll.ts:343` — the query sums `r.days`, the whole request's count, for any
@@ -362,6 +402,12 @@ days from February **and** five from March.
 Two further inconsistencies in the same arithmetic: `r.days` counts *working* days while the
 proration denominator counts *calendar* days, so numerator and denominator are different units; and
 one unpaid day costs 1/31 of a month in a 31-day month and 1/28 in February.
+
+**Fixed** for the first two: the query clips each request to the period and counts calendar days, so
+27 February–4 March costs three days in March and four in February, and the numerator is now in the
+same unit as the denominator. The third is a policy choice rather than a defect — a month's salary over
+the days in that month is the basis the module already applies to joiners and leavers, the payslip
+states which basis it used, and Q-HR-4 now asks CAC to confirm the divisor.
 
 ### 11.5 Reproducibility is broken by four undated fields
 
@@ -375,12 +421,32 @@ snapshotted from the current row too.
 
 This is the one promise Phase 7 was built to keep, and it holds only for the salary and the rates.
 
+**Fixed** for the four that decide money. Migrations 0027 and 0029 put the flags on
+`hr.employment_event`, nullable, projected onto the employee row with COALESCE exactly as employment
+type and salary already are; the run reads them as at the end of the period. Both halves were needed:
+`createEmployee` records them on the opening `hired` event, and `updateEmployee` writes a dated
+`statutory_changed` event whenever one changes — without that second half the dated read would have
+been *worse* than what it replaced, because the opening event would have answered for every period
+after the joining day and a change on the employee record would have affected nothing at all.
+
+(Migration 0027's own backfill used `kind = 'joined'`, which the kind CHECK does not permit. It
+matched no rows, because migrations run before there are employees, so it failed silently rather than
+loudly; 0029 does what it intended and says so.)
+
+`department_name`, `position_title` and the bank fields remain snapshots of the current row. They are
+descriptive rather than computational — no figure depends on them — and dating them is a larger change
+than this pass warranted.
+
 ### 11.6 A period can be finalised before the engine has ever run
 
 `packages/core/src/attendance.ts:1051` — `finaliseAttendancePeriod` checks only for a clock-in with
 no clock-out. Import writes `worked_minutes` NULL; `recalculateAttendance` skips final rows by
 design. Import March, finalise without pressing Recalculate, and `attendanceSummary` reports 0
 worked, 0 late, 0 extra minutes for a fully attended month. The only remedy is reopening the period.
+
+**Fixed.** `finaliseAttendancePeriod` refuses while any draft day in the period has no
+`worked_minutes`, which covers both cases that produce one: the engine has never run, and a correction
+cleared the figures afterwards on purpose. The message says to run the calculation first.
 
 ### 11.7 A rejected overtime claim blocks that date forever
 
@@ -389,6 +455,11 @@ regardless of status, and there is no cancel, withdraw or delete. A claim reject
 cannot be re-submitted: "There is already a rejected overtime request for that day." Leave has
 `cancelLeave`; overtime has no equivalent.
 
+**Fixed.** The check ignores rejected rows, and migration 0028 replaces the
+`UNIQUE (employee_id, work_date)` constraint — which enforced the same thing one layer down, so fixing
+only the application check would have changed nothing — with a partial unique index excluding rejected
+rows. One *live* claim per person per day, which is the guarantee that was actually wanted.
+
 ### 11.8 Attendance feeds nothing into payroll
 
 `packages/core/src/payroll.ts:186` — `hr.attendance` is read once in the whole module, to count draft
@@ -396,6 +467,16 @@ days, and the count is used only in an audit payload. So: an `is_absent` day doe
 lateness and short days do not, and `approved_ot_minutes` on the attendance row is ignored — only the
 separately approved overtime request is paid. Finalising attendance is, as far as payroll is
 concerned, ceremonial. Both modules' comments claim otherwise.
+
+**Not fixed, and now a question rather than a defect: Q-HR-4.** Deducting a day's pay for an
+unauthorised absence is taking money from somebody, and what lateness costs ranges from nothing to a
+deduction the Employment Act constrains. Neither is a rule this platform may invent, so it is asked
+rather than guessed.
+
+Two things were done in the meantime. `preparePayrollRun` now **refuses** a period whose attendance is
+still a draft — which the comment claimed and the code did not check; the draft count was read into an
+audit payload and ignored. And the misleading comments are gone. So a month is closed and looked at
+before it is paid, whatever the answer turns out to be.
 
 ### 11.9 Incomplete, HR
 

@@ -7,6 +7,7 @@ import {
   cancelLeave,
   decideLeave,
   decideOvertime,
+  rateOvertime,
   decideTimeoff,
   openCycle,
   recalculateAttendance,
@@ -318,6 +319,36 @@ export async function decideOvertimeAction(_prev: FormState, form: FormData): Pr
 
   revalidatePath("/hr/overtime");
   revalidatePath("/hr/attendance");
+  return { notice };
+}
+
+/**
+ * Recording the rate on a claim that was approved without one.
+ *
+ * Separate from deciding, because the decision has already been made: the hours stand, the approver
+ * stands, and only the multiple and its source are being supplied. Without this there was no way to
+ * pay an hour approved while Q-HR-1 was open — the screen said the rate was "not set" and nothing
+ * could ever set it.
+ */
+export async function rateOvertimeAction(_prev: FormState, form: FormData): Promise<FormState> {
+  let notice = "Done.";
+
+  try {
+    const { principal, db, context } = await begin("hr.overtime.approve");
+    await db.transaction(async (tx) => {
+      await rateOvertime(tx, principal, text(form, "requestId"), {
+        rateMultiple: text(form, "rateMultiple"),
+        rateSource: text(form, "rateSource"),
+        context,
+      });
+    });
+    notice = "Rate recorded. The next payroll run for that period will pay it.";
+  } catch (error) {
+    return toFormState(error, "The rate could not be recorded.");
+  }
+
+  revalidatePath("/hr/overtime");
+  revalidatePath("/hr/payroll");
   return { notice };
 }
 

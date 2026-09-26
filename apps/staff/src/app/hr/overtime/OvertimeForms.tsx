@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import {
   decideOvertimeAction,
   decideTimeoffAction,
+  rateOvertimeAction,
   recalculate,
   requestOvertimeAction,
   requestTimeoffAction,
@@ -12,6 +13,22 @@ import type { FormState } from "../../accounting/action-errors";
 import { Alert, Button, Field } from "@/components/ui";
 
 const initial: FormState = {};
+
+/**
+ * How a day kind reads in a sentence.
+ *
+ * `normal` is the stored value and "A normal." is not English; the table column says "working day"
+ * and these now agree with it.
+ */
+const DAY_KIND: Record<string, string> = {
+  normal: "working day",
+  rest_day: "rest day",
+  public_holiday: "public holiday",
+};
+
+function dayKindLabel(kind: string): string {
+  return DAY_KIND[kind] ?? kind.replace(/_/g, " ");
+}
 
 export interface EmployeeOption {
   id: string;
@@ -239,8 +256,8 @@ export function OvertimeDecision({
           className="numeric mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-right text-[12px]"
         />
         <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">
-          A {dayKind.replace(/_/g, " ")}. The multiple comes from the Employment Act, which CAC has
-          not yet supplied — see Q-HR-1.
+          A {dayKindLabel(dayKind)}. The multiple comes from the Employment Act, which CAC has not yet
+          supplied — see Q-HR-1.
         </p>
       </div>
 
@@ -263,6 +280,94 @@ export function OvertimeDecision({
           className="rounded bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
         >
           {pending ? "…" : "Approve"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded border border-[var(--color-line-strong)] px-2 py-1 text-[11px]"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * Supplying the rate on a claim that was approved without one.
+ *
+ * The counterpart of approving without a rate, which the decision form deliberately allows. Both
+ * halves have to exist: approving hours while the legal multiple is unknown is honest, and leaving
+ * the record with no way to apply the answer when it arrives is not — those hours were unpayable for
+ * good, and the payslip told the employee so.
+ */
+export function OvertimeRate({
+  requestId,
+  dayKind,
+  canRate,
+}: {
+  requestId: string;
+  dayKind: string;
+  canRate: boolean;
+}) {
+  const [state, action, pending] = useActionState(rateOvertimeAction, initial);
+  const [open, setOpen] = useState(false);
+
+  if (!canRate) return <span className="text-[11px] text-[var(--color-faint)]">—</span>;
+
+  if (!open) {
+    return (
+      <div className="space-y-1">
+        {state.error && <p className="text-[11px] text-[var(--color-danger)]">{state.error}</p>}
+        {state.notice && <p className="text-[11px] text-[var(--color-ok)]">{state.notice}</p>}
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="rounded border border-[var(--color-line-strong)] px-2 py-1 text-[11px]"
+        >
+          Record the rate
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <form action={action} className="w-56 space-y-2 rounded-md border border-[var(--color-line)] p-2">
+      <input type="hidden" name="requestId" value={requestId} />
+      {state.error && <p className="text-[11px] text-[var(--color-danger)]">{state.error}</p>}
+
+      <div>
+        <label htmlFor={`newrate-${requestId}`} className="block text-[11px] font-medium">
+          Rate multiple
+        </label>
+        <input
+          id={`newrate-${requestId}`}
+          name="rateMultiple"
+          required
+          inputMode="decimal"
+          className="numeric mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-right text-[12px]"
+        />
+        <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">
+          A {dayKindLabel(dayKind)}. The hours and the approver are unchanged; only the rate is being
+          supplied.
+        </p>
+      </div>
+
+      <input
+        name="rateSource"
+        required
+        placeholder="Where the rate comes from"
+        aria-label="Where the rate comes from"
+        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+      />
+
+      <div className="flex gap-1">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+        >
+          {pending ? "…" : "Record"}
         </button>
         <button
           type="button"

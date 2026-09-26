@@ -45,7 +45,10 @@ export function CreateRunForm({
         {kind === "supplementary" && (
           <p className="mt-1 text-[11px] text-[var(--color-muted)]">
             A finalised run is never edited. A supplementary run is how a correction is made, and it
-            says which run it corrects.
+            says which run it corrects. It pays only what that run missed &mdash; overtime whose rate
+            arrived afterwards, and the statutory contributions those extra wages attract. No basic
+            salary and no allowances: those were paid. Anybody with nothing outstanding gets no
+            payslip, and the period has to match the run being corrected.
           </p>
         )}
       </div>
