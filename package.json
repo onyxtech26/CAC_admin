@@ -18,8 +18,9 @@
     "db:migrate": "pnpm --filter @cac/db migrate",
     "db:seed": "pnpm --filter @cac/db seed",
     "db:bootstrap": "pnpm --filter @cac/db bootstrap",
-    "verify": "node scripts/check-route-guards.mjs && pnpm -r typecheck && pnpm -r test",
+    "verify": "node scripts/check-route-guards.mjs && node scripts/check-capabilities.mjs && pnpm -r typecheck && pnpm -r test",
     "check:routes": "node scripts/check-route-guards.mjs",
+    "check:capabilities": "node scripts/check-capabilities.mjs",
     "db:backup": "pnpm --filter @cac/db backup",
     "db:backup:verify": "pnpm --filter @cac/db backup verify",
     "db:perf": "pnpm --filter @cac/db perf"

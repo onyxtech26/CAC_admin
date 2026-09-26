@@ -32,6 +32,8 @@ export default async function OrganisationPage() {
 
   const canManage = principal.capabilities.has("hr.org.manage");
   const canSchedule = principal.capabilities.has("hr.schedule.manage");
+  const canViewSchedules =
+    canSchedule || principal.capabilities.has("hr.schedule.view");
   const costCentres = centres.rows ?? [];
 
   return (
@@ -111,6 +113,11 @@ export default async function OrganisationPage() {
           </Panel>
         </div>
 
+        {/* Gated on `hr.schedule.view`, which was granted to several roles and checked nowhere. A
+            schedule is not sensitive, but a capability that gates nothing is a line in the RBAC
+            matrix that is not true — and the matrix is what somebody reads to decide who may see
+            what. */}
+        {canViewSchedules && (
         <Panel
           title={`Work schedules (${schedules.length})`}
           description="What a normal week looks like, and therefore what counts as late."
@@ -153,6 +160,7 @@ export default async function OrganisationPage() {
             </DataTable>
           )}
         </Panel>
+        )}
 
         {(canManage || canSchedule) && (
           <div className="grid gap-4 lg:grid-cols-2">

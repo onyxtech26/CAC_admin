@@ -104,6 +104,11 @@ export const NAVIGATION: NavSection[] = [
       { label: "Users", href: "/admin/users", capabilities: ["admin.user.manage"] },
       { label: "Roles & permissions", href: "/admin/roles", capabilities: ["admin.role.manage"] },
       { label: "Settings", href: "/admin/settings", capabilities: ["admin.settings.manage"] },
+      {
+        label: "Integrations",
+        href: "/admin/integrations",
+        capabilities: ["admin.integration.manage"],
+      },
       { label: "Audit trail", href: "/admin/audit", capabilities: ["audit.view"] },
     ],
   },

@@ -224,13 +224,20 @@ Seven of 127 keys are checked nowhere in `apps/staff` or `packages/core`. Each i
 in `docs/RBAC_MATRIX.md`, which is the document somebody reads to decide who may do what. This is
 the same class as the `template.*` family already removed in migration 0026.
 
-`accounting.einvoice.submit` · `accounting.einvoice.cancel` · ~~`accounting.quotation.approve`~~ ·
-`admin.integration.manage` · `audit.export` · ~~`case.document.download`~~ · `hr.schedule.view`
+~~`accounting.einvoice.submit`~~ · ~~`accounting.einvoice.cancel`~~ · ~~`accounting.quotation.approve`~~ ·
+~~`admin.integration.manage`~~ · ~~`audit.export`~~ · ~~`case.document.download`~~ ·
+~~`hr.schedule.view`~~
 
-Two of them now gate something, as a consequence of 2.2 and 2.6: `accounting.quotation.approve` gates
-accepting a quotation, and `case.document.download` gates reading a generated case document. Five
-remain, and the same choice applies to each — wire it up or remove it, because a capability that gates
-nothing is a line in the matrix that is not true.
+**All seven now gate something**, and each was wired up rather than deleted, because each named a
+control the platform ought to have had: accepting a quotation, reading a generated document,
+exporting the trail, submitting and cancelling an e-Invoice, seeing which integrations exist, and
+seeing the work schedules.
+
+`scripts/check-capabilities.mjs` keeps it that way — it fails the build when a capability in the
+catalogue is checked nowhere in the application, which is the other half of the test that already
+proves every capability is granted to a role. A capability in the matrix is now real at both ends.
+There is an `UNCHECKED` list for genuine exceptions; it is empty, and it should be uncomfortable to
+add to.
 
 ## 5. Dangerous defaults
 
