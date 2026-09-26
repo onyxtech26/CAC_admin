@@ -287,7 +287,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
                       label={scanner.isConfigured() ? "Scan it" : "Try to scan it"}
                     />
                   )}
-                  {document.readable && (
+                  {document.extractable && (
                     <PipelineButton documentId={id} stage="extract" label="Read and index it" />
                   )}
                   {document.chunkCount > 0 && (

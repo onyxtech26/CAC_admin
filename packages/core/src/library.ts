@@ -60,7 +60,23 @@ export type ScanStatus =
   | "clean"
   | "infected"
   | "released_unscanned"
-  | "scan_failed";
+  | "scan_failed"
+  /**
+   * Produced by this platform, so never ingested and never scanned.
+   *
+   * A finalised case document used to be filed as `clean`, because `clean` is what the downstream
+   * gates check — which is exactly the borrowed claim the scan pipeline exists to refuse. It is also
+   * what let "Read and index it" run the extractor over a generated PDF and delete the text
+   * finalisation had supplied. See migration 0030.
+   */
+  | "produced_internally";
+
+/** Documents whose contents may be read and searched: nothing unscanned, nothing infected. */
+const TRUSTED_SCAN_STATUSES: ReadonlySet<ScanStatus> = new Set<ScanStatus>([
+  "clean",
+  "released_unscanned",
+  "produced_internally",
+]);
 
 export type ExtractionStatus = "pending" | "extracted" | "needs_ocr" | "unsupported" | "failed";
 
@@ -104,8 +120,19 @@ export interface LibraryDocument {
   archivedAt: string | null;
   createdAt: string;
   createdByName: string | null;
-  /** True when the file may be opened: scanned clean, or released with a reason. */
+  /**
+   * True when the file may be opened: scanned clean, released with a reason, or produced by this
+   * platform in the first place.
+   */
   readable: boolean;
+  /**
+   * True when the extractor may be run over it.
+   *
+   * Narrower than `readable`, and the difference is not cosmetic. Extraction replaces what is there,
+   * so for a document whose text was supplied at finalisation rather than read out of the file, it
+   * deletes the only copy. See `extractAndIndex`.
+   */
+  extractable: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -465,6 +492,12 @@ export async function scanDocument(
   requireCapability(principal, "doc.upload");
   const document = await loadAccessible(db, principal, documentId);
 
+  if (document.scanStatus === "produced_internally") {
+    throw new ConflictError(
+      `${document.documentNo} was produced by this platform, not ingested from anywhere, so there is ` +
+        "nothing for a scanner to have an opinion about.",
+    );
+  }
   if (document.scanStatus === "clean" || document.scanStatus === "infected") {
     return {
       status: document.scanStatus,
@@ -653,6 +686,26 @@ export async function extractAndIndex(
 ): Promise<ExtractReport> {
   requireCapability(principal, "doc.upload");
   const document = await loadAccessible(db, principal, documentId);
+
+  /**
+   * Refused for a document this platform produced, and this refusal is the point of the state.
+   *
+   * Extraction replaces: it deletes the pages and chunks that were there and writes whatever it finds
+   * this time. For an uploaded file that is right — a failed re-read must not leave stale chunks
+   * behind. For a generated PDF it is destruction. The extractor sees `application/pdf`, has no OCR
+   * engine, returns `needs_ocr`, and the delete has already happened: the text supplied at
+   * finalisation is gone, and it cannot come back, because finalising refuses to run twice and the
+   * generated document is immutable by trigger. The searchable text of an approved legal document
+   * was one button press from being destroyed with no warning and no way back.
+   */
+  if (document.scanStatus === "produced_internally") {
+    throw new ConflictError(
+      `${document.documentNo} was produced by this platform and its text was supplied when it was ` +
+        "finalised — it is the text the PDF was rendered from, not something read out of the file. " +
+        "Re-reading it would replace that text with what an extractor can find in a PDF, which is " +
+        "nothing, and there is no second copy.",
+    );
+  }
 
   if (document.scanStatus !== "clean" && document.scanStatus !== "released_unscanned") {
     throw new ConflictError(
@@ -986,9 +1039,11 @@ export async function searchLibrary(
   if (options.caseId) await requireCaseAccess(db, principal, options.caseId);
 
   const limit = Math.min(options.limit ?? 25, 100);
+  // A document this platform produced is searchable on the same footing as a scanned one: its text
+  // is the text it was rendered from, which is a stronger provenance than either.
   const allowed = options.includeUnscanned
-    ? sql`d.scan_status IN ('clean', 'released_unscanned')`
-    : sql`d.scan_status = 'clean'`;
+    ? sql`d.scan_status IN ('clean', 'released_unscanned', 'produced_internally')`
+    : sql`d.scan_status IN ('clean', 'produced_internally')`;
 
   // `plainto_tsquery` ANDs every word, which is what somebody typing a phrase means.
   // `matchAny` joins them with OR through `websearch_to_tsquery` instead.
@@ -1042,7 +1097,8 @@ export async function searchLibrary(
            END AS reason
       FROM library.document d
      WHERE d.archived_at IS NULL
-       AND (d.scan_status <> 'clean' OR d.extraction_status <> 'extracted' OR d.chunk_count = 0)
+       AND (d.scan_status NOT IN ('clean', 'produced_internally')
+            OR d.extraction_status <> 'extracted' OR d.chunk_count = 0)
        AND (${options.caseId ?? null}::uuid IS NULL OR d.case_id = ${options.caseId ?? null})
        AND ${libraryAccessClause(principal)}
      ORDER BY d.document_no
@@ -1180,7 +1236,12 @@ function toLibraryDocument(row: Record<string, unknown>): LibraryDocument {
     archivedAt: row.archived_at ? new Date(String(row.archived_at)).toISOString() : null,
     createdAt: new Date(String(row.created_at)).toISOString(),
     createdByName: (row.created_by_name as string) ?? null,
-    readable: scanStatus === "clean" || scanStatus === "released_unscanned",
+    // Two questions, not one. Its contents may be handled — downloaded, searched, shown — for
+    // anything that cleared quarantine and for anything this platform produced. Whether the
+    // *extractor* should be run over it is a different matter: for a generated PDF, running it
+    // destroys the only copy of the text.
+    readable: TRUSTED_SCAN_STATUSES.has(scanStatus),
+    extractable: scanStatus === "clean" || scanStatus === "released_unscanned",
   };
 }
 

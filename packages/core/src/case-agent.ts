@@ -317,7 +317,8 @@ export async function findGaps(
   const unreadable = await db.execute<{ count: string }>(sql`
     SELECT count(*) AS count FROM library.document
      WHERE case_id = ${caseId} AND archived_at IS NULL
-       AND (scan_status <> 'clean' OR extraction_status <> 'extracted')
+       AND (scan_status NOT IN ('clean', 'produced_internally')
+            OR extraction_status <> 'extracted')
   `);
   const stuck = Number(unreadable.rows![0].count);
   if (stuck > 0) {

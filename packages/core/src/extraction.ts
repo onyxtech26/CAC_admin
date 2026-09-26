@@ -37,7 +37,15 @@ import { inflateRawSync, inflateSync } from "node:zlib";
  * leave the country.
  */
 
-export type ExtractionMethod = "plain_text" | "docx_xml" | "ocr" | "manual";
+/**
+ * How a document's text was obtained.
+ *
+ * `generated` is text this platform produced and then rendered into the file, so the text is the
+ * source and the PDF is the copy. It is distinct from `manual`, which means a person typed it in:
+ * calling generated text manual was a small untruth in the one column that exists to say where text
+ * came from.
+ */
+export type ExtractionMethod = "plain_text" | "docx_xml" | "ocr" | "manual" | "generated";
 
 export type ExtractionOutcome =
   | {
@@ -114,6 +122,22 @@ export function extractText(
   if (type === DOCX_TYPE) {
     try {
       const text = extractDocxText(bytes);
+
+      // No text runs at all is not a successful read. It means either a genuinely empty document or a
+      // file that is not the Word document it claims to be, and the two are indistinguishable from
+      // here — which is the same reason `NotConfiguredOcrEngine` refuses rather than returning an
+      // empty page. Reporting success with confidence 1 over an empty string put "nothing" into the
+      // index as though it were the document's contents.
+      if (text.trim() === "") {
+        return {
+          status: "unsupported",
+          detail:
+            "This Word document contains no text runs at all. That is either an empty document or a " +
+            "file that is not what it says it is, and nothing here can tell which — so nothing is " +
+            "indexed. The original is held unchanged.",
+        };
+      }
+
       return {
         status: "extracted",
         method: "docx_xml",
@@ -281,12 +305,35 @@ function decodeXmlEntities(input: string): string {
 }
 
 /**
+ * The most a single entry may expand to.
+ *
+ * Deflate reaches about 1032:1 on a run of zeros, so a few megabytes inside the 25 MB upload limit
+ * decompresses to gigabytes. `inflateRawSync` had no `maxOutputLength` and Node's default is around
+ * 4 GiB, so the allocation happened inside the request and six global regex passes then ran over the
+ * result. 64 MiB is far more than `word/document.xml` ever is — a thousand-page report's body XML is
+ * single-digit megabytes — and small enough that refusing costs nothing real.
+ */
+const MAX_ENTRY_BYTES = 64 * 1024 * 1024;
+
+/**
  * One entry out of a ZIP archive.
  *
  * Read from the end-of-central-directory record rather than by walking local headers:
  * the central directory is authoritative about what is in the archive, and a local
  * header can lie about its sizes (the streaming case sets them to zero and puts the real
  * values in a trailing descriptor). Store and deflate only, which is what Word produces.
+ *
+ * Everything the archive says about itself is treated as a claim, because the archive is somebody
+ * else's file. Two of those claims were believed:
+ *
+ * **The compressed size.** `subarray` clamps rather than throwing, so an entry that overstated its
+ * size yielded whatever bytes followed — or nothing at all, past the end. The caller then found no
+ * `<w:t>` elements, produced an empty string, and reported it as a successful read with full
+ * confidence. `NotConfiguredOcrEngine` refuses precisely because "an empty page is indistinguishable
+ * from a blank document"; this path did the thing that refusal exists to prevent.
+ *
+ * **The uncompressed size.** It was never read, so nothing bounded what a deflate stream could
+ * expand to.
  */
 function readZipEntry(bytes: Uint8Array, wanted: string): Uint8Array | null {
   const view = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -311,6 +358,7 @@ function readZipEntry(bytes: Uint8Array, wanted: string): Uint8Array | null {
     }
     const method = view.readUInt16LE(cursor + 10);
     const compressedSize = view.readUInt32LE(cursor + 20);
+    const uncompressedSize = view.readUInt32LE(cursor + 24);
     const nameLength = view.readUInt16LE(cursor + 28);
     const extraLength = view.readUInt16LE(cursor + 30);
     const commentLength = view.readUInt16LE(cursor + 32);
@@ -324,10 +372,40 @@ function readZipEntry(bytes: Uint8Array, wanted: string): Uint8Array | null {
       const localNameLength = view.readUInt16LE(localOffset + 26);
       const localExtraLength = view.readUInt16LE(localOffset + 28);
       const dataAt = localOffset + 30 + localNameLength + localExtraLength;
+
+      // The declared size has to fit inside the file. `subarray` would clamp silently, and a short
+      // read is indistinguishable downstream from a document with no text in it.
+      if (dataAt + compressedSize > view.length) {
+        throw new Error(
+          `${name} claims ${compressedSize} bytes but the archive ends before that. The file is ` +
+            "truncated or the directory is wrong; either way it is not safe to read as far as it says.",
+        );
+      }
+      if (uncompressedSize > MAX_ENTRY_BYTES) {
+        throw new Error(
+          `${name} says it expands to ${uncompressedSize} bytes, past the ${MAX_ENTRY_BYTES}-byte ` +
+            "limit for a single entry.",
+        );
+      }
+
       const data = view.subarray(dataAt, dataAt + compressedSize);
 
       if (method === 0) return new Uint8Array(data);
-      if (method === 8) return new Uint8Array(inflateRawSync(data));
+      if (method === 8) {
+        // Both bounds: the size the directory declares, and a hard ceiling regardless, because the
+        // directory is part of the file being defended against.
+        const limit = Math.min(MAX_ENTRY_BYTES, Math.max(uncompressedSize, 1) * 2);
+        try {
+          return new Uint8Array(inflateRawSync(data, { maxOutputLength: limit }));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          throw new Error(
+            /buffer|length|RANGE/i.test(message)
+              ? `${name} expands to more than the ${limit} bytes this reader will allocate for it.`
+              : `${name} could not be decompressed: ${message}`,
+          );
+        }
+      }
       // 9 is deflate64; anything else is a compression Word does not use.
       throw new Error(`unsupported compression method ${method}`);
     }

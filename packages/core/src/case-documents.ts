@@ -10,12 +10,19 @@ import { allocateDocumentNumber } from "./sequence.js";
 import { getSetting } from "./settings.js";
 import {
   analyseTemplate,
+  parseBoolean,
   renderTemplate,
   validateTemplateBody,
   type TemplateVariable,
   type VariableType,
 } from "./templates.js";
-import { estatePosition, recordCaseEvent, requireCaseAccess, requireWritableCase } from "./cases.js";
+import {
+  MATTER_TYPES,
+  estatePosition,
+  recordCaseEvent,
+  requireCaseAccess,
+  requireWritableCase,
+} from "./cases.js";
 import { chunkPages } from "./chunking.js";
 import { listAssets, listCaseFacts, listLiabilities, listParties } from "./case-file.js";
 import { listRequirements } from "./case-checklist.js";
@@ -172,8 +179,33 @@ export async function saveCaseDocumentTemplate(
     }
   }
 
-  const matterTypes = (input.matterTypes ?? []).filter(Boolean);
-  const matterTypesJson = `{${matterTypes.map((entry) => `"${entry}"`).join(",")}}`;
+  /**
+   * The matter types this template may be used for, checked against the vocabulary.
+   *
+   * These were concatenated straight into a Postgres array literal from `form.getAll("matterTypes")`
+   * with no allow-list. It is a bound parameter, so this was array-literal injection rather than SQL
+   * injection — but a posted value of `probate","la` became two elements, and a value carrying a
+   * quote or a backslash produced a malformed literal and an opaque 500. Worse than either: a
+   * template could claim a matter type the UI never offered and that no case can ever have, and
+   * because the generation trigger checks the case's type against this list, such a template is then
+   * permanently unusable with no visible reason.
+   *
+   * Checking against `MATTER_TYPES` — the same list the case form offers and the same list the
+   * database's CHECK constraint holds — makes the injection question moot and the failure legible.
+   */
+  const matterTypes = [...new Set((input.matterTypes ?? []).map((entry) => entry.trim()).filter(Boolean))];
+  for (const entry of matterTypes) {
+    if (!MATTER_TYPES.some((known) => known.value === entry)) {
+      throw new ValidationError(
+        `"${entry}" is not a kind of matter. A template that named one nothing can be would simply ` +
+          `never be offered: ${MATTER_TYPES.map((known) => known.value).join(", ")}.`,
+        "matterTypes",
+      );
+    }
+  }
+  // One bound parameter, unpacked by Postgres. A hand-built `{"a","b"}` literal puts the caller's
+  // text into SQL syntax; this puts it into JSON, which the driver already knows how to escape.
+  const matterTypesArray = sql`ARRAY(SELECT jsonb_array_elements_text(${JSON.stringify(matterTypes)}::jsonb))`;
   const variablesJson = JSON.stringify(input.variables);
 
   if (input.templateId) {
@@ -190,7 +222,7 @@ export async function saveCaseDocumentTemplate(
     await db.execute(sql`
       UPDATE estate.document_template
          SET name = ${name}, kind = ${input.kind}, title = ${title}, body = ${body},
-             variables = ${variablesJson}::jsonb, matter_types = ${matterTypesJson}::text[],
+             variables = ${variablesJson}::jsonb, matter_types = ${matterTypesArray},
              source_ref = ${sourceRef}, notes = ${input.notes?.trim() || null},
              updated_by = ${principal.userId}
        WHERE id = ${input.templateId}
@@ -223,7 +255,7 @@ export async function saveCaseDocumentTemplate(
     INSERT INTO estate.document_template
       (code, version, name, kind, matter_types, title, body, variables, source_ref, notes, created_by)
     VALUES
-      (${code}, ${version}, ${name}, ${input.kind}, ${matterTypesJson}::text[], ${title},
+      (${code}, ${version}, ${name}, ${input.kind}, ${matterTypesArray}, ${title},
        ${body}, ${variablesJson}::jsonb, ${sourceRef}, ${input.notes?.trim() || null},
        ${principal.userId})
     RETURNING id
@@ -712,11 +744,9 @@ export function coerceValues(
         out[variable.key] = text.replace(/,/g, "");
         break;
       }
-      case "boolean": {
-        const lowered = text.toLowerCase();
-        out[variable.key] = ["true", "yes", "y", "1", "on"].includes(lowered);
+      case "boolean":
+        out[variable.key] = parseBoolean(text, variable.key);
         break;
-      }
       default:
         out[variable.key] = text;
     }
@@ -865,9 +895,14 @@ export async function finaliseCaseDocument(
  * Two things about how the row is written are worth stating.
  *
  * **It is marked as produced internally, not as scanned.** Nothing was ingested, so there is
- * nothing for a scanner to have an opinion about. `scanner` says `internal:generated` and the
- * detail says why, which is more honest than leaving it quarantined — the bytes came from this
- * process — and much more honest than borrowing the word "clean".
+ * nothing for a scanner to have an opinion about. `scan_status` is `produced_internally`, `scanner`
+ * says `internal:generated`, `scanned_at` is null because no scan happened, and the detail says why.
+ *
+ * That is what this passage always claimed and, until migration 0030, not what the code did: it wrote
+ * `clean`, because `clean` was what every downstream gate checked. Borrowing the word was the thing
+ * the whole scan pipeline exists to refuse, and it also made a destructive path reachable — a
+ * generated PDF counted as readable, so "Read and index it" would run an extractor over it and delete
+ * the text supplied below, which has no second copy.
  *
  * **Its text is supplied rather than read.** The document's rendered text is exactly what the
  * PDF contains, because the PDF was rendered from it, so it is stored as the page text with
@@ -896,9 +931,9 @@ async function storeFinalisedPdf(
       (${documentNo}, ${`${document.documentNo} — ${document.title}`}, ${filename},
        'application/pdf', ${pdf.byteLength}, ${sha256}, ${document.caseId},
        'client', ${document.kind}, 'rule', now(),
-       'clean', 'internal:generated', now(),
+       'produced_internally', 'internal:generated', NULL,
        ${"Produced by this platform from an approved template; no external bytes were ingested, so nothing was scanned."},
-       'extracted', 'manual', 1,
+       'extracted', 'generated', 1,
        ${"The text is the document's own rendered text, which is what this PDF was produced from — supplied rather than read out of the file."},
        1, ${document.bodyRendered.length}, now(),
        ${`Finalised ${document.documentNo}, from ${document.templateCode} v${document.templateVersion}.`},
@@ -914,11 +949,11 @@ async function storeFinalisedPdf(
 
   await db.execute(sql`
     INSERT INTO library.document_page (document_id, page_no, text, method, confidence)
-    VALUES (${id}, 1, ${document.bodyRendered}, 'manual', 1)
+    VALUES (${id}, 1, ${document.bodyRendered}, 'generated', 1)
   `);
 
   const chunks = chunkPages([
-    { pageNo: 1, text: document.bodyRendered, method: "manual", confidence: 1 },
+    { pageNo: 1, text: document.bodyRendered, method: "generated", confidence: 1 },
   ]);
   for (const chunk of chunks) {
     await db.execute(sql`

@@ -244,7 +244,9 @@ export function renderTemplate(
       case "date":
         return (options.formatDate ?? defaultDate)(String(raw));
       case "boolean":
-        return raw ? "yes" : "no";
+        // Not `raw ? …`: the string "false" is true to JavaScript, which is how a letter came to say
+        // "yes" beside a clause its own condition had excluded.
+        return parseBoolean(raw, key) ? "yes" : "no";
       default:
         return String(raw);
     }
@@ -284,11 +286,38 @@ function resolveConditionals(body: string, values: Record<string, unknown>): str
   return result;
 }
 
-function isTruthy(value: unknown): boolean {
+/**
+ * The one place a yes/no answer is read, for every template in the platform.
+ *
+ * There used to be three, and they disagreed. `letters.ts` treated anything that was not "false",
+ * "0" or "" as true; `case-documents.ts` used an allow-list of true|yes|y|1|on; the renderer asked
+ * JavaScript, for which the *string* "false" is true. So the single value "no" produced a letter
+ * whose `{{#if flag}}` clause was included and whose `{{flag}}` printed "yes" — the clause and the
+ * word contradicting each other inside one signed document — while the same answer on a case
+ * document came out negative in both.
+ *
+ * Anything that is not recognisably yes or no is refused rather than guessed. A document is not the
+ * place to decide that "maybe" means yes.
+ */
+export function parseBoolean(value: unknown, field?: string): boolean {
   if (value === undefined || value === null) return false;
   if (typeof value === "boolean") return value;
+
   const text = String(value).trim().toLowerCase();
-  return text !== "" && text !== "0" && text !== "false" && text !== "no";
+  if (text === "") return false;
+  if (["true", "yes", "y", "1", "on", "checked"].includes(text)) return true;
+  if (["false", "no", "n", "0", "off", "unchecked"].includes(text)) return false;
+
+  throw new ValidationError(
+    `"${String(value)}" is not a yes or a no. Write true or false, yes or no.`,
+    field,
+  );
+}
+
+function isTruthy(value: unknown): boolean {
+  // Deliberately the same reading as everywhere else; an unrecognisable answer refuses here too,
+  // rather than quietly taking the branch it happens to fall into.
+  return parseBoolean(value);
 }
 
 /** "4500.00" → "4,500.00". Thousands separators, two decimals, no currency. */

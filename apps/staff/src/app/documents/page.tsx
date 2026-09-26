@@ -22,6 +22,7 @@ const SCAN_TONE: Record<ScanStatus, "ok" | "warn" | "danger" | "neutral" | "info
   scan_failed: "warn",
   infected: "danger",
   released_unscanned: "info",
+  produced_internally: "ok",
 };
 
 const SCAN_LABEL: Record<ScanStatus, string> = {
@@ -30,6 +31,9 @@ const SCAN_LABEL: Record<ScanStatus, string> = {
   scan_failed: "scan failed",
   infected: "infected",
   released_unscanned: "released unscanned",
+  // Not "clean": nothing was ingested and nothing was scanned, and the list should not imply a
+  // scanner had an opinion about a file this platform wrote itself.
+  produced_internally: "produced by this platform",
 };
 
 /**

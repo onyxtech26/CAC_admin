@@ -590,6 +590,38 @@ describe("the property the phase exists for", () => {
 });
 
 // ---------------------------------------------------------------------------
+describe("one reading of yes and no, after the audit", () => {
+  it("does not print yes beside a clause its own condition excluded", () => {
+    const body =
+      "Salary: {{salary}}.{{#if has_car}} A car allowance applies.{{/if}} Car: {{has_car}}.";
+    const variables: TemplateVariable[] = [
+      { key: "salary", label: "Salary", type: "money" },
+      { key: "has_car", label: "Car allowance", type: "boolean", required: false },
+    ];
+
+    // The value that used to split the two readings apart. The condition said no and the
+    // placeholder said yes, in one letter, because the branch was resolved with one rule and the
+    // placeholder printed with another.
+    const rendered = renderTemplate(body, variables, { salary: "4500.00", has_car: "no" });
+    expect(rendered).not.toContain("car allowance applies");
+    expect(rendered).toContain("Car: no.");
+
+    const yes = renderTemplate(body, variables, { salary: "4500.00", has_car: "yes" });
+    expect(yes).toContain("A car allowance applies.");
+    expect(yes).toContain("Car: yes.");
+  });
+
+  it("refuses an answer that is neither", () => {
+    expect(() =>
+      renderTemplate(
+        "{{#if flag}}yes{{/if}}",
+        [{ key: "flag", label: "Flag", type: "boolean", required: false }],
+        { flag: "perhaps" },
+      ),
+    ).toThrow(/not a yes or a no/);
+  });
+});
+
 describe("the template engine's tag parsing, after the audit", () => {
   const declared: TemplateVariable[] = [
     { key: "name", label: "Name", type: "text" },

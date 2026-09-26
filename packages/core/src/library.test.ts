@@ -155,8 +155,16 @@ async function makePrincipal(
 
 const bytes = (text: string) => new TextEncoder().encode(text);
 
-/** A minimal, real .docx: a ZIP with one deflated entry. */
-function buildDocx(paragraphs: string[]): Uint8Array {
+/**
+ * A minimal, real .docx: a ZIP with one deflated entry.
+ *
+ * `tamper` makes the central directory lie about the entry's sizes, which is what a hostile file
+ * does and what the reader used to believe.
+ */
+function buildDocx(
+  paragraphs: string[],
+  tamper: { compressedSize?: number; uncompressedSize?: number; body?: string } = {},
+): Uint8Array {
   const xml =
     `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="x"><w:body>` +
     paragraphs
@@ -165,7 +173,7 @@ function buildDocx(paragraphs: string[]): Uint8Array {
     `</w:body></w:document>`;
 
   const name = Buffer.from("word/document.xml", "utf8");
-  const raw = Buffer.from(xml, "utf8");
+  const raw = Buffer.from(tamper.body ?? xml, "utf8");
   const deflated = deflateRawSync(raw);
   const crc = crc32(raw);
 
@@ -189,8 +197,8 @@ function buildDocx(paragraphs: string[]): Uint8Array {
   central.writeUInt16LE(8, 10);
   central.writeUInt32LE(0, 12);
   central.writeUInt32LE(crc, 16);
-  central.writeUInt32LE(deflated.length, 20);
-  central.writeUInt32LE(raw.length, 24);
+  central.writeUInt32LE(tamper.compressedSize ?? deflated.length, 20);
+  central.writeUInt32LE(tamper.uncompressedSize ?? raw.length, 24);
   central.writeUInt16LE(name.length, 28);
   central.writeUInt16LE(0, 30);
   central.writeUInt16LE(0, 32);
@@ -340,6 +348,61 @@ describe("extraction", () => {
     if (outcome.status !== "extracted") return;
     expect(outcome.method).toBe("docx_xml");
     expect(outcome.confidence).toBe(1);
+  });
+
+  it("refuses an archive that overstates how much of itself it is", () => {
+    // `subarray` clamps rather than throwing, so an entry that claimed more bytes than the file holds
+    // used to yield whatever followed — or nothing. The decoder then found no text runs, and the
+    // reader reported "extracted", confidence 1, over an empty string. An empty page and a blank
+    // document are indistinguishable, which is the reason the OCR seam refuses rather than returning
+    // one.
+    const docx = buildDocx(["Something"], { compressedSize: 5_000_000 });
+    const outcome = extractText(
+      docx,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "liar.docx",
+    );
+    expect(outcome.status).toBe("unsupported");
+    expect(outcome.detail).toMatch(/ends before that/);
+  });
+
+  it("refuses an entry that says it expands to more than it will allocate", () => {
+    const docx = buildDocx(["Something"], { uncompressedSize: 500 * 1024 * 1024 });
+    const outcome = extractText(
+      docx,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "bomb.docx",
+    );
+    expect(outcome.status).toBe("unsupported");
+    expect(outcome.detail).toMatch(/past the .* limit/);
+  });
+
+  it("refuses a deflate bomb that understates itself", () => {
+    // Deflate reaches roughly 1032:1 on zeros, so this is a few kilobytes on disk and 40 MB in
+    // memory — and the directory claims it is tiny, so the declared-size check does not catch it.
+    // `inflateRawSync` had no output limit at all, and Node's default is about 4 GiB.
+    const docx = buildDocx([], {
+      body: "\u0000".repeat(40 * 1024 * 1024),
+      uncompressedSize: 1024,
+    });
+    const outcome = extractText(
+      docx,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "zeros.docx",
+    );
+    expect(outcome.status).toBe("unsupported");
+    expect(outcome.detail).toMatch(/more than the .* bytes/);
+  });
+
+  it("does not call an empty Word document a successful read", () => {
+    const docx = buildDocx([]);
+    const outcome = extractText(
+      docx,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "empty.docx",
+    );
+    expect(outcome.status).toBe("unsupported");
+    expect(outcome.detail).toMatch(/no text runs at all/);
   });
 
   it("refuses a PDF rather than guessing at its text", () => {

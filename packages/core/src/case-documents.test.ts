@@ -25,7 +25,12 @@ import {
 } from "./case-documents.js";
 import { openCase } from "./cases.js";
 import { recordAsset, recordLiability, recordParty } from "./case-file.js";
-import { deleteDocument, getLibraryDocument } from "./library.js";
+import {
+  deleteDocument,
+  extractAndIndex,
+  getLibraryDocument,
+  searchLibrary,
+} from "./library.js";
 
 /**
  * Phase 12: documents generated for a matter.
@@ -212,6 +217,25 @@ describe("templates for case documents", () => {
         sourceRef: "fixture",
       }),
     ).rejects.toThrow(/nothing declares/);
+  });
+
+  it("refuses a matter type nothing can be", async () => {
+    // These were concatenated into a Postgres array literal from the form with no allow-list. A
+    // posted `probate","la` became two elements; a quote or a backslash made the literal malformed
+    // and the request a 500. And a template claiming a type no case can have is silently unusable
+    // for ever, because the generation trigger compares the case's type against this list.
+    await expect(
+      saveCaseDocumentTemplate(db, author, {
+        code: "PROBATE_APP",
+        name: "Application",
+        kind: "application",
+        matterTypes: ['probate","letters_of_administration'],
+        title: "Application",
+        body,
+        variables,
+        sourceRef: "fixture",
+      }),
+    ).rejects.toThrow(/is not a kind of matter/);
   });
 
   it("takes a draft, which cannot produce anything", async () => {
@@ -452,9 +476,50 @@ describe("review, finalisation and correction", () => {
     expect(stored.caseId).toBe(caseId);
     expect(stored.readable).toBe(true);
     // Produced here, not scanned — and the record says exactly that rather than "clean"
-    // with nothing behind it.
+    // with nothing behind it. It used to say "clean", which is the borrowed claim the whole scan
+    // pipeline exists to refuse, and which is what made the next test's defect reachable.
+    expect(stored.scanStatus).toBe("produced_internally");
     expect(stored.scanner).toBe("internal:generated");
+    expect(stored.scannedAt).toBeNull();
     expect(stored.scanDetail).toMatch(/no external bytes were ingested/);
+  });
+
+  it("will not let its text be destroyed by being asked to read it again", async () => {
+    const before = await db.execute<{ text: string }>(sql`
+      SELECT text FROM library.document_page WHERE document_id = ${pdfDocumentId}
+    `);
+    expect(before.rows).toHaveLength(1);
+    expect(before.rows![0]!.text).toContain("Tan Ah Kow");
+
+    // "Read and index it" was offered for any document the library called readable, and a finalised
+    // PDF was readable because it was marked clean. Pressing it ran the extractor, which sees a PDF,
+    // has no OCR engine, returns needs_ocr — and the delete has already happened. The text supplied
+    // at finalisation was gone, with no way back: finalising refuses to run twice and the generated
+    // document is immutable by trigger.
+    await expect(extractAndIndex(db, author, pdfDocumentId)).rejects.toThrow(
+      /supplied when it was finalised/,
+    );
+
+    const after = await db.execute<{ text: string }>(sql`
+      SELECT text FROM library.document_page WHERE document_id = ${pdfDocumentId}
+    `);
+    expect(after.rows).toHaveLength(1);
+    expect(after.rows![0]!.text).toBe(before.rows![0]!.text);
+
+    const chunks = await db.execute<{ n: string }>(sql`
+      SELECT count(*)::text AS n FROM library.chunk WHERE document_id = ${pdfDocumentId}
+    `);
+    expect(Number(chunks.rows![0]!.n)).toBeGreaterThan(0);
+
+    // And the screen no longer offers the button that would have done it.
+    const stored = (await getLibraryDocument(db, author, pdfDocumentId))!;
+    expect(stored.readable).toBe(true);
+    expect(stored.extractable).toBe(false);
+  });
+
+  it("is searchable on the same footing as a scanned document", async () => {
+    const found = await searchLibrary(db, author, "Tan Ah Kow");
+    expect(found.hits.some((hit) => hit.documentId === pdfDocumentId)).toBe(true);
   });
 
   it("will not let the stored bytes be altered", async () => {
@@ -577,5 +642,22 @@ describe("value coercion", () => {
   it("treats an absent boolean as false rather than missing", () => {
     const out = coerceValues([{ key: "flag", label: "Flag", type: "boolean" }], {});
     expect(out.flag).toBe(false);
+  });
+
+  it("reads a yes or a no the same way everywhere, and refuses anything else", () => {
+    const declared: TemplateVariable[] = [{ key: "flag", label: "Flag", type: "boolean" }];
+
+    // There were three readings of this value and they disagreed. The letters parser treated
+    // anything that was not "false", "0" or "" as true, so "no" was true; this parser used an
+    // allow-list, so "no" was false; and the renderer asked JavaScript, for which the string "false"
+    // is true. One answer, three results, inside documents people sign.
+    for (const yes of ["true", "yes", "y", "1", "on", "YES", " Yes "]) {
+      expect(coerceValues(declared, { flag: yes }).flag).toBe(true);
+    }
+    for (const no of ["false", "no", "n", "0", "off", "", "  "]) {
+      expect(coerceValues(declared, { flag: no }).flag).toBe(false);
+    }
+
+    expect(() => coerceValues(declared, { flag: "maybe" })).toThrow(/not a yes or a no/);
   });
 });

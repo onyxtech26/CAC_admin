@@ -376,6 +376,10 @@ text with no `<w:t>` elements, and `extractText` reports `status: "extracted"`, 
 precisely because "an empty page is indistinguishable from a blank document"; this path does exactly
 what that refuses to do.
 
+**Fixed, in both halves.** An entry whose declared size runs past the end of the file is refused
+rather than silently clamped, and a Word document that yields no text runs at all is reported as
+`unsupported` with the reason, instead of as a successful read of nothing.
+
 ### 10.6 `matterTypes` is interpolated into a Postgres array literal
 
 `packages/core/src/case-documents.ts:177` — built by string concatenation from

@@ -8,6 +8,7 @@ import { formatAmount, parseAmount } from "./money.js";
 import { allocateDocumentNumber } from "./sequence.js";
 import {
   analyseTemplate,
+  parseBoolean,
   renderTemplate,
   validateTemplateBody,
   type TemplateVariable,
@@ -550,7 +551,7 @@ function coerceValues(
         }
         break;
       case "boolean":
-        out[variable.key] = text.toLowerCase() !== "false" && text !== "0" && text !== "";
+        out[variable.key] = parseBoolean(text, variable.key);
         break;
       default:
         out[variable.key] = text;
