@@ -76,7 +76,7 @@ export function StatementLineRow({
               explained by{" "}
               <Link
                 href={`/accounting/journals/${line.journalId}`}
-                className="font-mono text-[var(--color-info)] hover:underline"
+                className="font-mono text-[var(--color-link)] hover:underline"
               >
                 {line.journalNo}
               </Link>
@@ -136,7 +136,7 @@ export function StatementLineRow({
           <button
             type="submit"
             disabled={pending}
-            className="text-[11px] text-[var(--color-info)] hover:underline disabled:opacity-50"
+            className="text-[11px] text-[var(--color-link)] hover:underline disabled:opacity-50"
           >
             {pending ? "…" : "Bring it back into the list"}
           </button>
@@ -155,7 +155,7 @@ export function StatementLineRow({
                   <div className="min-w-0 flex-1 text-[12px]">
                     <Link
                       href={`/accounting/journals/${candidate.journalLineId}`}
-                      className="font-mono text-[11px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[11px] text-[var(--color-link)] hover:underline"
                     >
                       {candidate.journalNo}
                     </Link>{" "}
@@ -175,7 +175,7 @@ export function StatementLineRow({
                     <button
                       type="submit"
                       disabled={pending}
-                      className="rounded bg-[var(--color-navy)] px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+                      className="btn btn-primary px-2 py-1 text-[11px]"
                     >
                       {pending ? "…" : "Same payment"}
                     </button>
@@ -196,7 +196,7 @@ export function StatementLineRow({
               <button
                 type="button"
                 onClick={() => setMode("post")}
-                className="text-[var(--color-info)] hover:underline"
+                className="text-[var(--color-link)] hover:underline"
               >
                 The ledger never recorded this — post it
               </button>
@@ -242,7 +242,7 @@ export function StatementLineRow({
                   id={`account-${line.id}`}
                   name="accountId"
                   required
-                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]"
+                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-[12px]"
                 >
                   <option value="">Choose…</option>
                   {accounts.map((account) => (
@@ -261,7 +261,7 @@ export function StatementLineRow({
                   id={`memo-${line.id}`}
                   name="memo"
                   defaultValue={line.description}
-                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]"
+                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-[12px]"
                 />
               </div>
 
@@ -297,7 +297,7 @@ export function StatementLineRow({
                 name="reason"
                 required
                 placeholder="Advice line the bank reversed on the next row"
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-[12px]"
               />
               <p className="text-[11px] text-[var(--color-muted)]">
                 Recorded against your name. Setting a line aside is a decision, not a way of
@@ -388,7 +388,7 @@ export function CompleteReconciliation({
           name="notes"
           rows={2}
           placeholder="What the outstanding items are, and when they are expected to clear."
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
         />
       </div>
 

@@ -131,6 +131,9 @@ export function MfaEnrolment() {
       )}
 
       <div className="grid gap-4 sm:grid-cols-[auto_1fr]">
+        {/* Deliberately white on a dark theme, and not a token: a QR code is read by a camera
+            looking for dark modules on a light field with a light quiet zone around them. Themed
+            to the navy ground it would be a decorative square that will not scan. */}
         <div className="rounded-md border border-[var(--color-line)] bg-white p-2">
           {/* Rendered on the server; the QR library never reaches the browser. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}

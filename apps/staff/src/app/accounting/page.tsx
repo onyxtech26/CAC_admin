@@ -130,7 +130,7 @@ export default async function AccountingPage() {
                     <Td>
                       <Link
                         href={`/accounting/journals/${journal.id}`}
-                        className="text-[var(--color-info)] hover:underline"
+                        className="text-[var(--color-link)] hover:underline"
                       >
                         {formatDate(journal.entryDate)}
                       </Link>

@@ -153,7 +153,7 @@ export function PurchaseForm({
                     value={line.description}
                     onChange={(event) => update(index, "description", event.target.value)}
                     aria-label={`Description for line ${index + 1}`}
-                    className="w-full min-w-[200px] rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-full min-w-[200px] rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   />
                   {isClaim && (
                     <input
@@ -162,7 +162,7 @@ export function PurchaseForm({
                       onChange={(event) => update(index, "receiptRef", event.target.value)}
                       placeholder="receipt reference"
                       aria-label={`Receipt reference for line ${index + 1}`}
-                      className="mt-1 w-full rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+                      className="mt-1 w-full rounded border border-[var(--color-line)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
                     />
                   )}
                 </td>
@@ -174,7 +174,7 @@ export function PurchaseForm({
                       value={line.spentOn}
                       onChange={(event) => update(index, "spentOn", event.target.value)}
                       aria-label={`Date spent for line ${index + 1}`}
-                      className="w-36 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                      className="w-36 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                     />
                   </td>
                 )}
@@ -184,7 +184,7 @@ export function PurchaseForm({
                     value={line.accountId}
                     onChange={(event) => update(index, "accountId", event.target.value)}
                     aria-label={`Account for line ${index + 1}`}
-                    className="w-full min-w-[190px] rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-full min-w-[190px] rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   >
                     <option value="">—</option>
                     {accounts.map((account) => (
@@ -200,7 +200,7 @@ export function PurchaseForm({
                     value={line.costCentreId}
                     onChange={(event) => update(index, "costCentreId", event.target.value)}
                     aria-label={`Cost centre for line ${index + 1}`}
-                    className="w-24 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-24 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   >
                     <option value="">—</option>
                     {costCentres.map((centre) => (
@@ -217,7 +217,7 @@ export function PurchaseForm({
                     onChange={(event) => update(index, "quantity", event.target.value)}
                     inputMode="decimal"
                     aria-label={`Quantity for line ${index + 1}`}
-                    className="numeric w-20 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-right"
+                    className="numeric w-20 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-right"
                   />
                   <input
                     name={`lines[${index}].unit`}
@@ -225,7 +225,7 @@ export function PurchaseForm({
                     onChange={(event) => update(index, "unit", event.target.value)}
                     placeholder="unit"
                     aria-label={`Unit for line ${index + 1}`}
-                    className="mt-1 w-20 rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+                    className="mt-1 w-20 rounded border border-[var(--color-line)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
                   />
                 </td>
                 <td className="px-2 py-1.5">
@@ -235,7 +235,7 @@ export function PurchaseForm({
                     onChange={(event) => update(index, "unitPrice", event.target.value)}
                     inputMode="decimal"
                     aria-label={`Unit price for line ${index + 1}`}
-                    className={`numeric w-28 rounded border bg-[var(--color-surface)] px-2 py-1.5 text-right ${
+                    className={`numeric w-28 rounded border bg-[var(--color-ink)]/55 px-2 py-1.5 text-right ${
                       line.unitPrice.trim() !== "" && !isAmount(line.unitPrice.trim())
                         ? "border-[var(--color-danger)]"
                         : "border-[var(--color-line-strong)]"
@@ -248,7 +248,7 @@ export function PurchaseForm({
                     value={line.taxCodeId}
                     onChange={(event) => update(index, "taxCodeId", event.target.value)}
                     aria-label={`Tax code for line ${index + 1}`}
-                    className="w-24 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-24 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   >
                     <option value="">None</option>
                     {taxCodes.map((code) => (

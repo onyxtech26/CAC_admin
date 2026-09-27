@@ -127,7 +127,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                   {employee.reportsToId ? (
                     <Link
                       href={`/hr/employees/${employee.reportsToId}`}
-                      className="text-[var(--color-info)] hover:underline"
+                      className="text-[var(--color-link)] hover:underline"
                     >
                       {employee.reportsToName}
                     </Link>
@@ -173,7 +173,7 @@ export default async function EmployeePage({ params }: { params: Promise<{ id: s
                   {employee.userId ? (
                     <Link
                       href={`/admin/users/${employee.userId}`}
-                      className="text-[var(--color-info)] hover:underline"
+                      className="text-[var(--color-link)] hover:underline"
                     >
                       has a login
                     </Link>

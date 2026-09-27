@@ -69,7 +69,7 @@ export function EnquiryHandling({
           name="status"
           value={next}
           onChange={(event) => setNext(event.target.value as EnquiryStatus)}
-          className="mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+          className="mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
         >
           {NEXT.map((option) => (
             <option key={option.value} value={option.value}>
@@ -84,7 +84,7 @@ export function EnquiryHandling({
         required={next === "spam"}
         placeholder={next === "spam" ? "Why is this spam?" : "Note, optional"}
         aria-label="Note about the handling"
-        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
 
       <div className="flex gap-1">

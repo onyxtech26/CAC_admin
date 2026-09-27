@@ -100,7 +100,7 @@ export function EInvoiceSubmission({
                       required
                       placeholder="Why is it being withdrawn?"
                       aria-label="Reason for cancelling the submission"
-                      className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+                      className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
                     />
                     <div className="flex gap-1">
                       <Button type="submit" variant="danger" disabled={cancelPending}>

@@ -118,7 +118,7 @@ export function CreditNoteForm({
                   }
                   inputMode="decimal"
                   aria-label={`Amount to credit for ${line.description}`}
-                  className={`numeric w-28 rounded border bg-[var(--color-surface)] px-2 py-1 text-right ${
+                  className={`numeric w-28 rounded border bg-[var(--color-ink)]/55 px-2 py-1 text-right ${
                     (amounts[index] ?? "").trim() !== "" && !isAmount((amounts[index] ?? "").trim())
                       ? "border-[var(--color-danger)]"
                       : "border-[var(--color-line-strong)]"
@@ -143,7 +143,7 @@ export function CreditNoteForm({
           name="reason"
           required
           placeholder="Scope reduced, billed twice, goodwill…"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
         />
       </div>
 

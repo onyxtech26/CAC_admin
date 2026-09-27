@@ -190,7 +190,7 @@ export function ReceiptActions({
             name="reason"
             required
             placeholder="Cheque bounced, recorded against the wrong customer…"
-            className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
           <p className="text-[11px] text-[var(--color-muted)]">
             The ledger entry is reversed and both stay visible. Any allocations must be removed first.
@@ -337,7 +337,7 @@ export function AllocationForm({
                     }
                     inputMode="decimal"
                     aria-label={`Amount to apply to ${invoice.invoiceNo}`}
-                    className="numeric w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-right"
+                    className="numeric w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-right"
                   />
                 </td>
               </tr>

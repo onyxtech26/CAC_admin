@@ -35,7 +35,7 @@ export function CreateRunForm({
           name="kind"
           value={kind}
           onChange={(event) => setKind(event.target.value)}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         >
           <option value="regular">The month&rsquo;s payroll</option>
           <option value="supplementary" disabled={finalisedRuns.length === 0}>
@@ -62,7 +62,7 @@ export function CreateRunForm({
             id="correctsRunId"
             name="correctsRunId"
             required
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {finalisedRuns.map((run) => (
@@ -214,7 +214,7 @@ export function RunActions({
                 name="reason"
                 required
                 placeholder="Posted to the wrong period"
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
               <div className="flex gap-2">
                 <Button type="submit" variant="danger" disabled={pending}>
@@ -254,7 +254,7 @@ export function RunActions({
                 id="abandonReason"
                 name="reason"
                 required
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
               <div className="flex gap-2">
                 <Button type="submit" variant="danger" disabled={pending}>

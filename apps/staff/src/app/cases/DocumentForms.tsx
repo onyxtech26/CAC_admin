@@ -119,7 +119,7 @@ export function CaseTemplateForm({
             name="kind"
             value={kind}
             onChange={(event) => setKind(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             {KINDS.map((entry) => (
               <option key={entry.value} value={entry.value}>
@@ -172,20 +172,20 @@ export function CaseTemplateForm({
                 value={row.key}
                 onChange={(event) => update(index, "key", event.target.value)}
                 placeholder="key"
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 font-mono text-[12px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 font-mono text-[12px]"
               />
               <input
                 name={`variables[${index}].label`}
                 value={row.label}
                 onChange={(event) => update(index, "label", event.target.value)}
                 placeholder="Label"
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
               />
               <select
                 name={`variables[${index}].type`}
                 value={row.type}
                 onChange={(event) => update(index, "type", event.target.value)}
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
               >
                 {TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -220,7 +220,7 @@ export function CaseTemplateForm({
               { key: "", label: "", type: "text", required: true },
             ])
           }
-          className="mt-2 text-[12px] text-[var(--color-info)] hover:underline"
+          className="mt-2 text-[12px] text-[var(--color-link)] hover:underline"
         >
           Add a variable
         </button>
@@ -339,7 +339,7 @@ export function GenerateDocumentForm({
                 id={`v-${variable.key}`}
                 name={`values[${variable.key}]`}
                 defaultValue={defaults[variable.key] ?? ""}
-                className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
               >
                 <option value="">No</option>
                 <option value="true">Yes</option>
@@ -354,7 +354,7 @@ export function GenerateDocumentForm({
                 }
                 required={variable.required}
                 defaultValue={defaults[variable.key] ?? ""}
-                className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
               />
             )}
             <p className="mt-1 text-[11px] text-[var(--color-muted)]">
@@ -458,7 +458,7 @@ export function DocumentActions({
                 name="reason"
                 required
                 placeholder="Why it is being cancelled"
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
               <div className="flex gap-2">
                 <Button type="submit" variant="danger" disabled={cancelling}>

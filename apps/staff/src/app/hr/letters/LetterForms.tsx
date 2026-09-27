@@ -95,7 +95,7 @@ export function TemplateForm({
             id="kind"
             name="kind"
             defaultValue={defaults?.kind ?? "custom"}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="appointment">Appointment</option>
             <option value="confirmation">Confirmation after probation</option>
@@ -138,7 +138,7 @@ export function TemplateForm({
                 onChange={(event) => update(index, "key", event.target.value)}
                 placeholder="key"
                 aria-label={`Variable ${index + 1} key`}
-                className="rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 font-mono text-[12px] sm:col-span-3"
+                className="rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 font-mono text-[12px] sm:col-span-3"
               />
               <input
                 name={`variables[${index}].label`}
@@ -146,14 +146,14 @@ export function TemplateForm({
                 onChange={(event) => update(index, "label", event.target.value)}
                 placeholder="What to call it on the form"
                 aria-label={`Variable ${index + 1} label`}
-                className="rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px] sm:col-span-4"
+                className="rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-[12px] sm:col-span-4"
               />
               <select
                 name={`variables[${index}].type`}
                 value={row.type}
                 onChange={(event) => update(index, "type", event.target.value)}
                 aria-label={`Variable ${index + 1} type`}
-                className="rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px] sm:col-span-3"
+                className="rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-[12px] sm:col-span-3"
               >
                 {TYPES.map((type) => (
                   <option key={type.value} value={type.value}>
@@ -182,7 +182,7 @@ export function TemplateForm({
               { key: "", label: "", type: "text", required: true },
             ])
           }
-          className="mt-2 text-[11px] text-[var(--color-info)] hover:underline"
+          className="mt-2 text-[11px] text-[var(--color-link)] hover:underline"
         >
           Another one
         </button>
@@ -205,7 +205,7 @@ export function TemplateForm({
           value={body}
           onChange={(event) => setBody(event.target.value)}
           placeholder={"Dear {{employee_name}},\n\nWe are pleased to offer you…\n\n{{#if has_car_allowance}}\nYou will also receive a car allowance of RM {{car_allowance}} per month.\n{{/if}}\n\nYours sincerely,"}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 font-mono text-[12px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 font-mono text-[12px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           A blank line starts a new paragraph. <code>{"{{#if x}}…{{else}}…{{/if}}"}</code> includes a
@@ -241,7 +241,7 @@ export function ApproveTemplate({ templateId, label }: { templateId: string; lab
       <button
         type="submit"
         disabled={pending}
-        className="rounded border border-[var(--color-navy)] bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+        className="btn btn-primary px-2 py-1 text-[11px]"
       >
         {pending ? "…" : `Approve ${label}`}
       </button>
@@ -315,7 +315,7 @@ export function GenerateLetterForm({
             required
             value={templateCode}
             onChange={(event) => setTemplateCode(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             {templates.map((row) => (
               <option key={row.code} value={row.code}>
@@ -335,7 +335,7 @@ export function GenerateLetterForm({
             required
             value={employeeId}
             onChange={(event) => setEmployeeId(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             {employees.map((employee) => (
               <option key={employee.id} value={employee.id}>
@@ -384,7 +384,7 @@ export function GenerateLetterForm({
                         ? "decimal"
                         : undefined
                     }
-                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                   />
                   {value !== "" && (
                     <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">
@@ -469,7 +469,7 @@ export function LetterActions({
                 id="deliveryNote"
                 name="deliveryNote"
                 placeholder="Handed over in person, signed copy on file"
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
               <p className="text-[11px] text-[var(--color-muted)]">
                 Recorded, because &ldquo;was it actually given to them&rdquo; is the question asked
@@ -506,7 +506,7 @@ export function LetterActions({
                 name="reason"
                 required
                 placeholder="Why it is being cancelled"
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
               <div className="flex gap-2">
                 <Button type="submit" variant="danger" disabled={pending}>

@@ -148,7 +148,7 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
                       <Td>
                         <Link
                           href={`/accounting/accounts/${line.accountCode}`}
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           <span className="font-mono text-[11px]">{line.accountCode}</span>
                         </Link>
@@ -192,7 +192,7 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
                       <Td>
                         <Link
                           href={`/accounting/vouchers/${voucher.id}`}
-                          className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                         >
                           {voucher.voucherNo}
                         </Link>

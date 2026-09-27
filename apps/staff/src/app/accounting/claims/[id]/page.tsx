@@ -116,7 +116,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
                   {claim.journalNo ? (
                     <Link
                       href={`/accounting/journals/${claim.journalId}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {claim.journalNo}
                     </Link>
@@ -128,7 +128,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
                   {claim.reimbursementVoucherNo ? (
                     <Link
                       href={`/accounting/vouchers/${claim.reimbursementVoucherId}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {claim.reimbursementVoucherNo}
                     </Link>
@@ -173,7 +173,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
                     <Td>
                       <Link
                         href={`/accounting/accounts/${line.accountCode}`}
-                        className="font-mono text-[11px] text-[var(--color-info)] hover:underline"
+                        className="font-mono text-[11px] text-[var(--color-link)] hover:underline"
                       >
                         {line.accountCode}
                       </Link>

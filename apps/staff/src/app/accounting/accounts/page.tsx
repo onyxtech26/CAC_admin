@@ -50,7 +50,7 @@ export default async function AccountsPage({
       actions={
         <Link
           href={includeInactive ? "/accounting/accounts" : "/accounting/accounts?inactive=1"}
-          className="text-[12px] text-[var(--color-info)] hover:underline"
+          className="text-[12px] text-[var(--color-link)] hover:underline"
         >
           {includeInactive ? "Hide retired accounts" : "Show retired accounts"}
         </Link>
@@ -95,7 +95,7 @@ export default async function AccountsPage({
                     {account.isPostable ? (
                       <Link
                         href={`/accounting/accounts/${account.code}`}
-                        className="text-[var(--color-info)] hover:underline"
+                        className="text-[var(--color-link)] hover:underline"
                       >
                         {account.name}
                       </Link>

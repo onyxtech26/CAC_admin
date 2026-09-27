@@ -67,7 +67,7 @@ export default async function EInvoicePage() {
           <ol className="space-y-3 text-[13px]">
             {status.blockers.map((blocker, index) => (
               <li key={index} className="flex gap-3">
-                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-warn)] text-[11px] font-bold text-white">
+                <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[var(--color-warn)] text-[11px] font-bold text-[var(--color-ink)]">
                   {index + 1}
                 </span>
                 <span>{blocker}</span>
@@ -98,7 +98,7 @@ export default async function EInvoicePage() {
               </p>
               <p className="mt-1 text-[12px] text-[var(--color-muted)]">
                 Enter it under{" "}
-                <Link href="/admin/settings" className="text-[var(--color-info)] hover:underline">
+                <Link href="/admin/settings" className="text-[var(--color-link)] hover:underline">
                   Settings
                 </Link>{" "}
                 as <span className="font-mono text-[11px]">tax.tin</span>. It is also what goes on
@@ -135,7 +135,7 @@ export default async function EInvoicePage() {
                         <Td>
                           <Link
                             href="/accounting/customers"
-                            className="text-[var(--color-info)] hover:underline"
+                            className="text-[var(--color-link)] hover:underline"
                           >
                             <span className="font-mono text-[11px]">{customer.code}</span>{" "}
                             {customer.name}
@@ -178,7 +178,7 @@ export default async function EInvoicePage() {
                       <Td>
                         <Link
                           href="/accounting/accounts"
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           <span className="font-mono text-[11px]">{account.code}</span>{" "}
                           {account.name}

@@ -61,7 +61,7 @@ export function TaxRateForm({
           required
           minLength={12}
           placeholder="e.g. Service Tax (Rate of Tax) Order, per our tax agent's letter of 12 March 2026"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           Name the order, guide or written advice, with its date. This is stored with the rate and

@@ -10,6 +10,7 @@ import {
   unclaimedExtraTime,
 } from "@cac/core";
 import { requireCapability } from "@/lib/auth";
+import { ownEmployeeFilter, UNLINKED_ACCOUNT } from "@/lib/own-employee";
 import { Shell } from "@/components/Shell";
 import {
   Alert,
@@ -69,19 +70,17 @@ export default async function OvertimePage({
   const onlyMine = !canSeeAll || query.mine === "1";
   const canRecalculate = principal.capabilities.has("hr.attendance.edit");
 
+  // See lib/own-employee.ts: an unlinked account has no rows, not an unrunnable query.
+  const mine = ownEmployeeFilter(principal, onlyMine);
+  const unlinked = mine.scope === "unlinked";
+
   const [overtime, timeoff, unclaimed, employees] = await Promise.all([
-    listOvertime(db, {
-      employeeId: onlyMine ? (principal.employeeId ?? "none") : undefined,
-      from,
-      to,
-      limit: 300,
-    }),
-    listTimeoff(db, {
-      employeeId: onlyMine ? (principal.employeeId ?? "none") : undefined,
-      from,
-      to,
-      limit: 300,
-    }),
+    unlinked
+      ? Promise.resolve([])
+      : listOvertime(db, { employeeId: mine.employeeId, from, to, limit: 300 }),
+    unlinked
+      ? Promise.resolve([])
+      : listTimeoff(db, { employeeId: mine.employeeId, from, to, limit: 300 }),
     canSeeAll ? unclaimedExtraTime(db, { from, to }) : Promise.resolve([]),
     canApprove ? listEmployees(db, { limit: 1000 }) : Promise.resolve([]),
   ]);
@@ -99,6 +98,8 @@ export default async function OvertimePage({
       breadcrumbs={[{ label: "Human resources" }, { label: "Overtime" }]}
     >
       <div className="space-y-4">
+        {unlinked && <Alert tone="info">{UNLINKED_ACCOUNT}</Alert>}
+
         <Alert tone="info">
           <strong>Extra time is not payable overtime.</strong> The clock records time beyond the
           scheduled day whether anybody asked for it or not. What gets paid is what somebody claimed
@@ -164,7 +165,7 @@ export default async function OvertimePage({
                 name="from"
                 type="date"
                 defaultValue={from}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
             </div>
             <div>
@@ -176,7 +177,7 @@ export default async function OvertimePage({
                 name="to"
                 type="date"
                 defaultValue={to}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
             </div>
             {canSeeAll && (
@@ -187,7 +188,7 @@ export default async function OvertimePage({
             )}
             <button
               type="submit"
-              className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+              className="btn btn-primary px-3 py-2 text-[13px]"
             >
               Show
             </button>
@@ -236,7 +237,7 @@ export default async function OvertimePage({
                       <Td>
                         <Link
                           href={`/hr/employees/${request.employeeId}`}
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           {request.employeeName}
                         </Link>
@@ -324,7 +325,7 @@ export default async function OvertimePage({
                         <Td>
                           <Link
                             href={`/hr/employees/${row.employeeId}`}
-                            className="text-[var(--color-info)] hover:underline"
+                            className="text-[var(--color-link)] hover:underline"
                           >
                             {row.employeeName}
                           </Link>

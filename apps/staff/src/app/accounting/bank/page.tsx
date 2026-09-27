@@ -107,7 +107,7 @@ export default async function BankPage() {
                       <Td>
                         <Link
                           href={`/accounting/bank/${account.id}`}
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           <span className="font-mono text-[12px]">{account.accountCode}</span>{" "}
                           {account.accountName}
@@ -150,7 +150,7 @@ export default async function BankPage() {
                         {account.openReconciliationId ? (
                           <Link
                             href={`/accounting/bank/${account.id}/reconcile`}
-                            className="text-[12px] text-[var(--color-info)] hover:underline"
+                            className="text-[12px] text-[var(--color-link)] hover:underline"
                           >
                             Reconciliation in progress
                           </Link>

@@ -35,7 +35,7 @@ export function CaseTabs({ caseId, active }: { caseId: string; active: CaseTab }
             aria-current={current ? "page" : undefined}
             className={`rounded-md px-3 py-1.5 text-[13px] font-medium transition ${
               current
-                ? "bg-[var(--color-navy)] text-white"
+                ? "bg-[var(--color-gold-2)] text-[var(--color-navy)]"
                 : "text-[var(--color-muted)] hover:bg-[var(--color-canvas)]"
             }`}
           >

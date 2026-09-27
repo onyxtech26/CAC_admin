@@ -67,7 +67,7 @@ export function VoucherHeader({
             name="kind"
             value={kind}
             onChange={(event) => setKind(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="expense">Buying something</option>
             <option value="settlement">Paying off a supplier account</option>
@@ -84,7 +84,7 @@ export function VoucherHeader({
             value={kind === "settlement" ? "paid" : settlement}
             disabled={kind === "settlement"}
             onChange={(event) => setSettlement(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px] disabled:opacity-60"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px] disabled:opacity-60"
           >
             <option value="paid">Paying now</option>
             <option value="payable">On account, to pay later</option>
@@ -106,7 +106,7 @@ export function VoucherHeader({
             type="date"
             required
             defaultValue={defaults?.voucherDate ?? defaultDate}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
 
@@ -118,7 +118,7 @@ export function VoucherHeader({
             id="method"
             name="method"
             defaultValue={defaults?.method ?? "transfer"}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="transfer">Bank transfer</option>
             <option value="cheque">Cheque</option>
@@ -138,7 +138,7 @@ export function VoucherHeader({
             <button
               type="button"
               onClick={() => setUseSupplier((current) => !current)}
-              className="text-[11px] text-[var(--color-info)] hover:underline"
+              className="text-[11px] text-[var(--color-link)] hover:underline"
             >
               {useSupplier ? "Not a registered supplier" : "Choose a supplier"}
             </button>
@@ -150,7 +150,7 @@ export function VoucherHeader({
               name="supplierId"
               required
               defaultValue={defaults?.supplierId ?? ""}
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             >
               <option value="">Choose…</option>
               {suppliers.map((supplier) => (
@@ -166,7 +166,7 @@ export function VoucherHeader({
               required
               defaultValue={defaults?.payeeName ?? ""}
               placeholder="Name of the payee"
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             />
           )}
         </div>
@@ -181,7 +181,7 @@ export function VoucherHeader({
               name="paymentAccountId"
               required
               defaultValue={defaults?.paymentAccountId ?? bankAccounts[0]?.id ?? ""}
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             >
               <option value="">Choose…</option>
               {bankAccounts.map((account) => (
@@ -208,7 +208,7 @@ export function VoucherHeader({
             name="reference"
             defaultValue={defaults?.reference ?? ""}
             placeholder="Their invoice number, cheque number"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -222,7 +222,7 @@ export function VoucherHeader({
           name="subject"
           defaultValue={defaults?.subject ?? ""}
           placeholder="What this payment is for, in one line"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
 
@@ -235,7 +235,7 @@ export function VoucherHeader({
           name="notes"
           rows={2}
           defaultValue={defaults?.notes ?? ""}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
     </div>

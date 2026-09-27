@@ -163,7 +163,7 @@ export function ScheduleForm() {
             required
             value={startsAt}
             onChange={(event) => setStartsAt(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -177,7 +177,7 @@ export function ScheduleForm() {
             required
             value={endsAt}
             onChange={(event) => setEndsAt(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -192,7 +192,7 @@ export function ScheduleForm() {
             max={480}
             value={breakMinutes}
             onChange={(event) => setBreakMinutes(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -206,7 +206,7 @@ export function ScheduleForm() {
             min={0}
             max={120}
             defaultValue={10}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>

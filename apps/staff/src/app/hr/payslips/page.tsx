@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getDb } from "@cac/db";
 import { formatAmount, formatDate, listPayslips } from "@cac/core";
 import { requireCapability } from "@/lib/auth";
+import { ownEmployeeFilter, UNLINKED_ACCOUNT } from "@/lib/own-employee";
 import { Shell } from "@/components/Shell";
 import { Alert, Badge, DataTable, EmptyState, Panel, Td } from "@/components/ui";
 
@@ -18,10 +19,14 @@ export default async function PayslipsPage() {
 
   const canSeeAll = principal.capabilities.has("hr.payslip.view_all");
 
-  const payslips = await listPayslips(db, {
-    employeeId: canSeeAll ? undefined : (principal.employeeId ?? "none"),
-    limit: 500,
-  });
+  // The message below was already written for this case and was unreachable: the query ran first
+  // and threw. See lib/own-employee.ts.
+  const mine = ownEmployeeFilter(principal, !canSeeAll);
+
+  const payslips =
+    mine.scope === "unlinked"
+      ? []
+      : await listPayslips(db, { employeeId: mine.employeeId, limit: 500 });
 
   return (
     <Shell
@@ -30,12 +35,7 @@ export default async function PayslipsPage() {
       breadcrumbs={[{ label: "Human resources" }, { label: "Payslips" }]}
     >
       <div className="space-y-4">
-        {!principal.employeeId && !canSeeAll && (
-          <Alert tone="info">
-            Your account is not linked to an employee record, so there are no payslips to show. An
-            administrator links the two.
-          </Alert>
-        )}
+        {mine.scope === "unlinked" && <Alert tone="info">{UNLINKED_ACCOUNT}</Alert>}
 
         <Panel title={canSeeAll ? `All payslips (${payslips.length})` : "Your payslips"}>
           {payslips.length === 0 ? (
@@ -53,7 +53,7 @@ export default async function PayslipsPage() {
                   <Td>
                     <Link
                       href={`/hr/payslips/${payslip.id}`}
-                      className="text-[var(--color-info)] hover:underline"
+                      className="text-[var(--color-link)] hover:underline"
                     >
                       {formatDate(payslip.periodFrom)} – {formatDate(payslip.periodTo)}
                     </Link>

@@ -155,7 +155,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                 <Detail label="Customer">
                   <Link
                     href={`/accounting/customers/${invoice.customerId}`}
-                    className="text-[var(--color-info)] hover:underline"
+                    className="text-[var(--color-link)] hover:underline"
                   >
                     {invoice.customerName}
                   </Link>
@@ -172,7 +172,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                   {invoice.quotationNo ? (
                     <Link
                       href={`/accounting/quotations/${invoice.quotationId}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {invoice.quotationNo}
                     </Link>
@@ -215,7 +215,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                     <Td>
                       <Link
                         href={`/accounting/accounts/${line.accountCode}`}
-                        className="text-[var(--color-info)] hover:underline"
+                        className="text-[var(--color-link)] hover:underline"
                       >
                         <span className="font-mono text-[11px]">{line.accountCode}</span>
                       </Link>
@@ -271,7 +271,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                       <Td>
                         <Link
                           href={`/accounting/invoices/${note.id}`}
-                          className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                         >
                           {note.invoiceNo ?? "draft"}
                         </Link>
@@ -318,7 +318,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                   Posted as{" "}
                   <Link
                     href={`/accounting/journals/${invoice.journalId}`}
-                    className="font-mono text-[var(--color-info)] hover:underline"
+                    className="font-mono text-[var(--color-link)] hover:underline"
                   >
                     {invoice.journalNo}
                   </Link>
@@ -329,7 +329,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                     Reversed by{" "}
                     <Link
                       href={`/accounting/journals/${invoice.voidJournalId}`}
-                      className="font-mono text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[var(--color-link)] hover:underline"
                     >
                       the void entry
                     </Link>

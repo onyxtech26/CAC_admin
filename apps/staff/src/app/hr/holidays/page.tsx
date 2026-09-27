@@ -58,7 +58,7 @@ export default async function HolidaysPage({
                 href={`/hr/holidays?year=${option}`}
                 className={`rounded-md border px-3 py-1.5 ${
                   option === year
-                    ? "border-[var(--color-navy)] bg-[var(--color-navy)] text-white"
+                    ? "border-[var(--color-gold-2)] bg-[var(--color-gold-2)] font-semibold text-[var(--color-navy)]"
                     : "border-[var(--color-line-strong)] hover:bg-[var(--color-canvas)]"
                 }`}
               >

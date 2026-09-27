@@ -86,13 +86,13 @@ export function RemoveHoliday({ holidayId, name }: { holidayId: string; name: st
         required
         placeholder="Why"
         aria-label={`Reason for removing ${name}`}
-        className="w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
       <div className="flex gap-1">
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-[var(--color-danger)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-danger px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Remove"}
         </button>

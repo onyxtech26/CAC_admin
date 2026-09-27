@@ -66,7 +66,7 @@ export default async function BankAccountPage({ params }: { params: Promise<{ id
             A reconciliation to {formatDate(open.asAt)} is in progress.{" "}
             <Link
               href={`/accounting/bank/${id}/reconcile`}
-              className="font-medium text-[var(--color-info)] hover:underline"
+              className="font-medium text-[var(--color-link)] hover:underline"
             >
               Carry on with it
             </Link>

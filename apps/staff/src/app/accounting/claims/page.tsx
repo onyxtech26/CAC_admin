@@ -111,7 +111,7 @@ export default async function ClaimsPage({
                 id="status"
                 name="status"
                 defaultValue={query.status ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               >
                 <option value="">All</option>
                 {Object.entries(LABEL).map(([value, label]) => (
@@ -129,7 +129,7 @@ export default async function ClaimsPage({
             )}
             <button
               type="submit"
-              className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+              className="btn btn-primary px-3 py-2 text-[13px]"
             >
               Apply
             </button>
@@ -162,7 +162,7 @@ export default async function ClaimsPage({
                   <Td>
                     <Link
                       href={`/accounting/claims/${claim.id}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {claim.claimNo ?? "draft"}
                     </Link>

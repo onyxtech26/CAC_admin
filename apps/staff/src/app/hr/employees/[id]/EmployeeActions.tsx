@@ -64,7 +64,7 @@ export function EmploymentEventForm({
             name="kind"
             value={kind}
             onChange={(event) => setKind(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="confirmed">Confirmed after probation</option>
             <option value="salary_changed">Salary changed</option>
@@ -89,7 +89,7 @@ export function EmploymentEventForm({
             type="date"
             required
             defaultValue={suggestedDate}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
           <p className="mt-1 text-[11px] text-[var(--color-muted)]">
             The date it took effect, not today. Payroll reads this.
@@ -107,7 +107,7 @@ export function EmploymentEventForm({
             name="basicSalary"
             required
             inputMode="decimal"
-            className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-right text-[14px]"
+            className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-right text-[14px]"
           />
           <p className="mt-1 text-[11px] text-[var(--color-muted)]">
             Recorded against the date above, so a payroll run for an earlier month still finds the
@@ -125,7 +125,7 @@ export function EmploymentEventForm({
             <select
               id="positionId"
               name="positionId"
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             >
               <option value="">Unchanged</option>
               {positions.map((row) => (
@@ -142,7 +142,7 @@ export function EmploymentEventForm({
             <select
               id="departmentId"
               name="departmentId"
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             >
               <option value="">Unchanged</option>
               {departments.map((row) => (
@@ -164,7 +164,7 @@ export function EmploymentEventForm({
             id="employmentType"
             name="employmentType"
             required
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="permanent">Permanent</option>
             <option value="probation">On probation</option>
@@ -184,7 +184,7 @@ export function EmploymentEventForm({
           name="reason"
           required={exiting}
           placeholder={exiting ? "Why the employment ended" : "Optional, but worth writing"}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
 
@@ -226,7 +226,7 @@ export function DeviceMappingForm({
         name="deviceUserId"
         required
         defaultValue={current ?? ""}
-        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
       />
       <p className="text-[11px] text-[var(--color-muted)]">
         What the thumbprint reader calls this person. Until it is set their scans arrive with
@@ -303,7 +303,7 @@ export function SensitiveReveal({ employeeId }: { employeeId: string }) {
           name="reason"
           required
           placeholder="Preparing the EPF submission for March"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
 

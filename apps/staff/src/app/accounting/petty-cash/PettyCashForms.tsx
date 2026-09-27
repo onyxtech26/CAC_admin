@@ -56,7 +56,7 @@ export function PettyCashEntryForm({
             name="kind"
             value={kind}
             onChange={(event) => setKind(event.target.value as "expense")}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="expense">Money spent from the tin</option>
             <option value="top_up">Topping the tin up from the bank</option>
@@ -74,7 +74,7 @@ export function PettyCashEntryForm({
             id="counterpartAccountId"
             name="counterpartAccountId"
             required
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {accounts.map((account) => (
@@ -142,7 +142,7 @@ export function PettyCashRowActions({
         <button
           type="submit"
           disabled={pending}
-          className="rounded border border-[var(--color-navy)] bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Post"}
         </button>
@@ -172,13 +172,13 @@ export function PettyCashRowActions({
         required
         placeholder="Reason"
         aria-label="Reason for voiding"
-        className="w-32 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-32 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
       <div className="flex gap-1">
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-[var(--color-danger)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-danger px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Void"}
         </button>
@@ -249,7 +249,7 @@ export function PettyCashCountForm({
             inputMode="decimal"
             value={counted}
             onChange={(event) => setCounted(event.target.value)}
-            className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-right text-[14px]"
+            className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-right text-[14px]"
           />
           <p className="mt-1 text-[11px] text-[var(--color-muted)]">
             The ledger says {formatAmount(parseAmount(bookBalance))}.

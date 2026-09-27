@@ -115,7 +115,7 @@ export function VoucherActions({
                 name="reason"
                 required
                 placeholder="Paid the wrong supplier, duplicate…"
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
               />
               <p className="text-[11px] text-[var(--color-muted)]">
                 The ledger entry is reversed and both entries stay visible.

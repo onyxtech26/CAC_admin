@@ -95,7 +95,7 @@ export default async function AttendanceImportBatchPage({
                 <p className="mt-3 border-t border-[var(--color-line)] pt-3 text-[11px] text-[var(--color-muted)]">
                   A row rejected because the device number is unknown is fixed by mapping that number
                   on the{" "}
-                  <Link href="/hr/employees" className="text-[var(--color-info)] hover:underline">
+                  <Link href="/hr/employees" className="text-[var(--color-link)] hover:underline">
                     employee record
                   </Link>{" "}
                   and importing the file again.
@@ -115,7 +115,7 @@ export default async function AttendanceImportBatchPage({
                       {row.employeeId ? (
                         <Link
                           href={`/hr/employees/${row.employeeId}`}
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           {row.employeeName}
                         </Link>

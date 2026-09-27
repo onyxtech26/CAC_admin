@@ -106,7 +106,7 @@ export function EmployeeForm({
               name="nationality"
               value={nationality}
               onChange={(event) => setNationality(event.target.value)}
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             >
               <option value="Malaysian">Malaysian</option>
               <option value="Other">Other</option>

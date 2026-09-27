@@ -68,7 +68,7 @@ export function UploadForm({
           name="file"
           type="file"
           required
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           Up to {maxMegabytes} MB. Originals are held in the database so a backup restores the

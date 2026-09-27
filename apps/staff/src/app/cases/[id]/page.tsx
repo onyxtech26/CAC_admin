@@ -196,7 +196,7 @@ export default async function CasePage({ params }: { params: Promise<{ id: strin
                   {record.customerName ? (
                     <Link
                       href={`/accounting/customers`}
-                      className="text-[var(--color-info)] hover:underline"
+                      className="text-[var(--color-link)] hover:underline"
                     >
                       {record.customerName}
                     </Link>

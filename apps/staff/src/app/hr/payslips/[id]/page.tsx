@@ -184,7 +184,7 @@ export default async function PayslipPage({ params }: { params: Promise<{ id: st
               </p>
               {principal.capabilities.has("hr.statutory.view") && (
                 <p className="mt-2 text-[12px]">
-                  <Link href="/hr/statutory" className="text-[var(--color-info)] hover:underline">
+                  <Link href="/hr/statutory" className="text-[var(--color-link)] hover:underline">
                     The rules themselves
                   </Link>
                 </p>

@@ -198,7 +198,7 @@ export default async function GeneratedDocumentPage({
                 <Row label="Matter">
                   <Link
                     href={`/cases/${id}`}
-                    className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                    className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                   >
                     {document.caseNo}
                   </Link>
@@ -230,7 +230,7 @@ export default async function GeneratedDocumentPage({
                 <p className="mt-3 border-t border-[var(--color-line)] pt-3 text-[12px]">
                   <Link
                     href={`/documents/${document.pdfDocumentId}`}
-                    className="text-[var(--color-info)] hover:underline"
+                    className="text-[var(--color-link)] hover:underline"
                   >
                     The stored PDF in the library
                   </Link>
@@ -261,7 +261,7 @@ export default async function GeneratedDocumentPage({
                 <p className="mt-2 text-[12px]">
                   <Link
                     href={`/cases/${id}/documents`}
-                    className="text-[var(--color-info)] hover:underline"
+                    className="text-[var(--color-link)] hover:underline"
                   >
                     Produce the correction
                   </Link>

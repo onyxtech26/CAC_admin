@@ -187,7 +187,7 @@ export default async function StatutoryPage() {
                         {version.sourceUrl && (
                           <a
                             href={version.sourceUrl}
-                            className="ml-1 text-[11px] text-[var(--color-info)] hover:underline"
+                            className="ml-1 text-[11px] text-[var(--color-link)] hover:underline"
                             rel="noreferrer noopener"
                             target="_blank"
                           >

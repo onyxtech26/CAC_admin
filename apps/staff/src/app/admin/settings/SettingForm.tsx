@@ -62,7 +62,7 @@ export function SettingForm({
           name="value"
           defaultValue={current}
           placeholder="Leave blank for unset"
-          className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 font-mono text-[12px]"
+          className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 font-mono text-[12px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           JSON: <code>30</code>, <code>true</code>, <code>&quot;Asia/Kuala_Lumpur&quot;</code>,{" "}
@@ -79,7 +79,7 @@ export function SettingForm({
             id={`r-${settingKey}`}
             name="reason"
             required
-            className="mt-1 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]"
+            className="mt-1 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-[12px]"
           />
           <p className="mt-1 text-[11px] text-[var(--color-muted)]">
             This setting carries statutory or financial weight, so the change needs a reason on the
@@ -92,7 +92,7 @@ export function SettingForm({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-[var(--color-navy)] px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           {pending ? "Saving…" : "Save"}
         </button>

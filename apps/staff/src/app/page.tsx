@@ -1,20 +1,46 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@cac/db";
 import { requirePrincipal } from "@/lib/auth";
+import { NAVIGATION } from "@/lib/nav";
 import { Shell } from "@/components/Shell";
 import { Alert, Badge, DataTable, EmptyState, Panel, StatTile, Td } from "@/components/ui";
 
 /**
  * The dashboard.
  *
- * Widgets are role-aware: a widget is rendered only when the caller holds the
- * capability its data belongs to. Rather than invent figures for modules that
- * do not exist yet, this shows what is genuinely known today — the platform's
- * own security and configuration state — and says plainly what is coming.
+ * Widgets are role-aware: a widget is rendered only when the caller holds the capability its data
+ * belongs to. Rather than invent figures for modules that do not exist yet, this shows what is
+ * genuinely known today — the platform's own security and configuration state — and says plainly
+ * what is coming.
+ *
+ * "What is live" is **derived from the navigation**, not written out here. It was written out here,
+ * and it went stale exactly the way a hand-maintained list of what exists always does: it went on
+ * telling anyone who signed in that invoicing, payroll and case management were unbuilt for the
+ * whole of the time they were being built. A dashboard that is wrong about the product is worse
+ * than a dashboard with nothing on it, and it is wrong quietly.
+ *
+ * The navigation already records what is not built, because each unbuilt entry carries the phase
+ * it is due in and renders disabled. Reading the status off the same source means the two cannot
+ * disagree: ship a module, delete its `phase`, and both the menu and this panel say so.
  */
 export default async function DashboardPage() {
   const principal = await requirePrincipal();
   const db = await getDb();
+
+  // One row per navigation section, live unless something inside it is still to come. Not
+  // filtered by role: this is a statement about the platform, and a clerk who cannot open payroll
+  // should still be told it exists.
+  const moduleStatus = NAVIGATION.filter((section) => section.heading !== "Account").map(
+    (section) => {
+      const pending = section.items
+        .map((item) => item.phase)
+        .filter((phase): phase is number => typeof phase === "number");
+      return {
+        heading: section.heading,
+        phase: pending.length > 0 ? Math.min(...pending) : null,
+      };
+    },
+  );
 
   const [settingsToConfirm, recentEvents, activeSessions] = await Promise.all([
     db.execute<{ key: string; label: string; description: string | null }>(sql`
@@ -76,34 +102,16 @@ export default async function DashboardPage() {
         <div className="space-y-4">
           <Panel title="Platform status" description="What is live today.">
             <ul className="space-y-2 text-[13px]">
-              <li className="flex items-center justify-between">
-                <span>Authentication, MFA and sessions</span>
-                <Badge tone="ok">Live</Badge>
-              </li>
-              <li className="flex items-center justify-between">
-                <span>Role-based access control</span>
-                <Badge tone="ok">Live</Badge>
-              </li>
-              <li className="flex items-center justify-between">
-                <span>Audit trail</span>
-                <Badge tone="ok">Live</Badge>
-              </li>
-              <li className="flex items-center justify-between">
-                <span>Accounting ledger and posting engine</span>
-                <Badge tone="ok">Live</Badge>
-              </li>
-              <li className="flex items-center justify-between">
-                <span>Invoicing, receipts and vouchers</span>
-                <Badge>Phase 3</Badge>
-              </li>
-              <li className="flex items-center justify-between">
-                <span>HR and payroll</span>
-                <Badge>Phase 5–8</Badge>
-              </li>
-              <li className="flex items-center justify-between">
-                <span>Case management and estate agent</span>
-                <Badge>Phase 9–12</Badge>
-              </li>
+              {moduleStatus.map((module) => (
+                <li key={module.heading} className="flex items-center justify-between gap-3">
+                  <span>{module.heading}</span>
+                  {module.phase === null ? (
+                    <Badge tone="ok">Live</Badge>
+                  ) : (
+                    <Badge>Phase {module.phase}</Badge>
+                  )}
+                </li>
+              ))}
             </ul>
           </Panel>
 

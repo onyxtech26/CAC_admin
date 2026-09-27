@@ -196,7 +196,7 @@ export default async function ReconcilePage({ params }: { params: Promise<{ id: 
                       <Td>
                         <Link
                           href={`/accounting/journals/${row.journalId}`}
-                          className="font-mono text-[11px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[11px] text-[var(--color-link)] hover:underline"
                         >
                           {row.journalNo ?? "—"}
                         </Link>

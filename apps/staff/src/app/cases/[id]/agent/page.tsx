@@ -170,7 +170,7 @@ export default async function CaseAgentPage({ params }: { params: Promise<{ id: 
             </ol>
           )}
           <p className="mt-3 text-[12px]">
-            <Link href={`/cases/${id}/intake`} className="text-[var(--color-info)] hover:underline">
+            <Link href={`/cases/${id}/intake`} className="text-[var(--color-link)] hover:underline">
               Answer them on the intake screen
             </Link>
           </p>
@@ -197,7 +197,7 @@ export default async function CaseAgentPage({ params }: { params: Promise<{ id: 
                   <Td>
                     <Link
                       href={`/cases/${id}${WHERE[gap.where].path}`}
-                      className="text-[11px] text-[var(--color-info)] hover:underline"
+                      className="text-[11px] text-[var(--color-link)] hover:underline"
                     >
                       {WHERE[gap.where].label}
                     </Link>
@@ -250,7 +250,7 @@ export default async function CaseAgentPage({ params }: { params: Promise<{ id: 
                   <Td>
                     <Link
                       href={`/cases/${entry.caseId}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {entry.caseNo}
                     </Link>
@@ -294,7 +294,7 @@ export default async function CaseAgentPage({ params }: { params: Promise<{ id: 
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <Link
                         href={`/documents/${passage.documentId}`}
-                        className="text-[13px] font-medium text-[var(--color-info)] hover:underline"
+                        className="text-[13px] font-medium text-[var(--color-link)] hover:underline"
                       >
                         {passage.documentTitle}
                       </Link>

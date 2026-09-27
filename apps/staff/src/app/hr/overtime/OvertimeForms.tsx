@@ -71,7 +71,7 @@ export function OvertimeRequestForm({
             name="employeeId"
             required
             defaultValue={ownEmployeeId ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {employees.map((employee) => (
@@ -95,7 +95,7 @@ export function OvertimeRequestForm({
             id="startsAt"
             name="startsAt"
             type="time"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -106,7 +106,7 @@ export function OvertimeRequestForm({
             id="endsAt"
             name="endsAt"
             type="time"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -176,13 +176,13 @@ export function OvertimeDecision({
           required
           placeholder="Why"
           aria-label="Reason for refusing"
-          className="w-32 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+          className="w-32 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
         />
         <div className="flex gap-1">
           <button
             type="submit"
             disabled={pending}
-            className="rounded bg-[var(--color-danger)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+            className="btn btn-danger px-2 py-1 text-[11px]"
           >
             {pending ? "…" : "Refuse"}
           </button>
@@ -205,7 +205,7 @@ export function OvertimeDecision({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="rounded border border-[var(--color-navy)] bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           Decide
         </button>
@@ -235,7 +235,7 @@ export function OvertimeDecision({
           name="approvedHours"
           defaultValue={String(requestedHours)}
           inputMode="decimal"
-          className="numeric mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-right text-[12px]"
+          className="numeric mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-right text-[12px]"
         />
         <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">
           {requestedHours} claimed
@@ -253,7 +253,7 @@ export function OvertimeDecision({
           name="rateMultiple"
           inputMode="decimal"
           placeholder="leave blank if not yet known"
-          className="numeric mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-right text-[12px]"
+          className="numeric mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-right text-[12px]"
         />
         <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">
           A {dayKindLabel(dayKind)}. The multiple comes from the Employment Act, which CAC has not yet
@@ -264,20 +264,20 @@ export function OvertimeDecision({
       <input
         name="rateSource"
         placeholder="Where the rate comes from"
-        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
 
       <input
         name="note"
         placeholder="Note, optional"
-        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
 
       <div className="flex gap-1">
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Approve"}
         </button>
@@ -345,7 +345,7 @@ export function OvertimeRate({
           name="rateMultiple"
           required
           inputMode="decimal"
-          className="numeric mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-right text-[12px]"
+          className="numeric mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-right text-[12px]"
         />
         <p className="mt-0.5 text-[10px] text-[var(--color-muted)]">
           A {dayKindLabel(dayKind)}. The hours and the approver are unchanged; only the rate is being
@@ -358,14 +358,14 @@ export function OvertimeRate({
         required
         placeholder="Where the rate comes from"
         aria-label="Where the rate comes from"
-        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
 
       <div className="flex gap-1">
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Record"}
         </button>
@@ -410,7 +410,7 @@ export function TimeoffRequestForm({
             name="employeeId"
             required
             defaultValue={ownEmployeeId ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {employees.map((employee) => (
@@ -433,7 +433,7 @@ export function TimeoffRequestForm({
           <select
             id="kind"
             name="kind"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="late_in">Coming in late</option>
             <option value="early_out">Leaving early</option>
@@ -477,12 +477,12 @@ export function TimeoffDecision({ requestId, canDecide }: { requestId: string; c
           required
           placeholder="Why"
           aria-label="Reason for refusing"
-          className="w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+          className="w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
         />
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-[var(--color-danger)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-danger px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Refuse"}
         </button>
@@ -499,7 +499,7 @@ export function TimeoffDecision({ requestId, canDecide }: { requestId: string; c
         <button
           type="submit"
           disabled={pending}
-          className="rounded border border-[var(--color-navy)] bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Approve"}
         </button>
@@ -541,7 +541,7 @@ export function RecalculateForm({ from, to }: { from: string; to: string }) {
             type="date"
             required
             defaultValue={from}
-            className="mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+            className="mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
           />
         </div>
         <div>
@@ -554,7 +554,7 @@ export function RecalculateForm({ from, to }: { from: string; to: string }) {
             type="date"
             required
             defaultValue={to}
-            className="mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+            className="mt-0.5 w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
           />
         </div>
       </div>

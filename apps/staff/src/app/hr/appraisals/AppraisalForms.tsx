@@ -58,12 +58,12 @@ export function CycleForm({ defaultFrom, defaultTo }: { defaultFrom: string; def
             name="templateJson"
             rows={8}
             placeholder={`{"scale":{"min":1,"max":5},"sections":[{"key":"delivery","title":"Delivery","questions":[{"key":"quality","prompt":"Report quality","rated":true,"comment":true}]}]}`}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 font-mono text-[11px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 font-mono text-[11px]"
           />
           <button
             type="button"
             onClick={() => setAdvanced(false)}
-            className="mt-1 text-[11px] text-[var(--color-info)] hover:underline"
+            className="mt-1 text-[11px] text-[var(--color-link)] hover:underline"
           >
             Use the simple form instead
           </button>
@@ -79,7 +79,7 @@ export function CycleForm({ defaultFrom, defaultTo }: { defaultFrom: string; def
               name="sections"
               rows={5}
               placeholder={"Delivery: report quality, meeting agreed dates\nConduct: dealing with clients, working with colleagues"}
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
             />
             <p className="mt-1 text-[11px] text-[var(--color-muted)]">
               One section per line: a heading, a colon, then the things to be rated, separated by
@@ -95,7 +95,7 @@ export function CycleForm({ defaultFrom, defaultTo }: { defaultFrom: string; def
           <button
             type="button"
             onClick={() => setAdvanced(true)}
-            className="text-[11px] text-[var(--color-info)] hover:underline"
+            className="text-[11px] text-[var(--color-link)] hover:underline"
           >
             Paste a form as JSON instead
           </button>
@@ -126,7 +126,7 @@ export function OpenCycle({ cycleId, name }: { cycleId: string; name: string }) 
       <button
         type="submit"
         disabled={pending}
-        className="rounded border border-[var(--color-navy)] bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+        className="btn btn-primary px-2 py-1 text-[11px]"
       >
         {pending ? "Opening…" : `Open ${name}`}
       </button>
@@ -202,7 +202,7 @@ export function AnswerForm({
                     id={`answer.${section.key}.${question.key}`}
                     name={`answer.${section.key}.${question.key}`}
                     defaultValue={valueOf(existing, section.key, question.key)}
-                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                   >
                     <option value="">Not answered</option>
                     {Array.from(
@@ -219,7 +219,7 @@ export function AnswerForm({
                     id={`answer.${section.key}.${question.key}`}
                     name={`answer.${section.key}.${question.key}`}
                     defaultValue={valueOf(existing, section.key, question.key)}
-                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                   />
                 )}
 
@@ -228,7 +228,7 @@ export function AnswerForm({
                     name={`answer.${section.key}.${question.key}_comment`}
                     placeholder="Comment"
                     defaultValue={valueOf(existing, section.key, `${question.key}_comment`)}
-                    className="mt-1 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px]"
+                    className="mt-1 w-full rounded-md border border-[var(--color-line)] bg-[var(--color-ink)]/55 px-3 py-1.5 text-[12px]"
                   />
                 )}
               </div>
@@ -289,7 +289,7 @@ export function AcknowledgeForm({ appraisalId }: { appraisalId: string }) {
           id="comment"
           name="comment"
           rows={3}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           Acknowledging is not agreeing. If you disagree with something, say so here — it becomes

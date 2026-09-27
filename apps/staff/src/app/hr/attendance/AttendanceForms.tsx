@@ -45,7 +45,7 @@ export function AttendanceDayForm({
             id="employeeId"
             name="employeeId"
             required
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {employees.map((employee) => (
@@ -66,7 +66,7 @@ export function AttendanceDayForm({
             type="date"
             required
             defaultValue={defaultDate}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -91,7 +91,7 @@ export function AttendanceDayForm({
               id="clockIn"
               name="clockIn"
               type="time"
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             />
           </div>
           <div>
@@ -102,7 +102,7 @@ export function AttendanceDayForm({
               id="clockOut"
               name="clockOut"
               type="time"
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             />
             <p className="mt-1 text-[11px] text-[var(--color-muted)]">
               Leave blank if the scan is genuinely missing, and say so in the remark. Inventing a
@@ -120,7 +120,7 @@ export function AttendanceDayForm({
           id="onLeaveType"
           name="onLeaveType"
           placeholder="annual, sick, unpaid…"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           Free text for now. Leave types and balances arrive with the leave module.
@@ -135,7 +135,7 @@ export function AttendanceDayForm({
           <input
             id="remarks"
             name="remarks"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -145,7 +145,7 @@ export function AttendanceDayForm({
           <input
             id="reason"
             name="reason"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -178,7 +178,7 @@ export function OpenPeriodForm({ defaultFrom, defaultTo }: { defaultFrom: string
             type="date"
             required
             defaultValue={defaultFrom}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -191,7 +191,7 @@ export function OpenPeriodForm({ defaultFrom, defaultTo }: { defaultFrom: string
             type="date"
             required
             defaultValue={defaultTo}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -232,7 +232,7 @@ export function PeriodActions({
         <button
           type="submit"
           disabled={pending}
-          className="rounded border border-[var(--color-navy)] bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           {pending ? "…" : `Finalise ${draftCount} day${draftCount === 1 ? "" : "s"}`}
         </button>
@@ -265,7 +265,7 @@ export function PeriodActions({
         required
         placeholder="Why"
         aria-label="Reason for reopening"
-        className="w-32 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-32 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
       <p className="text-[10px] text-[var(--color-muted)]">
         Payroll may already have been run against this period.
@@ -274,7 +274,7 @@ export function PeriodActions({
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-[var(--color-warn)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-warn px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Reopen"}
         </button>

@@ -10,7 +10,7 @@ export default function MfaPage() {
   const [state, action, pending] = useActionState(verifyMfa, initial);
 
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
+    <div className="plate rounded-lg p-5">
       <h1 className="text-[15px] font-semibold">Two-step verification</h1>
       <p className="mt-1 text-[12px] text-[var(--color-muted)]">
         Enter the 6-digit code from your authenticator app.

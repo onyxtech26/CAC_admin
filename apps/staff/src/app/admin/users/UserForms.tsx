@@ -248,7 +248,7 @@ export function RoleToggle({
           onChange={(event) => setReason(event.target.value)}
           placeholder="Reason (optional)"
           aria-label={`Reason for revoking ${role}`}
-          className="w-40 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+          className="w-40 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
         />
       )}
 
@@ -259,7 +259,7 @@ export function RoleToggle({
         className={`rounded border px-2 py-1 text-[11px] disabled:cursor-not-allowed disabled:opacity-40 ${
           held
             ? "border-[var(--color-line-strong)] hover:bg-[var(--color-canvas)]"
-            : "border-[var(--color-navy)] bg-[var(--color-navy)] text-white"
+            : "border-[var(--color-gold-2)] bg-[var(--color-gold-2)] font-semibold text-[var(--color-navy)]"
         }`}
       >
         {pending ? "…" : held ? "Revoke" : "Grant"}

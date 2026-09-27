@@ -88,7 +88,7 @@ export function ImportActions({
             name="reason"
             required
             placeholder="Wrong device, wrong month, columns mapped wrongly…"
-            className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+            className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
           />
           <div className="flex gap-2">
             <Button type="submit" variant="danger" disabled={pending}>

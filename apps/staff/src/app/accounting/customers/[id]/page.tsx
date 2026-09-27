@@ -127,7 +127,7 @@ export default async function CustomerPage({
                       <Td>
                         <Link
                           href={`/accounting/receipts/${receipt.id}`}
-                          className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                         >
                           {receipt.receiptNo}
                         </Link>
@@ -165,7 +165,7 @@ export default async function CustomerPage({
                               ? `/accounting/receipts/${entry.documentId}`
                               : `/accounting/invoices/${entry.documentId}`
                           }
-                          className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                         >
                           {entry.reference}
                         </Link>

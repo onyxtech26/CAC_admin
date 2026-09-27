@@ -52,7 +52,7 @@ export function ClaimHeader({
             type="date"
             required
             defaultValue={defaults?.claimDate ?? defaultDate}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
 
@@ -65,7 +65,7 @@ export function ClaimHeader({
             name="periodFrom"
             type="date"
             defaultValue={defaults?.periodFrom ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
 
@@ -78,7 +78,7 @@ export function ClaimHeader({
             name="periodTo"
             type="date"
             defaultValue={defaults?.periodTo ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -92,7 +92,7 @@ export function ClaimHeader({
           name="subject"
           defaultValue={defaults?.subject ?? ""}
           placeholder="Site visit travel, October"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
 
@@ -106,7 +106,7 @@ export function ClaimHeader({
           rows={2}
           defaultValue={defaults?.notes ?? ""}
           placeholder="Anything the approver needs to know."
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
     </div>

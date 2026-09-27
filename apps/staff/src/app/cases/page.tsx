@@ -114,7 +114,7 @@ export default async function CasesPage({
                   <Td>
                     <Link
                       href={`/cases/${task.caseId}/checklist`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {task.caseNo}
                     </Link>
@@ -147,7 +147,7 @@ export default async function CasesPage({
                 name="q"
                 defaultValue={filters.q ?? ""}
                 placeholder="Case number, title, name, court reference"
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[13px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[13px]"
               />
             </div>
             <div>
@@ -158,7 +158,7 @@ export default async function CasesPage({
                 id="status"
                 name="status"
                 defaultValue={filters.status ?? "active"}
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[13px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[13px]"
               >
                 <option value="active">Live matters</option>
                 <option value="intake">Intake</option>
@@ -176,7 +176,7 @@ export default async function CasesPage({
                 id="type"
                 name="type"
                 defaultValue={filters.type ?? ""}
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[13px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[13px]"
               >
                 <option value="">Any</option>
                 {MATTER_TYPES.map((type) => (
@@ -222,7 +222,7 @@ export default async function CasesPage({
                   <Td>
                     <Link
                       href={`/cases/${entry.id}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {entry.caseNo}
                     </Link>

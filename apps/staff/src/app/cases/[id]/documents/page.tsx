@@ -125,7 +125,7 @@ export default async function CaseDocumentsPage({
                   <Td>
                     <Link
                       href={`/cases/${id}/documents/${document.id}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {document.documentNo}
                     </Link>
@@ -189,7 +189,7 @@ export default async function CaseDocumentsPage({
               <p className="mt-3 text-[11px] text-[var(--color-muted)]">
                 {usable.name} · {usable.code} v{usable.version}
                 {usable.sourceRef ? ` · follows ${usable.sourceRef}` : ""} ·{" "}
-                <Link href={`/cases/${id}/documents`} className="text-[var(--color-info)] hover:underline">
+                <Link href={`/cases/${id}/documents`} className="text-[var(--color-link)] hover:underline">
                   choose a different one
                 </Link>
               </p>

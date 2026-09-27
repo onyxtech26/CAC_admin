@@ -66,7 +66,7 @@ export function AttendanceImportWizard() {
                 name="file"
                 type="file"
                 accept=".csv,.txt,.tsv,text/csv,text/plain"
-                className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
               <p className="mt-1 text-[11px] text-[var(--color-muted)]">
                 Whatever the thumbprint reader produces, as long as it is delimited text. If it only
@@ -83,7 +83,7 @@ export function AttendanceImportWizard() {
                 name="pasted"
                 rows={6}
                 placeholder="USERID,Name,Date/Time&#10;101,Aishah,13/07/2026 08:57"
-                className="mt-2 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 font-mono text-[12px]"
+                className="mt-2 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 font-mono text-[12px]"
               />
             </details>
           </>
@@ -101,7 +101,7 @@ export function AttendanceImportWizard() {
               min={0}
               max={50}
               defaultValue={preview.preview?.skipRows ?? 0}
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             />
             <p className="mt-1 text-[11px] text-[var(--color-muted)]">
               Device exports usually begin with the company name and a date range.
@@ -116,7 +116,7 @@ export function AttendanceImportWizard() {
               id="mapping.dateFormat"
               name="mapping.dateFormat"
               defaultValue={mapping?.dateFormat ?? "auto"}
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             >
               <option value="auto">Work it out where it is unambiguous</option>
               <option value="dmy">Day first — 03/04/2026 is 3 April</option>
@@ -143,7 +143,7 @@ export function AttendanceImportWizard() {
                     id={`mapping.${field.key}`}
                     name={`mapping.${field.key}`}
                     defaultValue={String(columnFor(field.key))}
-                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]"
+                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-[12px]"
                   >
                     <option value="-1">— none —</option>
                     {preview.preview!.header.map((heading, index) => (
@@ -312,7 +312,7 @@ export function AttendanceImportWizard() {
                   id="deviceLabel"
                   name="deviceLabel"
                   placeholder="Front door reader"
-                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
                 <p className="mt-1 text-[11px] text-[var(--color-muted)]">
                   Remembered with the column mapping, so next month&rsquo;s export from the same
@@ -326,7 +326,7 @@ export function AttendanceImportWizard() {
                 <input
                   id="notes"
                   name="notes"
-                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
               </div>
             </div>
@@ -360,7 +360,7 @@ export function AttendanceImportWizard() {
 
 function Figure({ label, value, tone }: { label: string; value: string; tone?: "warn" }) {
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-2">
+    <div className="plate rounded-lg px-3 py-2">
       <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--color-faint)]">
         {label}
       </p>

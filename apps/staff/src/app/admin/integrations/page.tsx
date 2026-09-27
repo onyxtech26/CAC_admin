@@ -172,7 +172,7 @@ export default async function IntegrationsPage() {
 
         <p className="text-[11px] text-[var(--color-muted)]">
           The same answers are in{" "}
-          <Link href="/api/health" className="text-[var(--color-info)] hover:underline">
+          <Link href="/api/health" className="text-[var(--color-link)] hover:underline">
             /api/health
           </Link>
           , which a monitoring system reads. This page is the one for a person.

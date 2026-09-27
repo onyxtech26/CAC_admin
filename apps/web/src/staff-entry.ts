@@ -23,8 +23,20 @@
 
 const CONFIGURED = import.meta.env.VITE_STAFF_LOGIN_URL as string | undefined;
 
-/** Where the staff login is, for this build. */
-export const STAFF_LOGIN_URL = (CONFIGURED && CONFIGURED.trim()) || "/staff/login";
+/**
+ * Where the staff login is, for this build.
+ *
+ * The production default assumes one origin with the staff app behind `/staff`. In development the
+ * two are separate servers on separate ports, so that path does not exist and the gesture led to
+ * the site's own 404 — the one case where the entrance is genuinely broken rather than merely
+ * unadvertised. Development therefore falls back to the staff dev server's own address.
+ *
+ * `VITE_STAFF_LOGIN_URL` still overrides both, which is what a deployment sets (Q-INFRA-1).
+ */
+const DEV_DEFAULT = "http://localhost:3100/login";
+
+export const STAFF_LOGIN_URL =
+  (CONFIGURED && CONFIGURED.trim()) || (import.meta.env.DEV ? DEV_DEFAULT : "/staff/login");
 
 /**
  * Sends the browser to the staff login.

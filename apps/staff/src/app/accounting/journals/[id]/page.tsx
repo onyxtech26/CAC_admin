@@ -137,7 +137,7 @@ export default async function JournalPage({ params }: { params: Promise<{ id: st
                 <Td>
                   <Link
                     href={`/accounting/accounts/${line.accountCode}`}
-                    className="text-[var(--color-info)] hover:underline"
+                    className="text-[var(--color-link)] hover:underline"
                   >
                     <span className="font-mono text-[12px]">{line.accountCode}</span> {line.accountName}
                   </Link>

@@ -157,7 +157,7 @@ export default async function PayrollPage() {
                       <Td>
                         <Link
                           href={`/hr/payroll/${run.id}`}
-                          className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                         >
                           {run.runNo ?? "draft"}
                         </Link>

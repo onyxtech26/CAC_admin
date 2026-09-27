@@ -10,6 +10,7 @@ import {
   toIsoDate,
 } from "@cac/core";
 import { requireCapability } from "@/lib/auth";
+import { ownEmployeeFilter, UNLINKED_ACCOUNT } from "@/lib/own-employee";
 import { Shell } from "@/components/Shell";
 import {
   Alert,
@@ -62,16 +63,19 @@ export default async function LeavePage({
   const canSetBalances = principal.capabilities.has("hr.leave.manage_balance");
   const onlyMine = !canApprove || query.mine === "1";
 
+  // An account that may only see its own leave, and is not linked to an employee record, has no
+  // rows rather than a query to run. See lib/own-employee.ts for what this used to do instead.
+  const mine = ownEmployeeFilter(principal, onlyMine);
+  const unlinked = mine.scope === "unlinked";
+
   const [types, requests, balances, employees] = await Promise.all([
     listLeaveTypes(db),
-    listLeaveRequests(db, {
-      employeeId: onlyMine ? (principal.employeeId ?? "none") : undefined,
-      limit: 300,
-    }),
-    listLeaveBalances(db, {
-      employeeId: onlyMine ? (principal.employeeId ?? "none") : undefined,
-      year,
-    }),
+    unlinked
+      ? Promise.resolve([])
+      : listLeaveRequests(db, { employeeId: mine.employeeId, limit: 300 }),
+    unlinked
+      ? Promise.resolve([])
+      : listLeaveBalances(db, { employeeId: mine.employeeId, year }),
     canApprove ? listEmployees(db, { limit: 1000 }) : Promise.resolve([]),
   ]);
 
@@ -93,6 +97,8 @@ export default async function LeavePage({
       breadcrumbs={[{ label: "Human resources" }, { label: "Leave" }]}
     >
       <div className="space-y-4">
+        {unlinked && <Alert tone="info">{UNLINKED_ACCOUNT}</Alert>}
+
         {types.length === 0 && (
           <Alert tone="warn">
             No leave types have been set up. Nothing can be requested until HR records the kinds of
@@ -158,12 +164,12 @@ export default async function LeavePage({
                   name="year"
                   type="number"
                   defaultValue={year}
-                  className="mt-1 w-24 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                  className="mt-1 w-24 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
                 />
               </div>
               <button
                 type="submit"
-                className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+                className="btn btn-primary px-3 py-2 text-[13px]"
               >
                 Apply
               </button>
@@ -196,7 +202,7 @@ export default async function LeavePage({
                         <Td>
                           <Link
                             href={`/hr/employees/${request.employeeId}`}
-                            className="text-[var(--color-info)] hover:underline"
+                            className="text-[var(--color-link)] hover:underline"
                           >
                             {request.employeeName}
                           </Link>

@@ -47,7 +47,7 @@ export default async function SuppliersPage({
                 name="q"
                 defaultValue={query.q ?? ""}
                 placeholder="Name or code"
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
             </div>
             <label className="flex items-center gap-2 pb-2 text-[12px]">
@@ -56,7 +56,7 @@ export default async function SuppliersPage({
             </label>
             <button
               type="submit"
-              className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+              className="btn btn-primary px-3 py-2 text-[13px]"
             >
               Search
             </button>

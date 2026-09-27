@@ -78,7 +78,7 @@ export function LeaveRequestForm({
             name="employeeId"
             required
             defaultValue={ownEmployeeId ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {employees.map((employee) => (
@@ -102,7 +102,7 @@ export function LeaveRequestForm({
           required
           value={typeId}
           onChange={(event) => setTypeId(event.target.value)}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         >
           <option value="">Choose…</option>
           {types.map((type) => (
@@ -135,7 +135,7 @@ export function LeaveRequestForm({
               setStartsOn(event.target.value);
               if (endsOn < event.target.value) setEndsOn(event.target.value);
             }}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -150,7 +150,7 @@ export function LeaveRequestForm({
             value={endsOn}
             min={startsOn}
             onChange={(event) => setEndsOn(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -227,13 +227,13 @@ export function LeaveDecision({
           required
           placeholder="Why"
           aria-label="Reason for refusing"
-          className="w-32 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+          className="w-32 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
         />
         <div className="flex gap-1">
           <button
             type="submit"
             disabled={pending}
-            className="rounded bg-[var(--color-danger)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+            className="btn btn-danger px-2 py-1 text-[11px]"
           >
             {pending ? "…" : "Refuse"}
           </button>
@@ -266,7 +266,7 @@ export function LeaveDecision({
         <button
           type="submit"
           disabled={pending}
-          className="rounded border border-[var(--color-navy)] bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Approve"}
         </button>
@@ -308,12 +308,12 @@ export function CancelLeave({ requestId }: { requestId: string }) {
         required
         placeholder="Why"
         aria-label="Reason for cancelling"
-        className="w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
       <button
         type="submit"
         disabled={pending}
-        className="rounded bg-[var(--color-warn)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+        className="btn btn-warn px-2 py-1 text-[11px]"
       >
         {pending ? "…" : "Cancel it"}
       </button>
@@ -353,7 +353,7 @@ export function LeaveTypeForm() {
             inputMode="decimal"
             value={days}
             onChange={(event) => setDays(event.target.value)}
-            className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-right text-[14px]"
+            className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-right text-[14px]"
           />
           <p className="mt-1 text-[11px] text-[var(--color-muted)]">
             Leave blank if it is not yet known. Blank is honest; a guess is not.
@@ -429,7 +429,7 @@ export function BalanceForm({
             id="b-employeeId"
             name="employeeId"
             required
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {employees.map((employee) => (
@@ -447,7 +447,7 @@ export function BalanceForm({
             id="b-leaveTypeId"
             name="leaveTypeId"
             required
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {types.map((type) => (
@@ -472,7 +472,7 @@ export function BalanceForm({
             inputMode="decimal"
             value={adjustment}
             onChange={(event) => setAdjustment(event.target.value)}
-            className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-right text-[14px]"
+            className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-right text-[14px]"
           />
         </div>
       </div>

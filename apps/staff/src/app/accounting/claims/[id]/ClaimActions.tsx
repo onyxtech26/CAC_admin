@@ -103,7 +103,7 @@ export function ClaimActions({
                     name="reason"
                     required
                     placeholder="No receipt for the second line…"
-                    className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                    className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                   />
                   <p className="text-[11px] text-[var(--color-muted)]">
                     The claimant sees this, so write it for them.
@@ -184,7 +184,7 @@ export function ClaimActions({
                     id="voucherId"
                     name="voucherId"
                     required
-                    className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                    className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                   >
                     <option value="">Choose…</option>
                     {vouchers.map((voucher) => (
@@ -211,7 +211,7 @@ export function ClaimActions({
               <button
                 type="button"
                 onClick={() => setLinking(true)}
-                className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+                className="btn btn-primary px-3 py-2 text-[13px]"
               >
                 Record the reimbursement
               </button>

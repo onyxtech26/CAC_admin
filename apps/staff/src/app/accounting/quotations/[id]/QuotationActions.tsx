@@ -64,7 +64,7 @@ export function QuotationActions({
                 name="reason"
                 required
                 placeholder="Raised against the wrong client, duplicate…"
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
               <p className="text-[11px] text-[var(--color-muted)]">
                 The draft goes; the audit trail keeps the fact that it existed.

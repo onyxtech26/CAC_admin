@@ -185,10 +185,8 @@ function ReasonForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={`rounded-md px-3 py-2 text-[13px] font-medium ${
-          variant === "danger"
-            ? "bg-[var(--color-danger)] text-white hover:opacity-90"
-            : "border border-[var(--color-line-strong)] hover:bg-[var(--color-canvas)]"
+        className={`btn px-3 py-2 text-[13px] ${
+          variant === "danger" ? "btn-danger" : "btn-secondary"
         }`}
       >
         {label}
@@ -209,7 +207,7 @@ function ReasonForm({
         required
         maxLength={500}
         placeholder={placeholder}
-        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
       />
       <p className="text-[11px] text-[var(--color-muted)]">Recorded in the audit trail.</p>
       <div className="flex gap-2">
@@ -254,7 +252,7 @@ export function DeleteInvoiceDraft({ invoiceId }: { invoiceId: string }) {
       <input
         name="reason"
         placeholder="Reason (optional)"
-        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
       />
       <div className="flex gap-2">
         <Button type="submit" variant="danger" disabled={pending}>

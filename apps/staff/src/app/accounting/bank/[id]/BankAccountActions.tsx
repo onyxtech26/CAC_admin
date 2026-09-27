@@ -42,13 +42,13 @@ export function StatementActions({
         required
         placeholder="Why"
         aria-label={`Reason for removing the statement to ${periodTo}`}
-        className="w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+        className="w-28 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
       />
       <div className="flex gap-1">
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-[var(--color-danger)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+          className="btn btn-danger px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Remove"}
         </button>
@@ -121,7 +121,7 @@ export function ReconciliationControls({
         </p>
         <Link
           href={`/accounting/bank/${bankAccountId}/reconcile`}
-          className="inline-block rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+          className="btn btn-primary px-3 py-2 text-[13px]"
         >
           Carry on with it
         </Link>
@@ -138,7 +138,7 @@ export function ReconciliationControls({
               id="abandonReason"
               name="reason"
               required
-              className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+              className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
             />
             <p className="text-[11px] text-[var(--color-muted)]">
               The matches made along the way are kept — they were judgements about the same money
@@ -188,7 +188,7 @@ export function ReconciliationControls({
           type="date"
           required
           defaultValue={defaultAsAt}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           Usually the closing date of the statement being worked. It has to be later than the last

@@ -158,7 +158,7 @@ export function DocumentForm({
             required
             value={customerId}
             onChange={(event) => setCustomerId(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {customers.map((customer) => (
@@ -179,7 +179,7 @@ export function DocumentForm({
             type="date"
             required
             defaultValue={defaultDate}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
 
@@ -192,7 +192,7 @@ export function DocumentForm({
             name="dueDate"
             type="date"
             defaultValue={defaultDueDate}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
           <p className="mt-1 text-[11px] text-[var(--color-muted)]">
             {kind === "invoice"
@@ -210,7 +210,7 @@ export function DocumentForm({
             name="reference"
             defaultValue={defaultReference}
             placeholder="Their PO, or a file number"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -224,7 +224,7 @@ export function DocumentForm({
           name="subject"
           defaultValue={defaultSubject}
           placeholder="What this is for, in one line"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
 
@@ -267,7 +267,7 @@ export function DocumentForm({
                     value={line.description}
                     onChange={(event) => update(index, "description", event.target.value)}
                     aria-label={`Description for line ${index + 1}`}
-                    className="w-full min-w-[220px] rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-full min-w-[220px] rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   />
                   <input
                     name={`lines[${index}].unit`}
@@ -275,7 +275,7 @@ export function DocumentForm({
                     onChange={(event) => update(index, "unit", event.target.value)}
                     placeholder="unit (optional)"
                     aria-label={`Unit for line ${index + 1}`}
-                    className="mt-1 w-full rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1 text-[11px]"
+                    className="mt-1 w-full rounded border border-[var(--color-line)] bg-[var(--color-ink)]/55 px-2 py-1 text-[11px]"
                   />
                 </td>
                 <td className="px-2 py-1.5">
@@ -284,7 +284,7 @@ export function DocumentForm({
                     value={line.accountId}
                     onChange={(event) => update(index, "accountId", event.target.value)}
                     aria-label={`Account for line ${index + 1}`}
-                    className="w-full min-w-[200px] rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-full min-w-[200px] rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   >
                     <option value="">—</option>
                     {accounts.map((account) => (
@@ -301,7 +301,7 @@ export function DocumentForm({
                       value={line.caseId}
                       onChange={(event) => update(index, "caseId", event.target.value)}
                       aria-label={`Matter for line ${index + 1}`}
-                      className="w-full min-w-[160px] rounded border border-[var(--color-line)] bg-[var(--color-surface)] px-2 py-1.5"
+                      className="w-full min-w-[160px] rounded border border-[var(--color-line)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                     >
                       <option value="">—</option>
                       {cases.map((matter) => (
@@ -319,7 +319,7 @@ export function DocumentForm({
                     onChange={(event) => update(index, "quantity", event.target.value)}
                     inputMode="decimal"
                     aria-label={`Quantity for line ${index + 1}`}
-                    className="numeric w-20 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-right"
+                    className="numeric w-20 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-right"
                   />
                 </td>
                 <td className="px-2 py-1.5">
@@ -329,7 +329,7 @@ export function DocumentForm({
                     onChange={(event) => update(index, "unitPrice", event.target.value)}
                     inputMode="decimal"
                     aria-label={`Unit price for line ${index + 1}`}
-                    className={`numeric w-28 rounded border bg-[var(--color-surface)] px-2 py-1.5 text-right ${
+                    className={`numeric w-28 rounded border bg-[var(--color-ink)]/55 px-2 py-1.5 text-right ${
                       line.unitPrice.trim() !== "" && !isAmount(line.unitPrice.trim())
                         ? "border-[var(--color-danger)]"
                         : "border-[var(--color-line-strong)]"
@@ -344,7 +344,7 @@ export function DocumentForm({
                     inputMode="decimal"
                     placeholder="0.1"
                     aria-label={`Discount fraction for line ${index + 1}`}
-                    className="numeric w-20 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-right"
+                    className="numeric w-20 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-right"
                   />
                 </td>
                 <td className="px-2 py-1.5">
@@ -353,7 +353,7 @@ export function DocumentForm({
                     value={line.taxCodeId}
                     onChange={(event) => update(index, "taxCodeId", event.target.value)}
                     aria-label={`Tax code for line ${index + 1}`}
-                    className="w-24 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-24 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   >
                     <option value="">None</option>
                     {taxCodes.map((code) => (
@@ -436,7 +436,7 @@ export function DocumentForm({
             name="notes"
             rows={3}
             defaultValue={defaultNotes}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -448,7 +448,7 @@ export function DocumentForm({
             name="terms"
             rows={3}
             defaultValue={defaultTerms}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>

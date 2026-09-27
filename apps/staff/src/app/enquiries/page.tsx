@@ -90,7 +90,7 @@ export default async function EnquiriesPage({
                 id="status"
                 name="status"
                 defaultValue={status ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
               >
                 <option value="">All</option>
                 {(Object.keys(LABEL) as EnquiryStatus[]).map((value) => (

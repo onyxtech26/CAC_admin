@@ -10,8 +10,8 @@ export default function LoginPage() {
   const [state, action, pending] = useActionState(signIn, initial);
 
   return (
-    <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-5">
-      <h1 className="text-[15px] font-semibold">Sign in</h1>
+    <div className="plate rounded-lg p-5">
+      <h1 className="page-title text-[19px]">Sign in</h1>
       <p className="mt-1 text-[12px] text-[var(--color-muted)]">
         Staff access only. Sign-in attempts are recorded.
       </p>

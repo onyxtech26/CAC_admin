@@ -110,7 +110,7 @@ export default async function LettersPage() {
                       <Td>
                         <Link
                           href={`/hr/letters/${letter.id}`}
-                          className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                         >
                           {letter.letterNo ?? "draft"}
                         </Link>
@@ -119,7 +119,7 @@ export default async function LettersPage() {
                       <Td>
                         <Link
                           href={`/hr/employees/${letter.employeeId}`}
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           {letter.employeeName}
                         </Link>

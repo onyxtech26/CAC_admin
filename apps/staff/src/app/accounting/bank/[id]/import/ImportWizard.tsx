@@ -73,7 +73,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                 name="file"
                 type="file"
                 accept=".csv,.txt,text/csv,text/plain"
-                className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
               <p className="mt-1 text-[11px] text-[var(--color-muted)]">
                 Whatever the bank exports. Comma, semicolon or tab separated; quoted fields and a
@@ -89,7 +89,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                 name="pasted"
                 rows={6}
                 placeholder="Date,Description,Debit,Credit,Balance"
-                className="mt-2 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 font-mono text-[12px]"
+                className="mt-2 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 font-mono text-[12px]"
               />
             </details>
           </>
@@ -107,7 +107,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
               min={0}
               max={50}
               defaultValue={preview.preview?.skipRows ?? 0}
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             />
             <p className="mt-1 text-[11px] text-[var(--color-muted)]">
               Many exports start with the account name and the download date.
@@ -122,7 +122,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
               id="mapping.dateFormat"
               name="mapping.dateFormat"
               defaultValue={mapping?.dateFormat ?? "auto"}
-              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+              className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
             >
               <option value="auto">Work it out where it is unambiguous</option>
               <option value="dmy">Day first — 03/04/2026 is 3 April</option>
@@ -152,7 +152,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                     id={`mapping.${field.key}`}
                     name={`mapping.${field.key}`}
                     defaultValue={String(columnFor(field.key))}
-                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5 text-[12px]"
+                    className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5 text-[12px]"
                   >
                     <option value="-1">— none —</option>
                     {preview.preview!.header.map((heading, index) => (
@@ -274,7 +274,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                   type="date"
                   required
                   defaultValue={preview.preview.earliest ?? ""}
-                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
               </div>
               <div>
@@ -287,7 +287,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                   type="date"
                   required
                   defaultValue={preview.preview.latest ?? ""}
-                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
               </div>
               <div>
@@ -300,7 +300,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                   required
                   inputMode="decimal"
                   placeholder="0.00"
-                  className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-right text-[14px]"
+                  className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-right text-[14px]"
                 />
               </div>
               <div>
@@ -313,7 +313,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                   required
                   inputMode="decimal"
                   placeholder="0.00"
-                  className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-right text-[14px]"
+                  className="numeric mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-right text-[14px]"
                 />
               </div>
             </div>
@@ -334,7 +334,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                 <input
                   id="statementRef"
                   name="statementRef"
-                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
               </div>
               <div>
@@ -344,7 +344,7 @@ export function ImportWizard({ bankAccountId }: { bankAccountId: string }) {
                 <input
                   id="notes"
                   name="notes"
-                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
               </div>
             </div>

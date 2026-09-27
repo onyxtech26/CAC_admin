@@ -122,7 +122,7 @@ export function JournalForm({
             type="date"
             required
             defaultValue={defaultEntryDate}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
           {periodHint && (
             <p className="mt-1 text-[11px] text-[var(--color-muted)]">{periodHint}</p>
@@ -137,7 +137,7 @@ export function JournalForm({
             name="memo"
             defaultValue={defaultMemo}
             placeholder="Why this entry exists"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -168,7 +168,7 @@ export function JournalForm({
                     value={line.accountId}
                     onChange={(event) => update(index, "accountId", event.target.value)}
                     aria-label={`Account for line ${index + 1}`}
-                    className="w-full min-w-[220px] rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-full min-w-[220px] rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   >
                     <option value="">—</option>
                     {accounts.map((account) => (
@@ -184,7 +184,7 @@ export function JournalForm({
                     value={line.description}
                     onChange={(event) => update(index, "description", event.target.value)}
                     aria-label={`Narrative for line ${index + 1}`}
-                    className="w-full min-w-[160px] rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-full min-w-[160px] rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   />
                 </td>
                 <td className="px-2 py-1.5">
@@ -193,7 +193,7 @@ export function JournalForm({
                     value={line.costCentreId}
                     onChange={(event) => update(index, "costCentreId", event.target.value)}
                     aria-label={`Cost centre for line ${index + 1}`}
-                    className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1.5"
+                    className="w-full rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1.5"
                   >
                     <option value="">—</option>
                     {costCentres.map((centre) => (
@@ -210,7 +210,7 @@ export function JournalForm({
                     onChange={(event) => update(index, "debit", event.target.value)}
                     inputMode="decimal"
                     aria-label={`Debit for line ${index + 1}`}
-                    className={`numeric w-28 rounded border bg-[var(--color-surface)] px-2 py-1.5 text-right ${
+                    className={`numeric w-28 rounded border bg-[var(--color-ink)]/55 px-2 py-1.5 text-right ${
                       line.debit.trim() !== "" && !isAmount(line.debit.trim())
                         ? "border-[var(--color-danger)]"
                         : "border-[var(--color-line-strong)]"
@@ -224,7 +224,7 @@ export function JournalForm({
                     onChange={(event) => update(index, "credit", event.target.value)}
                     inputMode="decimal"
                     aria-label={`Credit for line ${index + 1}`}
-                    className={`numeric w-28 rounded border bg-[var(--color-surface)] px-2 py-1.5 text-right ${
+                    className={`numeric w-28 rounded border bg-[var(--color-ink)]/55 px-2 py-1.5 text-right ${
                       line.credit.trim() !== "" && !isAmount(line.credit.trim())
                         ? "border-[var(--color-danger)]"
                         : "border-[var(--color-line-strong)]"

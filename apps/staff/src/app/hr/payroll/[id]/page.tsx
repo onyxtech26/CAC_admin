@@ -123,7 +123,7 @@ export default async function PayrollRunPage({ params }: { params: Promise<{ id:
                       <Td>
                         <Link
                           href={`/hr/payslips/${payslip.id}`}
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           {payslip.employeeName}
                         </Link>

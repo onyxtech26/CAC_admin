@@ -100,7 +100,7 @@ export default async function LetterPage({ params }: { params: Promise<{ id: str
                 <Row label="To">
                   <Link
                     href={`/hr/employees/${letter.employeeId}`}
-                    className="text-[var(--color-info)] hover:underline"
+                    className="text-[var(--color-link)] hover:underline"
                   >
                     {letter.employeeName}
                   </Link>
@@ -143,7 +143,7 @@ export default async function LetterPage({ params }: { params: Promise<{ id: str
                   which is what somebody holding a copy of the first deserves.
                 </p>
                 <p className="mt-2 text-[12px]">
-                  <Link href="/hr/letters" className="text-[var(--color-info)] hover:underline">
+                  <Link href="/hr/letters" className="text-[var(--color-link)] hover:underline">
                     Write the correction
                   </Link>
                 </p>

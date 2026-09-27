@@ -71,7 +71,7 @@ export default async function PurchaseOrdersPage({
                 id="status"
                 name="status"
                 defaultValue={query.status ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               >
                 <option value="">All</option>
                 {Object.entries(LABEL).map(([value, label]) => (
@@ -85,10 +85,10 @@ export default async function PurchaseOrdersPage({
                 id="q"
                 name="q"
                 defaultValue={query.q ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
             </div>
-            <button type="submit" className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white">
+            <button type="submit" className="btn btn-primary px-3 py-2 text-[13px]">
               Apply
             </button>
             <Link href="/accounting/purchase-orders" className="pb-2 text-[12px] text-[var(--color-info)]">Clear</Link>
@@ -108,7 +108,7 @@ export default async function PurchaseOrdersPage({
                   <Td>
                     <Link
                       href={`/accounting/purchase-orders/${order.id}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {order.orderNo ?? "draft"}
                     </Link>

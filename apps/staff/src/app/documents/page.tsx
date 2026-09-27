@@ -142,12 +142,12 @@ export default async function DocumentsPage({
                 name="q"
                 defaultValue={query}
                 placeholder="grant of probate, harta pusaka, death certificate"
-                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
             </div>
             <button
               type="submit"
-              className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+              className="btn btn-primary px-3 py-2 text-[13px]"
             >
               Search
             </button>
@@ -172,7 +172,7 @@ export default async function DocumentsPage({
                       <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <Link
                           href={`/documents/${hit.documentId}`}
-                          className="text-[13px] font-medium text-[var(--color-info)] hover:underline"
+                          className="text-[13px] font-medium text-[var(--color-link)] hover:underline"
                         >
                           {hit.documentTitle}
                         </Link>
@@ -242,7 +242,7 @@ export default async function DocumentsPage({
                 id="status"
                 name="status"
                 defaultValue={filters.status ?? ""}
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[13px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[13px]"
               >
                 <option value="">Any</option>
                 <option value="clean">Scanned clean</option>
@@ -275,7 +275,7 @@ export default async function DocumentsPage({
                   <Td>
                     <Link
                       href={`/documents/${document.id}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {document.documentNo}
                     </Link>
@@ -334,7 +334,7 @@ export default async function DocumentsPage({
                     {document.caseNo ? (
                       <Link
                         href={`/cases/${document.caseId}`}
-                        className="font-mono text-[11px] text-[var(--color-info)] hover:underline"
+                        className="font-mono text-[11px] text-[var(--color-link)] hover:underline"
                       >
                         {document.caseNo}
                       </Link>

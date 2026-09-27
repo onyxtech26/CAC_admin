@@ -259,7 +259,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
                   {document.caseNo ? (
                     <Link
                       href={`/cases/${document.caseId}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {document.caseNo}
                     </Link>

@@ -72,7 +72,7 @@ export function RuleForm({ defaultEffectiveFrom }: { defaultEffectiveFrom: strin
           name="kind"
           value={kind}
           onChange={(event) => setKind(event.target.value)}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         >
           {KINDS.map((row) => (
             <option key={row.value} value={row.value}>
@@ -124,7 +124,7 @@ export function RuleForm({ defaultEffectiveFrom }: { defaultEffectiveFrom: strin
           rows={12}
           required
           defaultValue={EXAMPLES[shape]}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 font-mono text-[11px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 font-mono text-[11px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           Bands have to be contiguous and the last one open-ended, or some wage would fall between
@@ -156,7 +156,7 @@ export function ApproveRule({ ruleId, label }: { ruleId: string; label: string }
       <button
         type="submit"
         disabled={pending}
-        className="rounded border border-[var(--color-navy)] bg-[var(--color-navy)] px-2 py-1 text-[11px] text-white disabled:opacity-50"
+        className="btn btn-primary px-2 py-1 text-[11px]"
       >
         {pending ? "…" : `Approve ${label}`}
       </button>

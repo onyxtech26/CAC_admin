@@ -39,7 +39,7 @@ export default async function BalanceSheetPage({
             <Td>
               <Link
                 href={`/accounting/accounts/${line.code}?to=${asOf}`}
-                className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
               >
                 {line.code}
               </Link>
@@ -82,12 +82,12 @@ export default async function BalanceSheetPage({
                 name="asOf"
                 type="date"
                 defaultValue={asOf}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
             </div>
             <button
               type="submit"
-              className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+              className="btn btn-primary px-3 py-2 text-[13px]"
             >
               Run
             </button>

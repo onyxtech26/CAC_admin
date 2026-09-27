@@ -106,7 +106,7 @@ export default async function AccountLedgerPage({
                   <Td>
                     <Link
                       href={`/accounting/journals/${entry.journalId}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {entry.journalNo}
                     </Link>

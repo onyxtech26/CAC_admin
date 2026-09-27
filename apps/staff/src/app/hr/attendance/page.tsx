@@ -94,7 +94,7 @@ export default async function AttendancePage({
                 {index > 0 && ", "}
                 <Link
                   href={`/hr/employees/${row.id}`}
-                  className="font-medium text-[var(--color-info)] hover:underline"
+                  className="font-medium text-[var(--color-link)] hover:underline"
                 >
                   {row.fullName}
                 </Link>
@@ -144,7 +144,7 @@ export default async function AttendancePage({
                 name="from"
                 type="date"
                 defaultValue={from}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
             </div>
             <div>
@@ -156,7 +156,7 @@ export default async function AttendancePage({
                 name="to"
                 type="date"
                 defaultValue={to}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               />
             </div>
             <div>
@@ -167,7 +167,7 @@ export default async function AttendancePage({
                 id="department"
                 name="department"
                 defaultValue={query.department ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[13px]"
+                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
               >
                 <option value="">All</option>
                 {departments.map((row) => (
@@ -179,7 +179,7 @@ export default async function AttendancePage({
             </div>
             <button
               type="submit"
-              className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+              className="btn btn-primary px-3 py-2 text-[13px]"
             >
               Show
             </button>
@@ -215,7 +215,7 @@ export default async function AttendancePage({
                       <Td>
                         <Link
                           href={`/hr/employees/${day.employeeId}`}
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           {day.employeeName}
                         </Link>
@@ -282,7 +282,7 @@ export default async function AttendancePage({
                       <Td>
                         <Link
                           href={`/hr/attendance/imports/${batch.id}`}
-                          className="text-[var(--color-info)] hover:underline"
+                          className="text-[var(--color-link)] hover:underline"
                         >
                           {new Date(batch.createdAt).toLocaleDateString("en-GB")}
                         </Link>

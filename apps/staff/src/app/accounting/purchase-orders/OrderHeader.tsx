@@ -37,7 +37,7 @@ export function OrderHeader({
             name="supplierId"
             required
             defaultValue={defaults?.supplierId ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="">Choose…</option>
             {suppliers.map((supplier) => (
@@ -58,7 +58,7 @@ export function OrderHeader({
             type="date"
             required
             defaultValue={defaults?.orderDate ?? defaultDate}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
 
@@ -71,7 +71,7 @@ export function OrderHeader({
             name="requiredBy"
             type="date"
             defaultValue={defaults?.requiredBy ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
 
@@ -84,7 +84,7 @@ export function OrderHeader({
             name="reference"
             defaultValue={defaults?.reference ?? ""}
             placeholder="Their quotation number"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>
@@ -98,7 +98,7 @@ export function OrderHeader({
           name="subject"
           defaultValue={defaults?.subject ?? ""}
           placeholder="What this order is for, in one line"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
 
@@ -113,7 +113,7 @@ export function OrderHeader({
             rows={2}
             defaultValue={defaults?.deliveryNote ?? ""}
             placeholder="Where and when it should arrive"
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
         <div>
@@ -125,7 +125,7 @@ export function OrderHeader({
             name="notes"
             rows={2}
             defaultValue={defaults?.notes ?? ""}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           />
         </div>
       </div>

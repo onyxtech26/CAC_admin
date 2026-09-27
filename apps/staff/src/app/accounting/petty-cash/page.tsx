@@ -202,7 +202,7 @@ export default async function PettyCashPage() {
                       <Td>
                         <Link
                           href={`/accounting/accounts/${entry.counterpartCode}`}
-                          className="font-mono text-[11px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[11px] text-[var(--color-link)] hover:underline"
                         >
                           {entry.counterpartCode}
                         </Link>
@@ -218,7 +218,7 @@ export default async function PettyCashPage() {
                         {entry.journalNo && (
                           <Link
                             href={`/accounting/journals/${entry.journalId}`}
-                            className="ml-1 font-mono text-[11px] text-[var(--color-info)] hover:underline"
+                            className="ml-1 font-mono text-[11px] text-[var(--color-link)] hover:underline"
                           >
                             {entry.journalNo}
                           </Link>

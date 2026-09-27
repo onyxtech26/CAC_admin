@@ -41,7 +41,7 @@ export function NewAccountForm({
             name="type"
             value={type}
             onChange={(event) => setType(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px] outline-none focus:border-[var(--color-info)]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px] outline-none focus:border-[var(--color-info)]"
           >
             <option value="ASSET">Asset</option>
             <option value="LIABILITY">Liability</option>

@@ -118,7 +118,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ id: st
                   {voucher.paymentAccountCode ? (
                     <Link
                       href={`/accounting/accounts/${voucher.paymentAccountCode}`}
-                      className="text-[var(--color-info)] hover:underline"
+                      className="text-[var(--color-link)] hover:underline"
                     >
                       <span className="font-mono text-[11px]">{voucher.paymentAccountCode}</span>{" "}
                       {voucher.paymentAccountName}
@@ -134,7 +134,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ id: st
                   {voucher.purchaseOrderNo ? (
                     <Link
                       href={`/accounting/purchase-orders/${voucher.purchaseOrderId}`}
-                      className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                     >
                       {voucher.purchaseOrderNo}
                     </Link>
@@ -172,7 +172,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ id: st
                     <Td>
                       <Link
                         href={`/accounting/accounts/${line.accountCode}`}
-                        className="text-[var(--color-info)] hover:underline"
+                        className="text-[var(--color-link)] hover:underline"
                       >
                         <span className="font-mono text-[11px]">{line.accountCode}</span>
                       </Link>
@@ -220,7 +220,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ id: st
                   Posted as{" "}
                   <Link
                     href={`/accounting/journals/${voucher.journalId}`}
-                    className="font-mono text-[var(--color-info)] hover:underline"
+                    className="font-mono text-[var(--color-link)] hover:underline"
                   >
                     {voucher.journalNo}
                   </Link>
@@ -231,7 +231,7 @@ export default async function VoucherPage({ params }: { params: Promise<{ id: st
                     Reversed by{" "}
                     <Link
                       href={`/accounting/journals/${voucher.voidJournalId}`}
-                      className="font-mono text-[var(--color-info)] hover:underline"
+                      className="font-mono text-[var(--color-link)] hover:underline"
                     >
                       the void entry
                     </Link>

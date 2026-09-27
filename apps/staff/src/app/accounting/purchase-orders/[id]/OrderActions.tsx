@@ -109,7 +109,7 @@ export function OrderActions({
                       defaultValue={trim(line.quantityReceived)}
                       inputMode="decimal"
                       aria-label={`Quantity received for ${line.description}`}
-                      className="numeric w-20 rounded border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-right"
+                      className="numeric w-20 rounded border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-right"
                     />
                   </div>
                 ))}
@@ -133,7 +133,7 @@ export function OrderActions({
               <button
                 type="button"
                 onClick={() => setReceiving(true)}
-                className="rounded-md bg-[var(--color-navy)] px-3 py-2 text-[13px] font-medium text-white"
+                className="btn btn-primary px-3 py-2 text-[13px]"
               >
                 Record a delivery
               </button>
@@ -154,7 +154,7 @@ export function OrderActions({
                   name="reason"
                   required
                   placeholder="Supplier could not meet the date…"
-                  className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
                 <div className="flex gap-2">
                   <Button type="submit" variant="danger" disabled={pending}>

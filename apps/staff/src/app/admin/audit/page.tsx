@@ -67,7 +67,7 @@ export default async function AuditPage({
                   id="from"
                   name="from"
                   type="date"
-                  className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
               </div>
               <div>
@@ -78,12 +78,12 @@ export default async function AuditPage({
                   id="to"
                   name="to"
                   type="date"
-                  className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+                  className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
                 />
               </div>
               <button
                 type="submit"
-                className="rounded-md border border-[var(--color-navy)] bg-[var(--color-navy)] px-3 py-2 text-[13px] text-white"
+                className="btn btn-primary px-3 py-2 text-[13px]"
               >
                 Download CSV
               </button>

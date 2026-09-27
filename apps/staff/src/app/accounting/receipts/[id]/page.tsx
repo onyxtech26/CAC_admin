@@ -128,7 +128,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
                   <Detail label="Customer">
                     <Link
                       href={`/accounting/customers/${receipt.customerId}`}
-                      className="text-[var(--color-info)] hover:underline"
+                      className="text-[var(--color-link)] hover:underline"
                     >
                       {receipt.customerName}
                     </Link>
@@ -139,7 +139,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
                   <Detail label="Into">
                     <Link
                       href={`/accounting/accounts/${receipt.depositAccountCode}`}
-                      className="text-[var(--color-info)] hover:underline"
+                      className="text-[var(--color-link)] hover:underline"
                     >
                       <span className="font-mono text-[11px]">{receipt.depositAccountCode}</span>{" "}
                       {receipt.depositAccountName}
@@ -151,7 +151,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
                     {receipt.journalNo ? (
                       <Link
                         href={`/accounting/journals/${receipt.journalId}`}
-                        className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                        className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                       >
                         {receipt.journalNo}
                       </Link>
@@ -211,7 +211,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
                       <Td>
                         <Link
                           href={`/accounting/invoices/${allocation.invoiceId}`}
-                          className="font-mono text-[12px] text-[var(--color-info)] hover:underline"
+                          className="font-mono text-[12px] text-[var(--color-link)] hover:underline"
                         >
                           {allocation.invoiceNo}
                         </Link>

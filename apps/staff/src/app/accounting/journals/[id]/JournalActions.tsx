@@ -104,7 +104,7 @@ export function ReverseJournal({
           name="reason"
           required
           maxLength={500}
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           Recorded on the reversal and in the audit trail.
@@ -120,7 +120,7 @@ export function ReverseJournal({
           name="entryDate"
           type="date"
           defaultValue={defaultDate}
-          className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
         <p className="mt-1 text-[11px] text-[var(--color-muted)]">
           Must fall in an open period. Defaults to the original date when its period is still open.
@@ -174,7 +174,7 @@ export function DeleteDraft({ journalId }: { journalId: string }) {
         <input
           id="discardReason"
           name="reason"
-          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+          className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
         />
       </div>
       <div className="flex gap-2">

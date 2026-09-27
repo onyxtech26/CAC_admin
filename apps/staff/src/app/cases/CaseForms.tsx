@@ -587,7 +587,7 @@ export function VerifyControl({
           name="reason"
           required
           placeholder="Why it is being excluded"
-          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
         />
         <div className="flex gap-2">
           <button
@@ -622,7 +622,7 @@ export function VerifyControl({
             <button
               type="submit"
               disabled={pending}
-              className="text-[11px] text-[var(--color-info)] hover:underline disabled:opacity-50"
+              className="text-[11px] text-[var(--color-link)] hover:underline disabled:opacity-50"
             >
               Mark verified
             </button>
@@ -728,7 +728,7 @@ export function RemoveDocumentButton({
         name="reason"
         required
         placeholder="Why it is being removed"
-        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
       />
       <div className="flex gap-2">
         <button
@@ -781,7 +781,7 @@ export function FactAnswerForm({
         <select
           name="value"
           defaultValue={value ?? ""}
-          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[13px]"
+          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[13px]"
         >
           <option value="">—</option>
           <option value="true">Yes</option>
@@ -791,7 +791,7 @@ export function FactAnswerForm({
         <select
           name="value"
           defaultValue={value ?? ""}
-          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[13px]"
+          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[13px]"
         >
           <option value="">—</option>
           {options.map((option) => (
@@ -806,7 +806,7 @@ export function FactAnswerForm({
           type={kind === "date" ? "date" : "text"}
           inputMode={kind === "number" ? "decimal" : undefined}
           defaultValue={value ?? ""}
-          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[13px]"
+          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[13px]"
         />
       )}
 
@@ -814,14 +814,14 @@ export function FactAnswerForm({
         name="sourceNote"
         defaultValue={sourceNote ?? ""}
         placeholder="Where the answer came from"
-        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+        className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
       />
 
       <div className="flex flex-wrap gap-2">
         <button
           type="submit"
           disabled={pending}
-          className="rounded-md bg-[var(--color-navy)] px-2 py-1 text-[11px] font-medium text-white disabled:opacity-50"
+          className="btn btn-primary px-2 py-1 text-[11px]"
         >
           {pending ? "…" : "Record"}
         </button>
@@ -887,7 +887,7 @@ export function RequirementControls({
           <select
             name="documentId"
             required
-            className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+            className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
           >
             <option value="">Which document…</option>
             {documents.map((document) => (
@@ -899,7 +899,7 @@ export function RequirementControls({
         ) : (
           <select
             name="documentId"
-            className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+            className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
           >
             <option value="">No document</option>
             {documents.map((document) => (
@@ -936,10 +936,10 @@ export function RequirementControls({
           name="reason"
           required
           placeholder="Why it is being waived"
-          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
         />
         <div className="flex gap-2">
-          <button type="submit" disabled={pending} className="text-[11px] text-[var(--color-info)] hover:underline">
+          <button type="submit" disabled={pending} className="text-[11px] text-[var(--color-link)] hover:underline">
             Waive it
           </button>
           <button
@@ -972,7 +972,7 @@ export function RequirementControls({
             <button
               type="button"
               onClick={() => setMode("waive")}
-              className="text-[11px] text-[var(--color-info)] hover:underline"
+              className="text-[11px] text-[var(--color-link)] hover:underline"
             >
               Waive
             </button>
@@ -1130,7 +1130,7 @@ export function TaskControls({
           name="reason"
           required
           placeholder="Why"
-          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
         />
         <div className="flex gap-2">
           <button type="submit" disabled={pending} className="text-[11px] text-[var(--color-danger)] hover:underline">
@@ -1210,7 +1210,7 @@ export function FactDefinitionForm({ matterTypes }: { matterTypes: Option[] }) {
             name="kind"
             value={kind}
             onChange={(event) => setKind(event.target.value)}
-            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-3 py-2 text-[14px]"
+            className="mt-1 w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
           >
             <option value="boolean">Yes / no</option>
             <option value="choice">One of a list</option>
@@ -1352,7 +1352,7 @@ export function RuleForm({
           <select
             name="join"
             defaultValue="all"
-            className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+            className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
           >
             <option value="all">All of these must hold</option>
             <option value="any">Any one of these is enough</option>
@@ -1371,7 +1371,7 @@ export function RuleForm({
                 value={row.fact}
                 onChange={(event) => update(index, "fact", event.target.value)}
                 required
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
               >
                 <option value="">Which question…</option>
                 {facts.map((fact) => (
@@ -1384,7 +1384,7 @@ export function RuleForm({
                 name={`tests[${index}].operator`}
                 value={row.operator}
                 onChange={(event) => update(index, "operator", event.target.value)}
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
               >
                 {OPERATORS.map((operator) => (
                   <option key={operator.value} value={operator.value}>
@@ -1398,7 +1398,7 @@ export function RuleForm({
                 onChange={(event) => update(index, "value", event.target.value)}
                 placeholder={row.operator === "answered" ? "—" : "true / false / value"}
                 disabled={row.operator === "answered"}
-                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px] disabled:opacity-40"
+                className="rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px] disabled:opacity-40"
               />
               <button
                 type="button"
@@ -1414,7 +1414,7 @@ export function RuleForm({
         <button
           type="button"
           onClick={() => setTests((current) => [...current, { fact: "", operator: "is", value: "" }])}
-          className="mt-2 text-[12px] text-[var(--color-info)] hover:underline"
+          className="mt-2 text-[12px] text-[var(--color-link)] hover:underline"
           disabled={facts.length === 0}
         >
           Add a condition
@@ -1460,7 +1460,7 @@ export function RuleApproval({
           name="reason"
           required
           placeholder="Why it is being withdrawn"
-          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-surface)] px-2 py-1 text-[12px]"
+          className="w-full rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-2 py-1 text-[12px]"
         />
         <div className="flex gap-2">
           <button type="submit" disabled={pending} className="text-[11px] text-[var(--color-danger)] hover:underline">
