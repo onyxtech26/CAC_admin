@@ -58,6 +58,7 @@ export default async function EditClaimPage({ params }: { params: Promise<{ id: 
             taxCodeId: line.taxCodeId ?? "",
             accountId: line.accountId,
             costCentreId: line.costCentreId ?? "",
+            caseId: line.caseId ?? "",
             spentOn: line.spentOn ?? "",
             receiptRef: line.receiptRef ?? "",
           }))}

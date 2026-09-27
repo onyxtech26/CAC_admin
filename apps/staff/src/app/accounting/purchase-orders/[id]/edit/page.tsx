@@ -52,6 +52,7 @@ export default async function EditPurchaseOrderPage({
             taxCodeId: line.taxCodeId ?? "",
             accountId: line.accountId,
             costCentreId: line.costCentreId ?? "",
+            caseId: line.caseId ?? "",
             spentOn: "",
             receiptRef: "",
           }))}

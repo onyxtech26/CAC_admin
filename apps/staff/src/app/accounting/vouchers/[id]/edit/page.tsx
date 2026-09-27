@@ -48,6 +48,7 @@ export default async function EditVoucherPage({ params }: { params: Promise<{ id
             taxCodeId: line.taxCodeId ?? "",
             accountId: line.accountId,
             costCentreId: line.costCentreId ?? "",
+            caseId: line.caseId ?? "",
             spentOn: "",
             receiptRef: "",
           }))}

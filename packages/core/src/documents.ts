@@ -267,8 +267,8 @@ async function resolveAccount(
  */
 export async function writeDocumentLines(
   db: Executor,
-  table: "quotation_line" | "invoice_line",
-  parentColumn: "quotation_id" | "invoice_id",
+  table: "quotation_line" | "invoice_line" | "supplier_invoice_line",
+  parentColumn: "quotation_id" | "invoice_id" | "supplier_invoice_id",
   parentId: string,
   lines: ComputedLine[],
 ): Promise<void> {
@@ -299,8 +299,8 @@ export interface StoredLine
 
 export async function readDocumentLines(
   db: Executor,
-  table: "quotation_line" | "invoice_line",
-  parentColumn: "quotation_id" | "invoice_id",
+  table: "quotation_line" | "invoice_line" | "supplier_invoice_line",
+  parentColumn: "quotation_id" | "invoice_id" | "supplier_invoice_id",
   parentId: string,
 ): Promise<StoredLine[]> {
   const result = await db.execute<{

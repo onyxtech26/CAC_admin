@@ -94,7 +94,7 @@ export async function salesFormOptions(principal?: Principal) {
  * the chart, and offering a hundred accounts on a voucher is how a payment ends
  * up against revenue.
  */
-export async function purchaseFormOptions() {
+export async function purchaseFormOptions(principal?: Principal) {
   const db = await getDb();
 
   const [accounts, suppliers, taxCodes, centres, sstRegistered] = await Promise.all([
@@ -107,11 +107,28 @@ export async function purchaseFormOptions() {
     getSetting<boolean>(db, "tax.sst_registered", false),
   ]);
 
+  /**
+   * The matters a cost can be attributed to — same scoping and same reasoning as the sales side.
+   *
+   * Supplied only where the caller can see cases, and only the ones they may see, so the bill
+   * form cannot become a way to enumerate matters.
+   */
+  const cases =
+    principal &&
+    (principal.capabilities.has("case.view") || principal.capabilities.has("case.view_all"))
+      ? (await listCases(db, principal, { limit: 500 }))
+          .filter((matter) => matter.status !== "closed")
+          .map((matter) => ({ id: matter.id, caseNo: matter.caseNo, title: matter.title }))
+      : [];
+
   return {
+    cases,
     suppliers: suppliers.map((supplier) => ({
       id: supplier.id,
       code: supplier.code,
       name: supplier.name,
+      // Carried so a bill's due date can be set from the supplier's terms rather than typed.
+      paymentTermsDays: supplier.paymentTermsDays,
     })),
     // What money can be spent on: costs, overheads, finance and tax, plus the two
     // liability accounts a payment legitimately settles (payables and staff

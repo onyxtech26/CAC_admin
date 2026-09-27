@@ -34,6 +34,14 @@ export const PERMISSIONS = {
     ["accounting.voucher.approve", "Approve payment vouchers within the configured limit"],
     ["accounting.voucher.approve_high_value", "Approve payment vouchers above the configured limit"],
     ["accounting.voucher.pay", "Mark a voucher paid"],
+    // The payables sub-ledger. Separate from voucher.* because recording what a supplier says CAC
+    // owes and deciding to pay it are two different acts, done by two different people.
+    ["accounting.bill.view", "View supplier bills"],
+    ["accounting.bill.create", "Enter supplier bills"],
+    ["accounting.bill.approve", "Approve a supplier bill as genuine"],
+    ["accounting.bill.post", "Post a supplier bill to the ledger"],
+    ["accounting.bill.void", "Void a posted supplier bill"],
+    ["accounting.bill.settle", "Apply payments and credit notes to bills"],
     ["accounting.po.view", "View purchase orders"],
     ["accounting.po.create", "Create purchase orders"],
     ["accounting.po.approve", "Approve purchase orders"],
@@ -211,6 +219,9 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     "accounting.quotation.approve",
     "accounting.receipt.approve",
     "accounting.voucher.approve", "accounting.voucher.approve_high_value",
+    // A bill is confirmed as genuine by somebody who did not enter it. On the sales side that
+    // pairing is invoice.approve; this is the same pairing facing the other way.
+    "accounting.bill.approve", "accounting.bill.void",
     "accounting.po.approve", "accounting.pettycash.approve",
     "accounting.claim.approve", "accounting.journal.reverse",
     "accounting.period.manage", "accounting.period.close", "accounting.report.export",
@@ -234,6 +245,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
   MANAGEMENT: [
     ...readOnlyOf("accounting."), "accounting.report.export",
     "accounting.invoice.approve", "accounting.voucher.approve",
+    "accounting.bill.approve",
     "accounting.pettycash.approve", "accounting.claim.approve",
     ...readOnlyOf("hr."), "hr.overtime.approve", "hr.leave.approve", "hr.timeoff.approve",
     // A line manager reviews the people who report to them. Without this the cycle
@@ -258,6 +270,7 @@ export const ROLE_PERMISSIONS: Record<RoleKey, string[]> = {
     "accounting.invoice.create", "accounting.quotation.create",
     "accounting.receipt.create", "accounting.receipt.allocate",
     "accounting.voucher.create", "accounting.po.create",
+    "accounting.bill.create", "accounting.bill.settle",
     "accounting.pettycash.create", "accounting.claim.create",
     "accounting.customer.manage", "accounting.supplier.manage",
     // Importing a statement and matching what is obvious is the work; saying the
@@ -358,4 +371,8 @@ export const MAKER_CHECKER_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ["accounting.po.create", "accounting.po.approve"],
   ["accounting.pettycash.create", "accounting.pettycash.approve"],
   ["hr.letter.generate", "hr.letter.approve"],
+  // The payables sub-ledger. A fabricated supplier invoice that one person can both enter and
+  // confirm as genuine is a fabricated supplier invoice that gets paid — which is the single most
+  // common internal fraud in a company this size.
+  ["accounting.bill.create", "accounting.bill.approve"],
 ];

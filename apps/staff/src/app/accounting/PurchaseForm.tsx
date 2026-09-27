@@ -31,6 +31,15 @@ export interface PurchaseFormLine {
   taxCodeId: string;
   accountId: string;
   costCentreId: string;
+  /**
+   * The matter this cost belongs to. Bills only.
+   *
+   * `supplier_invoice_line.case_id` is what turns revenue-by-matter into profit-by-matter, and it
+   * is the dimension AutoCount has no equivalent of — its own payroll posting guide admits it
+   * cannot group a journal by department, let alone by engagement. It would be worth very little
+   * if the form that enters the cost could not set it.
+   */
+  caseId: string;
   /** Claims only. */
   spentOn: string;
   receiptRef: string;
@@ -44,6 +53,7 @@ const emptyLine = (spentOn = ""): PurchaseFormLine => ({
   taxCodeId: "",
   accountId: "",
   costCentreId: "",
+  caseId: "",
   spentOn,
   receiptRef: "",
 });
@@ -51,7 +61,7 @@ const emptyLine = (spentOn = ""): PurchaseFormLine => ({
 const initial: FormState = {};
 
 /**
- * The line editor for purchase orders, payment vouchers and expense claims.
+ * The line editor for purchase orders, payment vouchers, expense claims and supplier bills.
  *
  * Deliberately *not* the sales one. These documents carry no discount — a
  * supplier's discount is already in the price they quoted, and a second field for
@@ -71,18 +81,21 @@ export function PurchaseForm({
   accounts,
   taxCodes,
   costCentres,
+  cases,
   header,
   defaultLines,
   defaultDate,
   submitLabel,
   footnote,
 }: {
-  kind: "order" | "voucher" | "claim";
+  kind: "order" | "voucher" | "claim" | "bill";
   action: (state: FormState, form: FormData) => Promise<FormState>;
   documentId?: string;
   accounts: Option[];
   taxCodes: TaxOption[];
   costCentres: Option[];
+  /** Supplied for a bill, so a cost can be attributed to the matter it was incurred on. */
+  cases?: Array<{ id: string; caseNo: string; title: string }>;
   /** The document-specific fields above the lines. */
   header: React.ReactNode;
   defaultLines?: PurchaseFormLine[];
@@ -98,8 +111,16 @@ export function PurchaseForm({
   );
 
   const totals = useMemo(() => computeTotals(lines, taxCodes), [lines, taxCodes]);
-  const idField = kind === "order" ? "orderId" : kind === "voucher" ? "voucherId" : "claimId";
+  const idField =
+    kind === "order"
+      ? "orderId"
+      : kind === "voucher"
+        ? "voucherId"
+        : kind === "bill"
+          ? "billId"
+          : "claimId";
   const isClaim = kind === "claim";
+  const showMatter = kind === "bill" && (cases?.length ?? 0) > 0;
 
   const update = (index: number, field: keyof PurchaseFormLine, value: string) => {
     setLines((current) =>
@@ -113,6 +134,7 @@ export function PurchaseForm({
     ...(isClaim ? ["Spent on"] : []),
     "Account",
     "Cost centre",
+    ...(showMatter ? ["Matter"] : []),
     "Qty",
     "Unit price",
     "Tax",
@@ -210,6 +232,24 @@ export function PurchaseForm({
                     ))}
                   </select>
                 </td>
+                {showMatter && (
+                  <td className="px-2 py-1.5">
+                    <select
+                      name={`lines[${index}].caseId`}
+                      value={line.caseId}
+                      onChange={(event) => update(index, "caseId", event.target.value)}
+                      aria-label={`Matter for line ${index + 1}`}
+                      className="w-full min-w-[160px] rounded border border-[var(--color-line)] bg-[var(--color-ink)]/55 px-2 py-1.5"
+                    >
+                      <option value="">—</option>
+                      {cases!.map((matter) => (
+                        <option key={matter.id} value={matter.id}>
+                          {matter.caseNo} {matter.title}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                )}
                 <td className="px-2 py-1.5">
                   <input
                     name={`lines[${index}].quantity`}

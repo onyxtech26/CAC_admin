@@ -316,6 +316,20 @@ export const AUDIT = {
   PO_RECEIVED: "PO_RECEIVED",
   PO_CLOSED: "PO_CLOSED",
   PO_CANCELLED: "PO_CANCELLED",
+  // Payables. A bill is an event of its own: what a supplier says CAC owes, recorded before and
+  // separately from any decision to pay it. Keeping BILL_* apart from VOUCHER_* is what lets the
+  // trail answer "when did we know we owed this" as well as "when did we pay it".
+  BILL_CREATED: "BILL_CREATED",
+  BILL_UPDATED: "BILL_UPDATED",
+  BILL_DELETED: "BILL_DELETED",
+  BILL_SUBMITTED: "BILL_SUBMITTED",
+  BILL_RETURNED: "BILL_RETURNED",
+  BILL_APPROVED: "BILL_APPROVED",
+  BILL_POSTED: "BILL_POSTED",
+  BILL_VOIDED: "BILL_VOIDED",
+  BILL_SETTLED: "BILL_SETTLED",
+  BILL_UNSETTLED: "BILL_UNSETTLED",
+
   VOUCHER_CREATED: "VOUCHER_CREATED",
   VOUCHER_UPDATED: "VOUCHER_UPDATED",
   VOUCHER_DELETED: "VOUCHER_DELETED",

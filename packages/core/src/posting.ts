@@ -751,6 +751,9 @@ export async function postSourceJournal(
   input: DraftJournalInput & {
     sourceType:
       | "invoice"
+      // A bill CAC received. Distinct from "voucher", which is money going out: the two are
+      // different events and a payables ledger that cannot tell them apart cannot be aged.
+      | "supplier_invoice"
       | "receipt"
       | "voucher"
       | "petty_cash"

@@ -239,6 +239,10 @@ const SEQUENCES = [
   { key: "receipt", prefix: "RCP" },
   { key: "voucher", prefix: "PV" },
   { key: "purchase_order", prefix: "PO" },
+  // The payables sub-ledger. BILL is CAC's own reference for a bill it received; the supplier's
+  // own number is recorded separately and is the one quoted in a dispute.
+  { key: "supplier_invoice", prefix: "BILL" },
+  { key: "supplier_credit_note", prefix: "SCN" },
   { key: "journal", prefix: "JV" },
   { key: "petty_cash", prefix: "PC" },
   { key: "claim", prefix: "CLM" },

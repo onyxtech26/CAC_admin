@@ -261,6 +261,259 @@ export async function receivablesAging(
   };
 }
 
+export interface PayablesAgingRow {
+  supplierId: string;
+  supplierCode: string;
+  supplierName: string;
+  current: Amount;
+  buckets: AgingBucket[];
+  total: Amount;
+  /** Posted supplier credit notes not yet applied to a bill. Reduces what is really owed. */
+  unappliedCredits: Amount;
+  /**
+   * Money already paid to this supplier that is not against any particular bill.
+   *
+   * The mirror of `unallocatedReceipts` on the sales side, and the reconciliation does not work
+   * without it: a settlement voucher debits the payables control account for its whole value the
+   * moment it is posted, whether or not anybody has said which bill it settles. Leave it out and
+   * the report claims more is owed than the balance sheet does, by exactly the value of every
+   * payment nobody has matched — which is the state most payables ledgers are in most of the time.
+   */
+  paymentsOnAccount: Amount;
+  netOwing: Amount;
+  oldestDueDate: string | null;
+}
+
+export interface PayablesAgingReport {
+  asOf: string;
+  boundaries: number[];
+  boundariesConfirmed: boolean;
+  rows: PayablesAgingRow[];
+  totals: {
+    current: Amount;
+    buckets: Amount[];
+    total: Amount;
+    unappliedCredits: Amount;
+    paymentsOnAccount: Amount;
+    netOwing: Amount;
+  };
+  controlAccountBalance: Amount | null;
+  difference: Amount | null;
+}
+
+/**
+ * Accounts payable, aged — the mirror of `receivablesAging`.
+ *
+ * Same buckets, same "as at" basis, and the same reconciliation against the control account,
+ * because an aging report that does not agree with the ledger is worse than no aging report: it
+ * is a number somebody will act on.
+ *
+ * The difference in meaning is worth stating. On the receivables side an old balance is a
+ * collections problem. Here it is either a cash-flow problem or a supplier about to stop working
+ * with CAC, and the oldest-due-date column is the one to read first.
+ *
+ * Bills entered but not yet posted are **excluded**, exactly as unissued invoices are. They are
+ * not liabilities yet — nobody has confirmed them — and including them would make the report
+ * disagree with the balance sheet by the value of whatever is sitting in somebody's drafts.
+ */
+export async function payablesAging(
+  db: Executor,
+  options: { asOf?: string; supplierId?: string } = {},
+): Promise<PayablesAgingReport> {
+  const asOf = toIsoDate(options.asOf ? parseIsoDate(options.asOf, "asOf") : today());
+  const buckets = await getSettingState<number[]>(db, "accounting.aging_buckets", [30, 60, 90]);
+  const sorted = [...buckets.value].sort((a, b) => a - b);
+
+  // As on the receivables side, what has been settled is rebuilt as at the date rather than read
+  // from `amount_settled`, which is today's figure. A payment made last week did not reduce what
+  // was owed a month ago.
+  const bills = await db.execute<{
+    supplier_id: string;
+    supplier_code: string;
+    supplier_name: string;
+    due_date: string;
+    outstanding: string;
+    days_overdue: number;
+  }>(sql`
+    WITH settled AS (
+      SELECT ps.supplier_invoice_id, SUM(ps.amount) AS amount
+        FROM accounting.payable_settlement ps
+        LEFT JOIN accounting.payment_voucher v ON v.id = ps.voucher_id
+        LEFT JOIN accounting.supplier_invoice cn ON cn.id = ps.credit_note_id
+       WHERE COALESCE(v.voucher_date, cn.bill_date) <= ${asOf}::date
+         AND (v.id IS NULL OR v.status = 'posted')
+         AND (cn.id IS NULL OR cn.status IN ('posted', 'settled'))
+       GROUP BY ps.supplier_invoice_id
+    )
+    SELECT b.supplier_id, s.code AS supplier_code, s.name AS supplier_name, b.due_date,
+           (b.total - COALESCE(x.amount, 0))::text AS outstanding,
+           (${asOf}::date - b.due_date) AS days_overdue
+      FROM accounting.supplier_invoice b
+      JOIN accounting.supplier s ON s.id = b.supplier_id
+      LEFT JOIN settled x ON x.supplier_invoice_id = b.id
+     WHERE b.kind = 'invoice'
+       AND b.status IN ('posted', 'settled')
+       AND b.total > COALESCE(x.amount, 0)
+       AND b.bill_date <= ${asOf}::date
+       AND ${options.supplierId ? sql`b.supplier_id = ${options.supplierId}` : sql`true`}
+  `);
+
+  const credits = await db.execute<{ supplier_id: string; amount: string }>(sql`
+    WITH applied AS (
+      SELECT ps.credit_note_id, SUM(ps.amount) AS amount
+        FROM accounting.payable_settlement ps
+        JOIN accounting.supplier_invoice b ON b.id = ps.supplier_invoice_id
+       WHERE ps.credit_note_id IS NOT NULL AND b.bill_date <= ${asOf}::date
+       GROUP BY ps.credit_note_id
+    )
+    SELECT cn.supplier_id, SUM(cn.total - COALESCE(a.amount, 0))::text AS amount
+      FROM accounting.supplier_invoice cn
+      LEFT JOIN applied a ON a.credit_note_id = cn.id
+     WHERE cn.kind = 'credit_note'
+       AND cn.status IN ('posted', 'settled')
+       AND cn.total > COALESCE(a.amount, 0)
+       AND cn.bill_date <= ${asOf}::date
+       AND ${options.supplierId ? sql`cn.supplier_id = ${options.supplierId}` : sql`true`}
+     GROUP BY cn.supplier_id
+  `);
+  const creditsBySupplier = new Map(
+    (credits.rows ?? []).map((row) => [row.supplier_id, parseAmount(row.amount)]),
+  );
+
+  // Settlement vouchers that have been posted but not fully applied to a bill. Same "as at" basis
+  // as everything else: only applications against bills that existed by the date count.
+  const onAccount = await db.execute<{ supplier_id: string; amount: string }>(sql`
+    WITH applied AS (
+      SELECT ps.voucher_id, SUM(ps.amount) AS amount
+        FROM accounting.payable_settlement ps
+        JOIN accounting.supplier_invoice b ON b.id = ps.supplier_invoice_id
+       WHERE ps.voucher_id IS NOT NULL AND b.bill_date <= ${asOf}::date
+       GROUP BY ps.voucher_id
+    )
+    SELECT v.supplier_id, SUM(v.total - COALESCE(a.amount, 0))::text AS amount
+      FROM accounting.payment_voucher v
+      LEFT JOIN applied a ON a.voucher_id = v.id
+     WHERE v.kind = 'settlement'
+       AND v.status = 'posted'
+       AND v.supplier_id IS NOT NULL
+       AND v.total > COALESCE(a.amount, 0)
+       AND v.voucher_date <= ${asOf}::date
+       AND ${options.supplierId ? sql`v.supplier_id = ${options.supplierId}` : sql`true`}
+     GROUP BY v.supplier_id
+  `);
+  const onAccountBySupplier = new Map(
+    (onAccount.rows ?? []).map((row) => [row.supplier_id, parseAmount(row.amount)]),
+  );
+
+  const emptyBuckets = (): AgingBucket[] =>
+    sorted.map((from, index) => ({
+      label:
+        index === sorted.length - 1 ? `${from}+ days` : `${from}-${sorted[index + 1]! - 1} days`,
+      from,
+      to: index === sorted.length - 1 ? null : sorted[index + 1]!,
+      amount: 0n,
+    }));
+
+  const bySupplier = new Map<string, PayablesAgingRow>();
+
+  for (const row of bills.rows ?? []) {
+    const outstanding = parseAmount(row.outstanding);
+    const overdue = Number(row.days_overdue);
+
+    let entry = bySupplier.get(row.supplier_id);
+    if (!entry) {
+      entry = {
+        supplierId: row.supplier_id,
+        supplierCode: row.supplier_code,
+        supplierName: row.supplier_name,
+        current: 0n,
+        buckets: emptyBuckets(),
+        total: 0n,
+        unappliedCredits: creditsBySupplier.get(row.supplier_id) ?? 0n,
+        paymentsOnAccount: onAccountBySupplier.get(row.supplier_id) ?? 0n,
+        netOwing: 0n,
+        oldestDueDate: null,
+      };
+      bySupplier.set(row.supplier_id, entry);
+    }
+
+    if (overdue < sorted[0]!) {
+      entry.current += outstanding;
+    } else {
+      const index = sorted.reduce((best, from, i) => (overdue >= from ? i : best), 0);
+      entry.buckets[index]!.amount += outstanding;
+    }
+
+    entry.total += outstanding;
+    const dueDate = String(row.due_date).slice(0, 10);
+    if (!entry.oldestDueDate || dueDate < entry.oldestDueDate) entry.oldestDueDate = dueDate;
+  }
+
+  // A supplier CAC owes nothing to but holds credit with, or has overpaid, still belongs here.
+  // Both are part of the reconciliation, and both are money CAC is entitled to have back.
+  for (const supplierId of new Set([...creditsBySupplier.keys(), ...onAccountBySupplier.keys()])) {
+    if (bySupplier.has(supplierId)) continue;
+    const named = await db.execute<{ code: string; name: string }>(
+      sql`SELECT code, name FROM accounting.supplier WHERE id = ${supplierId}`,
+    );
+    bySupplier.set(supplierId, {
+      supplierId,
+      supplierCode: named.rows?.[0]?.code ?? "",
+      supplierName: named.rows?.[0]?.name ?? "",
+      current: 0n,
+      buckets: emptyBuckets(),
+      total: 0n,
+      unappliedCredits: creditsBySupplier.get(supplierId) ?? 0n,
+      paymentsOnAccount: onAccountBySupplier.get(supplierId) ?? 0n,
+      netOwing: 0n,
+      oldestDueDate: null,
+    });
+  }
+
+  const rows = [...bySupplier.values()].map((row) => ({
+    ...row,
+    netOwing: row.total - row.unappliedCredits - row.paymentsOnAccount,
+  }));
+  rows.sort((a, b) => a.supplierName.localeCompare(b.supplierName));
+
+  const bucketTotals = sorted.map((_, index) =>
+    sumAmounts(rows.map((row) => row.buckets[index]!.amount)),
+  );
+  const total = sumAmounts(rows.map((row) => row.total));
+  const creditsTotal = sumAmounts(rows.map((row) => row.unappliedCredits));
+  const onAccountTotal = sumAmounts(rows.map((row) => row.paymentsOnAccount));
+
+  // The payables control account is a credit balance, and `accountBalanceAt` returns a balance in
+  // the account's normal direction — so for a liability it is already positive when money is
+  // owed. No sign flip here; one would make the report agree with nothing.
+  const controlAccountBalance = options.supplierId
+    ? null
+    : await accountBalanceAt(db, SYSTEM_ACCOUNTS.payableControl, asOf);
+
+  return {
+    asOf,
+    boundaries: sorted,
+    boundariesConfirmed: buckets.confirmed,
+    rows,
+    totals: {
+      current: sumAmounts(rows.map((row) => row.current)),
+      buckets: bucketTotals,
+      total,
+      unappliedCredits: creditsTotal,
+      paymentsOnAccount: onAccountTotal,
+      netOwing: total - creditsTotal - onAccountTotal,
+    },
+    controlAccountBalance,
+    // Bills outstanding, less credit notes not yet applied, less payments not yet matched to a
+    // bill, is what account 2110 should hold. Anything else reached it without going through the
+    // sub-ledger, and the screen says so rather than quietly disagreeing with the balance sheet.
+    difference:
+      controlAccountBalance === null
+        ? null
+        : total - creditsTotal - onAccountTotal - controlAccountBalance,
+  };
+}
+
 /**
  * Net balance of one account at a date, in its normal direction.
  *
