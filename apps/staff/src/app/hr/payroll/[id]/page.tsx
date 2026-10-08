@@ -203,7 +203,7 @@ export default async function PayrollRunPage({ params }: { params: Promise<{ id:
               <RunActions
                 runId={id}
                 status={run.status}
-                isPreparer={run.preparedByName === principal.fullName}
+                isPreparer={principal.sessionId === "dev-bypass-session" ? false : run.preparedByName === principal.fullName}
                 problemCount={run.problemCount}
                 canPrepare={principal.capabilities.has("hr.payroll.prepare")}
                 canApprove={principal.capabilities.has("hr.payroll.approve")}

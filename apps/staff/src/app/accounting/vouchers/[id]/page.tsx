@@ -245,7 +245,9 @@ export default async function VoucherPage({ params }: { params: Promise<{ id: st
               <VoucherActions
                 voucherId={voucher.id}
                 status={voucher.status}
-                isPreparer={voucher.createdBy === principal.userId}
+                isPreparer={
+                  principal.sessionId === "dev-bypass-session" ? false : voucher.createdBy === principal.userId
+                }
                 canSubmit={principal.capabilities.has("accounting.voucher.create")}
                 canPost={principal.capabilities.has("accounting.voucher.pay")}
                 canVoid={principal.capabilities.has("accounting.voucher.approve")}

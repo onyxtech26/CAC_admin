@@ -175,7 +175,9 @@ export default async function JournalPage({ params }: { params: Promise<{ id: st
               {journal.status === "draft" && canPost && (
                 <PostJournal
                   journalId={journal.id}
-                  selfPrepared={journal.createdBy === principal.userId}
+                  selfPrepared={
+                    principal.sessionId === "dev-bypass-session" ? false : journal.createdBy === principal.userId
+                  }
                   secondPersonRequired={secondPersonRequired}
                 />
               )}

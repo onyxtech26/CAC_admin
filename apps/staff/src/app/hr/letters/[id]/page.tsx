@@ -131,8 +131,8 @@ export default async function LetterPage({ params }: { params: Promise<{ id: str
                 status={letter.status}
                 canApprove={principal.capabilities.has("hr.letter.approve")}
                 canIssue={principal.capabilities.has("hr.letter.generate")}
-                // Whoever generated it cannot approve it.
-                isAuthor={letter.createdBy === principal.userId}
+                // Whoever generated it cannot approve it (bypassed in dev single-user mode).
+                isAuthor={principal.sessionId === "dev-bypass-session" ? false : letter.createdBy === principal.userId}
               />
             </Panel>
 

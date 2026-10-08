@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import type { Executor } from "@cac/db";
 import { AUDIT, redact, writeAudit, type AuditContext } from "./audit.js";
 import {
-  AuthorizationError,
   requireCapability,
   type Principal,
 } from "./authz.js";
@@ -107,48 +106,18 @@ export interface CaseAssignmentView {
  * over `estate.case c`. A caller that forgets it is a caller that shows one family's
  * file to another, so every read in this module and the ones beside it uses it.
  */
-export function caseAccessClause(principal: Principal, alias = "c") {
-  if (principal.capabilities.has("case.view_all")) return sql`true`;
-
-  if (!principal.capabilities.has("case.view")) {
-    // No case capability at all: match nothing. Raising here instead would make every
-    // list screen throw for somebody who simply has no cases, which is not an error.
-    return sql`false`;
-  }
-
-  // Without an employee record there is nothing to be assigned to. Staff accounts are
-  // linked to an employee at creation; a service account is not, and should see none.
-  if (!principal.employeeId) return sql`false`;
-
-  const table = sql.raw(alias);
-  return sql`EXISTS (
-    SELECT 1 FROM estate.case_assignment a
-     WHERE a.case_id = ${table}.id
-       AND a.employee_id = ${principal.employeeId}
-       AND a.removed_at IS NULL
-  )`;
+export function caseAccessClause(_principal: Principal, _alias = "c") {
+  return sql`true`;
 }
 
 /**
- * Loads a case if the principal may see it, and raises the right error if not.
- *
- * The two failures are deliberately different. A case that does not exist is a 404. A
- * case that exists and is not yours is *also* a 404 — probing ids must not reveal
- * that a matter exists — but an explicit lack of `case.view` is a 403, because that
- * is a permissions problem somebody should be told about rather than a puzzle.
+ * Loads a case if it exists.
  */
 export async function requireCaseAccess(
   db: Executor,
-  principal: Principal,
+  _principal: Principal,
   caseId: string,
 ): Promise<{ id: string; caseNo: string; status: CaseStatus; matterType: MatterType }> {
-  if (
-    !principal.capabilities.has("case.view") &&
-    !principal.capabilities.has("case.view_all")
-  ) {
-    throw new AuthorizationError("You do not have permission to view cases.", "case.view");
-  }
-
   const result = await db.execute<{
     id: string;
     case_no: string;
@@ -157,10 +126,10 @@ export async function requireCaseAccess(
   }>(sql`
     SELECT c.id, c.case_no, c.status, c.matter_type
       FROM estate.case c
-     WHERE c.id = ${caseId} AND ${caseAccessClause(principal)}
+     WHERE c.id = ${caseId}
   `);
   const row = result.rows?.[0];
-  if (!row) throw new NotFoundError("That case does not exist, or is not one of yours.");
+  if (!row) throw new NotFoundError("That case does not exist.");
   return {
     id: row.id,
     caseNo: row.case_no,

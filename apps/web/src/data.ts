@@ -330,6 +330,7 @@ export const SERVICE_OPTIONS = [
 ];
 
 export const NAV = [
+  { label: "Home", to: "/" },
   { label: "About Us", to: "/about" },
   { label: "Services", to: "/services" },
   { label: "Our Process", to: "/process" },

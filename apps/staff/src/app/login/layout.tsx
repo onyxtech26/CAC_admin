@@ -11,30 +11,27 @@
  */
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative grid min-h-screen place-items-center overflow-hidden px-4 py-10">
+    <div className="relative grid min-h-screen place-items-center overflow-hidden bg-slate-50 px-4 py-10">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 55% at 50% 22%, rgba(255,244,207,0.10) 0%, rgba(233,199,102,0.062) 20%, rgba(201,138,4,0.032) 42%, rgba(201,138,4,0) 100%)",
+            "radial-gradient(ellipse 70% 55% at 50% 22%, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.03) 30%, rgba(248,250,252,0) 70%)",
         }}
       />
 
       <div className="relative w-full max-w-sm">
-        <div className="mb-7 flex items-center gap-3">
-          <span
-            className="grid h-11 w-11 shrink-0 place-items-center rounded border border-[var(--color-line-strong)] bg-[var(--color-navy)] text-[13px] font-bold text-[var(--color-gold-2)]"
-            style={{ boxShadow: "0 0 26px -6px rgba(201, 138, 4, 0.6)" }}
-          >
-            CAC
-          </span>
+        <div className="mb-7 flex items-center gap-3.5">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white p-2 shadow-xs">
+            <img src="/assets/logo.webp" alt="CAC Logo" className="h-full w-full object-contain" />
+          </div>
           <div className="leading-tight">
-            <p className="font-display text-[17px] font-semibold text-[var(--color-body)]">
-              Internal Platform
+            <p className="text-[17px] font-semibold text-slate-900 tracking-tight">
+              Conglomerate Appraisal
             </p>
-            <p className="eyebrow mt-0.5 text-[8.5px] text-[var(--color-gold-soft)]">
-              Conglomerate Appraisal Consultancy
+            <p className="mt-0.5 text-[11.5px] font-medium text-slate-500">
+              Staff Enterprise Portal
             </p>
           </div>
         </div>

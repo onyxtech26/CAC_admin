@@ -81,16 +81,16 @@ export default async function EnquiriesPage({
         </div>
 
         <Panel title="Filter">
-          <form method="get" className="flex flex-wrap items-end gap-3">
+          <form method="get" className="flex flex-wrap items-end gap-3.5">
             <div>
-              <label htmlFor="status" className="block text-[12px] font-medium">
+              <label htmlFor="status" className="block text-[12px] font-semibold text-slate-700">
                 Status
               </label>
               <select
                 id="status"
                 name="status"
                 defaultValue={status ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[14px]"
+                className="control mt-1.5 min-w-[160px]"
               >
                 <option value="">All</option>
                 {(Object.keys(LABEL) as EnquiryStatus[]).map((value) => (
@@ -102,9 +102,9 @@ export default async function EnquiriesPage({
             </div>
             <button
               type="submit"
-              className="rounded-md border border-[var(--color-line-strong)] px-3 py-2 text-[13px]"
+              className="btn btn-primary px-4 py-2 text-[13px] font-semibold shadow-xs"
             >
-              Show
+              Apply
             </button>
           </form>
         </Panel>

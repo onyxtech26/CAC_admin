@@ -67,28 +67,33 @@ export default function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 lg:flex">
-          {NAV.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              className={({ isActive }) =>
-                `group relative px-4 py-2 font-mono text-[12px] uppercase tracking-wide-2 transition-colors ${
-                  isActive ? "text-gold-2" : "text-stone hover:text-ivory"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  {n.label}
-                  <span
-                    className={`absolute inset-x-3 -bottom-0.5 h-px origin-left bg-gold-2 transition-transform duration-300 ${
-                      isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
-                    }`}
-                  />
-                </>
-              )}
-            </NavLink>
-          ))}
+          {NAV.map((n) => {
+            const isHome = n.to === "/";
+            return (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                {...(isHome ? staffEntryProps() : {})}
+                className={({ isActive }) =>
+                  `group relative flex items-center gap-1.5 px-3.5 py-2 font-mono text-[12px] uppercase tracking-wide-2 transition-colors ${
+                    isActive ? "text-gold-2" : "text-stone hover:text-ivory"
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {isHome && <Icon name="home" size={14} className="text-gold-2/90 group-hover:text-gold-2" />}
+                    <span>{n.label}</span>
+                    <span
+                      className={`absolute inset-x-3 -bottom-0.5 h-px origin-left bg-gold-2 transition-transform duration-300 ${
+                        isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+                      }`}
+                    />
+                  </>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* CTA + mobile toggle */}
@@ -172,20 +177,27 @@ export default function Navbar() {
         }`}
       >
         <nav className="mx-auto flex max-w-[1320px] flex-col gap-1 px-5 py-4">
-          {NAV.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              className={({ isActive }) =>
-                `flex items-center justify-between border-b border-white/5 py-3 font-display text-lg ${
-                  isActive ? "text-gold-2" : "text-sand"
-                }`
-              }
-            >
-              {n.label}
-              <Icon name="arrow" size={16} className="text-gold-2/60" />
-            </NavLink>
-          ))}
+          {NAV.map((n) => {
+            const isHome = n.to === "/";
+            return (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                {...(isHome ? staffEntryProps() : {})}
+                className={({ isActive }) =>
+                  `flex items-center justify-between border-b border-white/5 py-3 font-display text-lg ${
+                    isActive ? "text-gold-2" : "text-sand"
+                  }`
+                }
+              >
+                <span className="flex items-center gap-2.5">
+                  {isHome && <Icon name="home" size={18} className="text-gold-2" />}
+                  <span>{n.label}</span>
+                </span>
+                <Icon name="arrow" size={16} className="text-gold-2/60" />
+              </NavLink>
+            );
+          })}
           <div className="mt-3 grid grid-cols-2 gap-2">
             <a href={waLink()} target="_blank" rel="noreferrer" className="gold-btn flex items-center justify-center gap-2 rounded-sm px-4 py-3 text-[12px] uppercase">
               <Icon name="whatsapp" size={16} /> WhatsApp

@@ -27,3 +27,4 @@ packages/db/.data.owner.json
 
 # Local backups taken by `pnpm --filter @cac/db backup`
 .backups/
+scratch/

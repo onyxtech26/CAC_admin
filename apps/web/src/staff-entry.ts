@@ -33,10 +33,10 @@ const CONFIGURED = import.meta.env.VITE_STAFF_LOGIN_URL as string | undefined;
  *
  * `VITE_STAFF_LOGIN_URL` still overrides both, which is what a deployment sets (Q-INFRA-1).
  */
-const DEV_DEFAULT = "http://localhost:3100/login";
+const DEV_DEFAULT = "http://localhost:3100";
 
 export const STAFF_LOGIN_URL =
-  (CONFIGURED && CONFIGURED.trim()) || (import.meta.env.DEV ? DEV_DEFAULT : "/staff/login");
+  (CONFIGURED && CONFIGURED.trim()) || (import.meta.env.DEV ? DEV_DEFAULT : "/staff");
 
 /**
  * Sends the browser to the staff login.

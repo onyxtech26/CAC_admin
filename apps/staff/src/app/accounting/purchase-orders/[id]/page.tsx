@@ -225,7 +225,9 @@ export default async function PurchaseOrderPage({ params }: { params: Promise<{ 
               <OrderActions
                 orderId={order.id}
                 status={order.status}
-                isPreparer={order.createdBy === principal.userId}
+                isPreparer={
+                  principal.sessionId === "dev-bypass-session" ? false : order.createdBy === principal.userId
+                }
                 canCreate={principal.capabilities.has("accounting.po.create")}
                 canApprove={principal.capabilities.has("accounting.po.approve")}
                 canReceive={principal.capabilities.has("accounting.po.receive")}

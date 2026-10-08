@@ -1,19 +1,151 @@
 import Link from "next/link";
 import type { Principal } from "@cac/core";
-import { visibleNavigation } from "@/lib/nav";
-import { Badge } from "./ui";
+import { visibleNavigation, type AppSuite } from "@/lib/nav";
+import { QuickActionMenu } from "./QuickActionMenu";
+import {
+  IconAccounting,
+  IconAdmin,
+  IconAward,
+  IconBank,
+  IconBill,
+  IconCase,
+  IconCheckCircle,
+  IconClock,
+  IconDashboard,
+  IconEnquiry,
+  IconFileCheck,
+  IconFolder,
+  IconHRMS,
+  IconInvoice,
+  IconJournal,
+  IconLegalAI,
+  IconLetters,
+  IconPayroll,
+  IconPayslip,
+  IconQuote,
+  IconReceipt,
+  IconTax,
+  IconUsers,
+  IconVoucher,
+} from "./icons";
+
+function getNavIcon(name?: string) {
+  switch (name) {
+    case "dashboard":
+      return <IconDashboard size={16} />;
+    case "enquiry":
+      return <IconEnquiry size={16} />;
+    case "accounting":
+      return <IconAccounting size={16} />;
+    case "hrms":
+      return <IconHRMS size={16} />;
+    case "legal":
+      return <IconLegalAI size={16} />;
+    case "admin":
+      return <IconAdmin size={16} />;
+    case "invoice":
+      return <IconInvoice size={16} />;
+    case "receipt":
+      return <IconReceipt size={16} />;
+    case "quote":
+      return <IconQuote size={16} />;
+    case "bill":
+      return <IconBill size={16} />;
+    case "voucher":
+      return <IconVoucher size={16} />;
+    case "journal":
+      return <IconJournal size={16} />;
+    case "bank":
+      return <IconBank size={16} />;
+    case "tax":
+      return <IconTax size={16} />;
+    case "users":
+      return <IconUsers size={16} />;
+    case "clock":
+      return <IconClock size={16} />;
+    case "payroll":
+      return <IconPayroll size={16} />;
+    case "payslip":
+      return <IconPayslip size={16} />;
+    case "award":
+      return <IconAward size={16} />;
+    case "letters":
+      return <IconLetters size={16} />;
+    case "case":
+      return <IconCase size={16} />;
+    case "folder":
+      return <IconFolder size={16} />;
+    case "check":
+      return <IconCheckCircle size={16} />;
+    default:
+      return <IconFileCheck size={16} />;
+  }
+}
+
+function inferActiveSuite(
+  breadcrumbs?: Array<{ label: string; href?: string }>,
+  title?: string,
+): AppSuite {
+  const combined = `${title ?? ""} ${(breadcrumbs ?? []).map((b) => b.label).join(" ")}`.toLowerCase();
+  if (
+    combined.includes("accounting") ||
+    combined.includes("invoice") ||
+    combined.includes("quote") ||
+    combined.includes("receipt") ||
+    combined.includes("bill") ||
+    combined.includes("voucher") ||
+    combined.includes("ledger") ||
+    combined.includes("journal") ||
+    combined.includes("aging") ||
+    combined.includes("bank") ||
+    combined.includes("tax") ||
+    combined.includes("customer") ||
+    combined.includes("supplier")
+  ) {
+    return "accounting";
+  }
+  if (
+    combined.includes("hr") ||
+    combined.includes("employee") ||
+    combined.includes("leave") ||
+    combined.includes("attendance") ||
+    combined.includes("payroll") ||
+    combined.includes("payslip") ||
+    combined.includes("statutory") ||
+    combined.includes("appraisal") ||
+    combined.includes("letter")
+  ) {
+    return "hrms";
+  }
+  if (
+    combined.includes("case") ||
+    combined.includes("matter") ||
+    combined.includes("probate") ||
+    combined.includes("rule") ||
+    combined.includes("legal") ||
+    combined.includes("document")
+  ) {
+    return "legal";
+  }
+  if (
+    combined.includes("admin") ||
+    combined.includes("user") ||
+    combined.includes("role") ||
+    combined.includes("setting") ||
+    combined.includes("integration") ||
+    combined.includes("audit")
+  ) {
+    return "admin";
+  }
+  return "all";
+}
 
 /**
- * The application shell: sidebar, header, breadcrumbs, content.
+ * Re-architected Ergonomic 3-Tier Enterprise Shell:
  *
- * The sidebar is a plain <details> on small screens rather than a JS drawer — fewer moving parts,
- * works before hydration, and keyboard accessible for free.
- *
- * The chrome is the public site's: an ink sidebar against the navy ground, the CAC mark set the
- * way the site's navbar sets it, gold for the section rules and for wherever you are. The one
- * thing borrowed and then turned down is the site's brand halo — permanent there, and here only on
- * the mark itself, because a glow behind a menu you read fifty times a day is a glow you come to
- * resent.
+ * Tier 1: Top Suite Switcher with isolated focus (Command Hub / Accounting / HRMS / Legal AI / Admin)
+ * Tier 2: Contextual Left Navigation (shows only the relevant tools for the active suite, eliminating sidebar clutter)
+ * Tier 3: High-Legibility Canvas with generous padding, crisp borders, and executive contrast
  */
 export function Shell({
   principal,
@@ -21,99 +153,242 @@ export function Shell({
   title,
   actions,
   children,
+  currentSuite,
 }: {
   principal: Principal;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   title: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
+  currentSuite?: AppSuite;
 }) {
-  const sections = visibleNavigation(principal);
+  const activeSuite = currentSuite ?? inferActiveSuite(breadcrumbs, title);
+
+  // Filter navigation contextually based on the active suite:
+  // If in a specific suite (e.g. accounting, hrms, legal, admin), show only its tools.
+  // In the overview hub ("all"), show everything cleanly.
+  const sections = visibleNavigation(principal, activeSuite === "all" ? "all" : activeSuite);
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[248px_1fr]">
+    <div className="min-h-screen bg-[var(--color-canvas)] lg:grid lg:grid-cols-[260px_1fr]">
       <a href="#main" className="skip-link">
         Skip to content
       </a>
 
-      <aside className="border-r border-[var(--color-line)] bg-[var(--color-ink)]/70 lg:min-h-screen">
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 border-b border-[var(--color-line)] px-4 py-3.5"
-        >
-          <span
-            className="grid h-8 w-8 shrink-0 place-items-center rounded border border-[var(--color-line-strong)] bg-[var(--color-navy)] text-[11px] font-bold text-[var(--color-gold-2)]"
-            style={{ boxShadow: "0 0 18px -6px rgba(201, 138, 4, 0.55)" }}
+      {/* Sidebar: Executive Slate/Navy Rail (Viewport Pinned & Sticky) */}
+      <aside className="border-r border-slate-800 bg-[#0f172a] text-slate-300 lg:sticky lg:top-0 lg:h-screen lg:max-h-screen flex flex-col justify-between overflow-y-auto shrink-0">
+        <div>
+          {/* Brand Header */}
+          <Link
+            href="/"
+            className="group flex items-center gap-3 border-b border-slate-800/80 px-4 py-3.5 hover:bg-slate-800/50 transition-colors"
           >
-            CAC
-          </span>
-          <div className="leading-tight">
-            <p className="font-display text-[13px] font-semibold text-[var(--color-body)]">
-              Internal Platform
-            </p>
-            <p className="eyebrow text-[8px] text-[var(--color-gold-soft)]">
-              Conglomerate Appraisal
-            </p>
+            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 border border-slate-700/80 p-1.5 shadow-xs transition group-hover:border-slate-600">
+              <img
+                src="/assets/logo.webp"
+                alt="CAC Logo"
+                className="h-full w-full object-contain brightness-105"
+              />
+            </div>
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-[13.5px] font-semibold text-white tracking-tight group-hover:text-amber-200 transition-colors">
+                Conglomerate Appraisal
+              </p>
+              <p className="mt-0.5 truncate text-[11px] text-slate-400 font-normal">
+                Enterprise Portal
+              </p>
+            </div>
+          </Link>
+
+          {/* Active Suite Indicator Pill in Sidebar */}
+          {activeSuite !== "all" && (
+            <div className="px-3 pt-3 pb-1">
+              <div className="flex items-center justify-between rounded-lg bg-slate-850/80 border border-slate-750 px-3 py-1.5 text-[11.5px]">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <span className="truncate text-slate-300 font-medium">
+                    {activeSuite === "accounting"
+                      ? "Accounting Suite"
+                      : activeSuite === "hrms"
+                        ? "HRMS & Payroll"
+                        : activeSuite === "legal"
+                          ? "Legal AI Forensics"
+                          : "Administration"}
+                  </span>
+                </div>
+                <Link
+                  href="/"
+                  className="text-[10.5px] text-slate-400 hover:text-amber-300 transition font-medium ml-2 shrink-0"
+                  title="Return to Command Hub"
+                >
+                  Hub
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile menu toggle */}
+          <details className="lg:hidden" open={false}>
+            <summary className="cursor-pointer list-none px-4 py-2.5 text-[11px] text-amber-400 uppercase font-mono">
+              Toggle Menu
+            </summary>
+            <NavList sections={sections} />
+          </details>
+
+          {/* Desktop Nav List */}
+          <div className="hidden lg:block">
+            <NavList sections={sections} />
           </div>
-        </Link>
+        </div>
 
-        <details className="lg:hidden" open={false}>
-          <summary className="eyebrow cursor-pointer list-none px-4 py-2.5 text-[10px] text-[var(--color-gold-soft)]">
-            Menu
-          </summary>
-          <NavList sections={sections} />
-        </details>
-
-        <div className="hidden lg:block">
-          <NavList sections={sections} />
+        {/* Sidebar Footer */}
+        <div className="hidden lg:block shrink-0 border-t border-slate-800/80 px-4 py-3 bg-slate-950/40">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span className="truncate max-w-[150px]">Conglomerate Appraisal</span>
+            <span className="font-mono text-[9px] text-amber-400 font-medium">Enterprise</span>
+          </div>
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-col">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-line)] bg-[var(--color-ink)]/55 px-4 py-2.5">
-          <nav aria-label="Breadcrumb" className="text-[12px] text-[var(--color-muted)]">
-            <ol className="flex items-center gap-1.5">
+      {/* Main Workspace */}
+      <div className="flex min-w-0 flex-col bg-[var(--color-canvas)]">
+        {/* Top Header: Clean High-Legibility Bar */}
+        <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white/95 backdrop-blur-md px-6 py-3 shadow-2xs">
+          {/* Breadcrumbs */}
+          <nav aria-label="Breadcrumb" className="text-[12.5px] text-slate-500">
+            <ol className="flex items-center gap-2">
               <li>
-                <Link href="/" className="hover:text-[var(--color-body)]">
-                  Home
+                <Link href="/" className="hover:text-amber-700 flex items-center gap-1.5 transition font-medium">
+                  <IconDashboard size={14} className="text-slate-400" />
+                  <span>CAC</span>
                 </Link>
               </li>
               {(breadcrumbs ?? []).map((crumb) => (
-                <li key={crumb.label} className="flex items-center gap-1.5">
-                  <span aria-hidden="true">/</span>
+                <li key={crumb.label} className="flex items-center gap-2">
+                  <span aria-hidden="true" className="text-slate-300">/</span>
                   {crumb.href ? (
-                    <Link href={crumb.href} className="hover:text-[var(--color-body)]">
+                    <Link href={crumb.href} className="hover:text-amber-700 transition font-medium text-slate-600">
                       {crumb.label}
                     </Link>
                   ) : (
-                    <span className="text-[var(--color-body)]">{crumb.label}</span>
+                    <span className="text-slate-900 font-semibold">{crumb.label}</span>
                   )}
                 </li>
               ))}
             </ol>
           </nav>
 
+          {/* Right Controls */}
           <div className="flex items-center gap-3">
-            <span className="hidden text-[12px] text-[var(--color-muted)] sm:inline">
-              {principal.fullName}
-            </span>
-            {principal.roles[0] && <Badge tone="info">{principal.roles[0].replace(/_/g, " ")}</Badge>}
+            <QuickActionMenu />
+
+            <div className="hidden sm:flex items-center gap-2 pl-3 border-l border-slate-200">
+              <Link
+                href="/account"
+                title={`Signed in as ${principal.fullName} (${principal.email}) — View Profile & Security`}
+                className="group flex items-center gap-2.5 rounded-lg px-2.5 py-1 text-[12.5px] font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              >
+                <span className="grid h-7 w-7 place-items-center rounded-full bg-slate-900 text-[11px] font-bold text-amber-300 shadow-xs group-hover:scale-105 transition-transform">
+                  {(principal.fullName?.charAt(0) || "U").toUpperCase()}
+                </span>
+                <div className="text-left leading-tight hidden md:block">
+                  <p className="max-w-[130px] truncate text-[12px] font-semibold text-slate-800 group-hover:text-amber-800 transition-colors">
+                    {principal.fullName}
+                  </p>
+                  <p className="text-[10px] text-slate-500 font-medium capitalize">
+                    {principal.roles[0]?.replace(/_/g, " ").toLowerCase() ?? "Staff"}
+                  </p>
+                </div>
+              </Link>
+            </div>
+
             <form action="/api/logout" method="post">
-              <button type="submit" className="btn btn-secondary px-2.5 py-1.5 text-[12px]">
+              <button
+                type="submit"
+                title="Sign out and return to the main public website"
+                className="btn btn-secondary px-3 py-1.5 text-[12px] font-medium text-slate-700 hover:text-slate-900"
+              >
                 Sign out
               </button>
             </form>
           </div>
         </header>
 
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 p-4 lg:p-6">
-          {/*
-            The enrolment reminder, on every page rather than only on /account — somebody who never
-            visits their account page would otherwise meet the requirement as a locked door on the
-            day it falls due. It disappears the moment an authenticator is enrolled.
-          */}
+        {/* Tier 1: Suite Switcher Bar (Spacious Ergonomic Navigation) */}
+        <div className="border-b border-slate-200/90 bg-white px-6 py-2.5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <Link
+                href="/"
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                  activeSuite === "all"
+                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                <IconDashboard size={14} />
+                <span>Command Hub</span>
+              </Link>
+
+              <Link
+                href="/accounting"
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                  activeSuite === "accounting"
+                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                <IconAccounting size={14} />
+                <span>AutoCount Accounting</span>
+              </Link>
+
+              <Link
+                href="/hr"
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                  activeSuite === "hrms"
+                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                <IconHRMS size={14} />
+                <span>AutoCount HRMS</span>
+              </Link>
+
+              <Link
+                href="/cases"
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                  activeSuite === "legal"
+                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                <IconLegalAI size={14} />
+                <span>Legal AI Forensics</span>
+              </Link>
+
+              <Link
+                href="/admin"
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                  activeSuite === "admin"
+                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                }`}
+              >
+                <IconAdmin size={14} />
+                <span>Administration</span>
+              </Link>
+            </div>
+
+            <span className="hidden xl:inline text-[11px] text-slate-400 font-mono">
+              Malaysian SST & Bar Council Compliant
+            </span>
+          </div>
+        </div>
+
+        {/* Main Content Area: Generous Enterprise Canvas */}
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 p-6 lg:p-8 page-transition">
           {principal.mfaRequired && !principal.mustEnrolMfa && (
-            <div className="mb-4 rounded-md border border-[color-mix(in_srgb,var(--color-warn)_35%,transparent)] bg-[var(--color-warn-bg)] px-3 py-2 text-[12px]">
+            <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
               This account needs an authenticator by{" "}
               <strong>
                 {principal.mfaEnrolmentDueAt
@@ -124,22 +399,23 @@ export function Shell({
                   : "the deadline"}
               </strong>
               . After that date only your account page opens.{" "}
-              <Link href="/account" className="underline">
+              <Link href="/account" className="underline font-semibold">
                 Set one up
               </Link>
               , which takes about a minute.
             </div>
           )}
 
-          <div className="mb-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <h1 className="page-title text-[22px] text-[var(--color-body)]">{title}</h1>
+          <div className="mb-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h1 className="page-title text-[24px] font-semibold text-slate-900 tracking-tight">
+                {title}
+              </h1>
               {actions}
             </div>
-            {/* The site rules a gold hairline under every section heading. One line of CSS, and it
-                is the single strongest signal that these are the same product. */}
-            <div className="hairline mt-2 h-px w-full" aria-hidden="true" />
+            <div className="hairline mt-3 h-px w-full" aria-hidden="true" />
           </div>
+
           {children}
         </main>
       </div>
@@ -147,34 +423,41 @@ export function Shell({
   );
 }
 
-function NavList({ sections }: { sections: ReturnType<typeof visibleNavigation> }) {
+function NavList({
+  sections,
+}: {
+  sections: ReturnType<typeof visibleNavigation>;
+}) {
   return (
-    <nav className="px-2 py-2" aria-label="Sections">
+    <nav className="px-3 py-3 space-y-4" aria-label="Sections">
       {sections.map((section) => (
-        <div key={section.heading} className="mb-3">
-          <p className="eyebrow px-2 py-1 text-[9px] text-[var(--color-gold-soft)]">
+        <div key={section.heading} className="space-y-1">
+          <p className="px-3 py-1 font-mono text-[9.5px] uppercase tracking-wider text-slate-400 font-semibold">
             {section.heading}
           </p>
-          <ul>
+          <ul className="space-y-0.5">
             {section.items.map((item) => (
               <li key={item.href}>
                 {item.phase ? (
-                  // Not built yet. Shown, disabled, and labelled with the phase
-                  // rather than hidden — a menu that lies about what exists is
-                  // worse than one that admits what is coming.
                   <span
-                    className="flex cursor-not-allowed items-center justify-between rounded px-2 py-1.5 text-[13px] text-[var(--color-faint)]"
+                    className="flex cursor-not-allowed items-center justify-between rounded-lg px-3 py-1.5 text-[13px] text-slate-500"
                     title={`Planned for phase ${item.phase}`}
                   >
-                    {item.label}
-                    <span className="text-[10px]">P{item.phase}</span>
+                    <span className="flex items-center gap-2.5">
+                      <span className="opacity-40">{getNavIcon(item.icon)}</span>
+                      <span>{item.label}</span>
+                    </span>
+                    <span className="text-[10px] font-mono">P{item.phase}</span>
                   </span>
                 ) : (
                   <Link
                     href={item.href}
-                    className="block rounded border-l-2 border-transparent px-2 py-1.5 text-[13px] text-[var(--color-muted)] transition hover:border-[var(--color-gold-2)] hover:bg-[rgba(233,199,102,0.08)] hover:text-[var(--color-body)]"
+                    className="group flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[13px] text-slate-300 font-normal transition-all duration-150 hover:bg-slate-800 hover:text-white"
                   >
-                    {item.label}
+                    <span className="text-slate-400 group-hover:text-amber-400 transition-colors shrink-0">
+                      {getNavIcon(item.icon)}
+                    </span>
+                    <span className="truncate">{item.label}</span>
                   </Link>
                 )}
               </li>

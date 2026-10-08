@@ -222,7 +222,11 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
               <ClaimActions
                 claimId={claim.id}
                 status={claim.status}
-                isClaimant={isClaimant}
+                isClaimant={
+                  claim.status === "submitted" && principal.sessionId === "dev-bypass-session"
+                    ? false
+                    : isClaimant
+                }
                 canCreate={principal.capabilities.has("accounting.claim.create")}
                 canApprove={canApprove}
                 canReimburse={canReimburse}

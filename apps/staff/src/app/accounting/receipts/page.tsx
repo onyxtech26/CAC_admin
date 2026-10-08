@@ -67,14 +67,14 @@ export default async function ReceiptsPage({
         </div>
 
         <Panel title="Filter">
-          <form method="get" className="flex flex-wrap items-end gap-3">
+          <form method="get" className="flex flex-wrap items-end gap-3.5">
             <div>
-              <label htmlFor="status" className="block text-[12px] font-medium">Status</label>
+              <label htmlFor="status" className="block text-[12px] font-semibold text-slate-700">Status</label>
               <select
                 id="status"
                 name="status"
                 defaultValue={query.status ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
+                className="control mt-1.5 min-w-[140px]"
               >
                 <option value="">All</option>
                 <option value="draft">Draft</option>
@@ -83,22 +83,36 @@ export default async function ReceiptsPage({
               </select>
             </div>
             <div>
-              <label htmlFor="q" className="block text-[12px] font-medium">Number, reference or customer</label>
+              <label htmlFor="q" className="block text-[12px] font-semibold text-slate-700">Number, reference or customer</label>
               <input
                 id="q"
                 name="q"
+                placeholder="Search receipts..."
                 defaultValue={query.q ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
+                className="control mt-1.5 min-w-[240px]"
               />
             </div>
-            <label className="flex items-center gap-2 pb-2 text-[12px]">
-              <input type="checkbox" name="unallocated" value="1" defaultChecked={query.unallocated === "1"} />
+            <label className="flex items-center gap-2 pb-2 text-[12.5px] text-slate-700 font-medium cursor-pointer">
+              <input
+                type="checkbox"
+                name="unallocated"
+                value="1"
+                defaultChecked={query.unallocated === "1"}
+                className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+              />
               Only what is unmatched
             </label>
-            <button type="submit" className="btn btn-primary px-3 py-2 text-[13px]">
-              Apply
-            </button>
-            <Link href="/accounting/receipts" className="pb-2 text-[12px] text-[var(--color-info)]">Clear</Link>
+            <div className="flex items-center gap-2 pb-0.5">
+              <button type="submit" className="btn btn-primary px-4 py-2 text-[13px] font-semibold shadow-xs">
+                Apply
+              </button>
+              <Link
+                href="/accounting/receipts"
+                className="btn btn-ghost px-3 py-2 text-[12.5px] font-medium text-slate-500 hover:text-slate-800"
+              >
+                Clear
+              </Link>
+            </div>
           </form>
         </Panel>
 

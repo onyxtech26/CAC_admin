@@ -1,34 +1,28 @@
 import type { ReactNode } from "react";
 
 /**
- * The platform's primitives, in the brand's clothes.
+ * Enterprise primitives for CAC Platform.
  *
- * Dense on purpose — data tables, status badges and stat tiles are the vocabulary of accounting
- * and HR software. What changed when the platform took on the public site's identity is the
- * surface underneath them: panels are the site's gold-edged plate, the primary action is its gold
- * button, and headings are set in Playfair. What deliberately did not change is the behaviour.
- * Nothing floats, drifts or glows: those belong to a page somebody scrolls past once, not to a
- * screen somebody reads a figure off forty times a day.
- *
- * Colour lives in tokens (globals.css) and never in this file, which is why the theme could be
- * swapped underneath all 93 screens at once.
+ * Spacious, high-legibility enterprise components:
+ * - Generous padding and crisp boundaries
+ * - Clear contrast and readable status badges
+ * - Tabular alignment for financial figures and time logs
  */
 
 type Tone = "neutral" | "ok" | "warn" | "danger" | "info";
 
 const TONE: Record<Tone, string> = {
-  neutral: "bg-[var(--color-canvas)] text-[var(--color-muted)] border-[var(--color-line-strong)]",
-  ok: "bg-[var(--color-ok-bg)] text-[var(--color-ok)] border-[color-mix(in_srgb,var(--color-ok)_25%,transparent)]",
-  warn: "bg-[var(--color-warn-bg)] text-[var(--color-warn)] border-[color-mix(in_srgb,var(--color-warn)_25%,transparent)]",
-  danger:
-    "bg-[var(--color-danger-bg)] text-[var(--color-danger)] border-[color-mix(in_srgb,var(--color-danger)_25%,transparent)]",
-  info: "bg-[var(--color-info-bg)] text-[var(--color-info)] border-[color-mix(in_srgb,var(--color-info)_25%,transparent)]",
+  neutral: "bg-[var(--color-surface-2)] text-[var(--color-body)] border-[var(--color-line)]",
+  ok: "bg-[var(--color-ok-bg)] text-[var(--color-ok)] border-[var(--color-ok-border)]",
+  warn: "bg-[var(--color-warn-bg)] text-[var(--color-warn)] border-[var(--color-warn-border)]",
+  danger: "bg-[var(--color-danger-bg)] text-[var(--color-danger)] border-[var(--color-danger-border)]",
+  info: "bg-[var(--color-info-bg)] text-[var(--color-info)] border-[var(--color-info-border)]",
 };
 
 export function Badge({ tone = "neutral", children }: { tone?: Tone; children: ReactNode }) {
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${TONE[tone]}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11.5px] font-medium ${TONE[tone]}`}
     >
       {children}
     </span>
@@ -47,23 +41,23 @@ export function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="plate rounded-lg">
+    <section className="plate rounded-xl overflow-hidden">
       {(title || action) && (
-        <header className="flex items-start justify-between gap-4 border-b border-[var(--color-line)] px-4 py-3">
+        <header className="flex items-start justify-between gap-4 border-b border-[var(--color-line)] bg-slate-50/70 px-6 py-4">
           <div>
             {title && (
-              <h2 className="font-display text-[15px] font-semibold text-[var(--color-body)]">
+              <h2 className="text-[15.5px] font-semibold text-slate-900 tracking-tight">
                 {title}
               </h2>
             )}
             {description && (
-              <p className="mt-0.5 text-[12px] text-[var(--color-muted)]">{description}</p>
+              <p className="mt-0.5 text-[12.5px] text-[var(--color-muted)]">{description}</p>
             )}
           </div>
           {action}
         </header>
       )}
-      <div className="p-4">{children}</div>
+      <div className="p-6">{children}</div>
     </section>
   );
 }
@@ -80,22 +74,22 @@ export function StatTile({
   tone?: Tone;
 }) {
   return (
-    <div className="plate rounded-lg px-4 py-3">
-      <p className="eyebrow text-[10px] text-[var(--color-faint)]">{label}</p>
-      {/* The figure is the point of the tile, so it gets the display face. Tabular, because a row
-          of tiles that do not share a digit width reads as though the numbers are wandering. */}
-      <p className="numeric font-display mt-1.5 text-[26px] leading-none font-semibold text-[var(--color-gold-2)]">
+    <div className="plate plate-interactive rounded-xl p-5 transition-all duration-200 hover:-translate-y-0.5">
+      <p className="eyebrow text-[10.5px] text-[var(--color-faint)] font-medium">{label}</p>
+      <p className="numeric mt-2 text-[26px] leading-none font-bold text-slate-900 tracking-tight">
         {value}
       </p>
       {hint && (
-        <p className="mt-1 text-[12px]">
+        <p className="mt-2 text-[12px]">
           <span
             className={
               tone === "warn"
-                ? "text-[var(--color-warn)]"
+                ? "text-[var(--color-warn)] font-medium"
                 : tone === "danger"
-                  ? "text-[var(--color-danger)]"
-                  : "text-[var(--color-muted)]"
+                  ? "text-[var(--color-danger)] font-medium"
+                  : tone === "ok"
+                    ? "text-[var(--color-ok)] font-medium"
+                    : "text-[var(--color-muted)]"
             }
           >
             {hint}
@@ -116,9 +110,9 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-[var(--color-line-strong)] px-6 py-12 text-center">
-      <p className="font-display text-[15px] font-semibold text-[var(--color-body)]">{title}</p>
-      {body && <p className="mt-1 max-w-md text-[12px] text-[var(--color-muted)]">{body}</p>}
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--color-line-strong)] bg-slate-50/40 px-6 py-12 text-center">
+      <p className="text-[14.5px] font-semibold text-slate-900 tracking-tight">{title}</p>
+      {body && <p className="mt-1 max-w-md text-[12.5px] text-[var(--color-muted)]">{body}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
@@ -134,27 +128,23 @@ export function DataTable({
   caption?: string;
 }) {
   return (
-    // Wide tables scroll inside their own container; the page body never
-    // scrolls sideways.
-    <div className="overflow-x-auto">
-      <table className="data-table w-full border-collapse text-[13px]">
+    <div className="overflow-x-auto rounded-xl border border-[var(--color-line)] bg-white shadow-xs">
+      <table className="data-table w-full border-collapse text-[13.5px]">
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
-          <tr className="border-b border-[var(--color-line)]">
-            {/* Keyed by position as well as label: a table may legitimately have
-                two blank column headings, and React needs the keys to differ. */}
+          <tr className="border-b border-[var(--color-line)] bg-slate-50/80">
             {columns.map((c, index) => (
               <th
                 key={`${c}-${index}`}
                 scope="col"
-                className="eyebrow px-3 py-2 text-left text-[10px] text-[var(--color-faint)]"
+                className="eyebrow px-4 py-3 text-left text-[10.5px] font-semibold text-[var(--color-faint)]"
               >
                 {c}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody>{children}</tbody>
+        <tbody className="divide-y divide-[var(--color-line)]">{children}</tbody>
       </table>
     </div>
   );
@@ -163,7 +153,7 @@ export function DataTable({
 export function Td({ children, numeric }: { children: ReactNode; numeric?: boolean }) {
   return (
     <td
-      className={`border-b border-[var(--color-line)] px-3 py-2 ${numeric ? "numeric text-right" : ""}`}
+      className={`px-4 py-3.5 text-[13.5px] text-[var(--color-body)] ${numeric ? "numeric text-right" : ""}`}
     >
       {children}
     </td>
@@ -181,11 +171,8 @@ export function Button({
   variant?: "primary" | "secondary" | "danger";
   type?: "button" | "submit";
   disabled?: boolean;
-  /** Only from a client component. A server component passing this is a build error, which is the right place to find out. */
   onClick?: () => void;
 }) {
-  // The look is three classes in globals.css rather than three strings here, so that the forty
-  // buttons written inline across the screens can say the same thing without repeating it.
   const styles = { primary: "btn-primary", secondary: "btn-secondary", danger: "btn-danger" }[
     variant
   ];
@@ -194,7 +181,7 @@ export function Button({
       type={type}
       disabled={disabled}
       onClick={onClick}
-      className={`btn px-3 py-2 text-[13px] ${styles}`}
+      className={`btn ${styles}`}
     >
       {children}
     </button>
@@ -223,7 +210,7 @@ export function Field({
   const id = `f-${name}`;
   return (
     <div>
-      <label htmlFor={id} className="block text-[12px] font-medium text-[var(--color-muted)]">
+      <label htmlFor={id} className="block text-[12.5px] font-medium text-[var(--color-navy)]">
         {label}
       </label>
       <input
@@ -234,16 +221,16 @@ export function Field({
         autoComplete={autoComplete}
         defaultValue={defaultValue}
         inputMode={inputMode}
-        className="control mt-1"
+        className="control mt-1.5"
       />
-      {hint && <p className="mt-1 text-[11px] text-[var(--color-muted)]">{hint}</p>}
+      {hint && <p className="mt-1 text-[11.5px] text-[var(--color-faint)]">{hint}</p>}
     </div>
   );
 }
 
 export function Alert({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
-    <div className={`rounded-md border px-3 py-2 text-[13px] ${TONE[tone]}`} role="alert">
+    <div className={`rounded-xl border px-4 py-3 text-[13.5px] ${TONE[tone]}`} role="alert">
       {children}
     </div>
   );
@@ -269,7 +256,7 @@ export function Select({
   const id = `f-${name}`;
   return (
     <div>
-      <label htmlFor={id} className="block text-[12px] font-medium text-[var(--color-muted)]">
+      <label htmlFor={id} className="block text-[12.5px] font-medium text-[var(--color-navy)]">
         {label}
       </label>
       <select
@@ -277,7 +264,7 @@ export function Select({
         name={name}
         required={required}
         defaultValue={defaultValue ?? ""}
-        className="control mt-1"
+        className="control mt-1.5"
       >
         {placeholder && <option value="">{placeholder}</option>}
         {options.map((option) => (
@@ -286,7 +273,7 @@ export function Select({
           </option>
         ))}
       </select>
-      {hint && <p className="mt-1 text-[11px] text-[var(--color-muted)]">{hint}</p>}
+      {hint && <p className="mt-1 text-[11.5px] text-[var(--color-faint)]">{hint}</p>}
     </div>
   );
 }
@@ -311,7 +298,7 @@ export function Textarea({
   const id = `f-${name}`;
   return (
     <div>
-      <label htmlFor={id} className="block text-[12px] font-medium text-[var(--color-muted)]">
+      <label htmlFor={id} className="block text-[12.5px] font-medium text-[var(--color-navy)]">
         {label}
       </label>
       <textarea
@@ -321,19 +308,13 @@ export function Textarea({
         required={required}
         maxLength={maxLength}
         defaultValue={defaultValue}
-        className="control mt-1"
+        className="control mt-1.5"
       />
-      {hint && <p className="mt-1 text-[11px] text-[var(--color-muted)]">{hint}</p>}
+      {hint && <p className="mt-1 text-[11.5px] text-[var(--color-faint)]">{hint}</p>}
     </div>
   );
 }
 
-/**
- * A link styled as a button.
- *
- * An <a> rather than a <button> with an onClick: navigation should work with the
- * middle mouse button, open in a new tab, and function before hydration.
- */
 export function LinkButton({
   href,
   children,
@@ -345,16 +326,15 @@ export function LinkButton({
 }) {
   const styles = variant === "primary" ? "btn-primary" : "btn-secondary";
   return (
-    <a href={href} className={`btn px-3 py-2 text-[13px] ${styles}`}>
+    <a href={href} className={`btn ${styles}`}>
       {children}
     </a>
   );
 }
 
-/** A table row of totals: heavier rule, no bottom border, tabular figures. */
 export function TotalRow({ children }: { children: ReactNode }) {
   return (
-    <tr className="border-t-2 border-[var(--color-line-strong)] font-semibold text-[var(--color-gold-2)]">
+    <tr className="border-t-2 border-[var(--color-line-strong)] bg-slate-50/50 font-semibold text-[var(--color-navy)]">
       {children}
     </tr>
   );
@@ -362,8 +342,8 @@ export function TotalRow({ children }: { children: ReactNode }) {
 
 export function FieldSet({ legend, children }: { legend: string; children: ReactNode }) {
   return (
-    <fieldset className="space-y-3">
-      <legend className="eyebrow mb-1 text-[10px] text-[var(--color-gold-soft)]">
+    <fieldset className="space-y-4">
+      <legend className="eyebrow mb-1 text-[10.5px] text-[var(--color-gold)] font-semibold">
         {legend}
       </legend>
       {children}

@@ -1,81 +1,79 @@
 @import "tailwindcss";
 
 /**
- * The platform wears the same clothes as the public site.
+ * Signature Enterprise Theme for CAC Enterprise Platform.
  *
- * It did not, before: the marketing site was dark navy and gold, and this was a light enterprise
- * grey, on the reasoning that someone entering fifty invoice lines is not being persuaded of
- * anything. CAC asked for one identity across both, which is a fair thing to want — the staff who
- * see the brand all day are the people most likely to notice when it is not there.
- *
- * So the *surface* language is now the site's — navy ground, gold rules, Playfair for headings,
- * Poppins for text — and the *density* stays: 14px base, compact rows, tabular figures, visible
- * focus, and no card that floats, drifts or glows while somebody is reading a number off it. The
- * site's motion is for a visitor scrolling once. It is wrong here and is deliberately absent.
- *
- * Everything below is a token. All 93 screens are written against these names and not one of them
- * carries a colour of its own, which is why this file is most of the change.
+ * Refined, high-legibility enterprise palette:
+ * - Executive Slate / Navy (#0F172A, #1E293B, #334155)
+ * - Clean Canvas (#F8FAFC)
+ * - Crisp Card Surfaces (#FFFFFF)
+ * - Crisp Slate Borders (#E2E8F0, #CBD5E1)
+ * - Muted Warm Gold & Amber Accents (#B45309, #D97706, #F59E0B)
+ * - High-Contrast Typography: Playfair Display + Poppins + JetBrains Mono
  */
 @theme {
-  /* ---- Brand, identical to apps/web/src/index.css ---- */
-  --color-navy: #0b192e;
-  --color-navy-2: #112a48;
-  --color-navy-3: #173763;
-  --color-ink: #050b16;
+  /* ---- Executive Slate / Navy Ramp ---- */
+  --color-navy: #0f172a;
+  --color-navy-2: #1e293b;
+  --color-navy-3: #334155;
+  --color-ink: #ffffff;
 
-  --color-gold: #ca8a04;
-  --color-gold-2: #e9c766;
-  --color-gold-3: #8f6519;
-  --color-gold-soft: #d8b25a;
+  /* ---- Muted Warm Gold Accents ---- */
+  --color-gold: #b45309;
+  --color-gold-2: #d97706;
+  --color-gold-3: #78350f;
+  --color-gold-soft: #f59e0b;
+  --color-gold-tint: rgba(217, 119, 6, 0.08);
 
-  /* ---- Ground and panels ----
-     `surface` is a panel, `canvas` is the ground behind it. On the light theme the panel was the
-     lighter of the two; here it still is, so every `hover:bg-canvas` written across the screens
-     goes on meaning "recede" without one of them being touched. */
-  --color-canvas: #0b192e;
-  --color-surface: #102b4a;
-  --color-surface-2: #16355a;
+  /* ---- Light Canvas & Surfaces ---- */
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f5f9;
+  --color-surface-3: #e2e8f0;
 
-  /* Rules are gold at low alpha rather than grey: a grey hairline on navy reads as dirt. */
-  --color-line: rgba(233, 199, 102, 0.16);
-  --color-line-strong: rgba(233, 199, 102, 0.34);
+  /* Crisp structural borders */
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
 
-  /* ---- Text ramp ----
-     Measured against --color-surface (#102b4a): body 12.4:1, muted 7.3:1, faint 4.9:1. AA for
-     normal text is 4.5:1, so `faint` is at the floor and is used only for uppercase labels. */
-  --color-body: #e7ecf3;
-  --color-muted: #a9b6c8;
-  --color-faint: #8a99ad;
+  /* ---- High-Contrast Text Tokens ---- */
+  --color-body: #0f172a;
+  --color-muted: #475569;
+  --color-faint: #64748b;
+  --color-ivory: #0f172a;
+  --color-sand: #f1f5f9;
+  --color-stone: #475569;
 
-  /* ---- Status ----
-     Re-picked for a dark ground. The light theme's inks (#0f7b4f, #b3261e) are about 2:1 here and
-     would be unreadable; these are their light-on-dark equivalents, each above 4.5:1 on the panel,
-     and each paired with a translucent wash rather than an opaque tint so it works on the panel
-     and on the ground alike. */
-  --color-ok: #5fd39b;
-  --color-ok-bg: rgba(95, 211, 155, 0.12);
-  --color-warn: #e9c766;
-  --color-warn-bg: rgba(233, 199, 102, 0.12);
-  --color-danger: #ff8f86;
-  --color-danger-bg: rgba(255, 143, 134, 0.13);
-  --color-info: #8ec3f7;
-  --color-info-bg: rgba(142, 195, 247, 0.12);
+  /* ---- Accessible Status Badges & Alerts ---- */
+  --color-ok: #047857;
+  --color-ok-bg: #ecfdf5;
+  --color-ok-border: #a7f3d0;
 
-  /* Links had been borrowing the informational blue, which on this ground reads as a different
-     product's chrome. Gold is what the public site uses for a link, and this is the softer of the
-     two golds so that a table of forty links does not compete with the one gold button above it.
-     7.5:1 on the panel. */
-  --color-link: #d8b25a;
+  --color-warn: #b45309;
+  --color-warn-bg: #fffbeb;
+  --color-warn-border: #fde68a;
 
-  /* next/font sets the -loaded variables in layout.tsx; the fallbacks keep the app rendering in
-     roughly the same metrics if a font ever fails to arrive. */
-  --font-display: var(--font-display-loaded), "Playfair Display", Georgia, serif;
-  --font-sans: var(--font-body-loaded), "Poppins", system-ui, sans-serif;
-  --font-mono: var(--font-mono-loaded), "JetBrains Mono", ui-monospace, monospace;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fecaca;
+
+  --color-info: #1d4ed8;
+  --color-info-bg: #eff6ff;
+  --color-info-border: #bfdbfe;
+
+  /* Action links */
+  --color-link: #b45309;
+
+  --font-display: var(--font-sans);
+  --font-sans: "Poppins", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
@@ -84,14 +82,13 @@ body {
   color: var(--color-body);
   font-family: var(--font-sans);
   font-size: 14px;
-  /* 400, not 300 — the public site learned this the same way: Poppins Light on navy reads thin. */
   font-weight: 400;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* The site's grid, at a quarter of its strength. There it is scenery; here it must not compete
-   with a table. Fixed to the viewport so it does not scroll with the content and turn into moiré. */
+/* Subtle architectural dot grid */
 body::before {
   content: "";
   position: fixed;
@@ -99,20 +96,33 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(201, 138, 4, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(201, 138, 4, 0.045) 1px, transparent 1px);
-  background-size: 64px 64px;
-  /* Fades down the page so long screens end on clean ground. */
-  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.35) 60%, transparent 100%);
-  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.35) 60%, transparent 100%);
+    linear-gradient(#e2e8f0 1px, transparent 1px),
+    linear-gradient(90deg, #e2e8f0 1px, transparent 1px);
+  background-size: 40px 40px;
+  opacity: 0.35;
 }
 
-/* Keyboard users must always be able to see where they are. Gold, because the light theme's blue
-   is now barely distinguishable from the ground. */
+/* ---------- Page Transition ---------- */
+@keyframes page-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-transition {
+  animation: page-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Accessible visible focus states */
 :focus-visible {
   outline: 2px solid var(--color-gold-2);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 :focus:not(:focus-visible) {
   outline: none;
@@ -125,28 +135,27 @@ body::before {
   transform: translate(-50%, -120%);
   z-index: 200;
   padding: 0.625rem 1.25rem;
-  background: var(--color-ink);
+  background: var(--color-navy);
   border: 1px solid var(--color-gold-2);
   border-top: 0;
-  color: var(--color-gold-2);
+  color: #ffffff;
   border-radius: 0 0 0.375rem 0.375rem;
-  transition: transform 0.15s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .skip-link:focus {
   transform: translate(-50%, 0);
 }
 
-/* Checkboxes and radios are drawn by the browser. Left alone they are a light-theme grey box on a
-   navy form; `accent-color` is the one property that restyles the native control without replacing
-   it with a div, which would cost the keyboard behaviour it comes with. */
+/* Checkboxes and radios */
 input[type="checkbox"],
 input[type="radio"] {
   accent-color: var(--color-gold);
-  width: 0.95rem;
-  height: 0.95rem;
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
 }
 
-/* Tabular figures everywhere money or time is shown, so columns line up. */
+/* Tabular figures for accounting and time tables */
 .numeric {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -157,57 +166,69 @@ input[type="radio"] {
   font-family: var(--font-display);
 }
 
-/* A page title, in the site's voice. Playfair at this size is the one flourish the platform keeps:
-   it appears once per screen and never inside the data. */
 .page-title {
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.01em;
+  color: var(--color-navy);
 }
 
-/* The site's small-caps rule — section headings, table headers, field legends. */
 .eyebrow {
   font-family: var(--font-mono);
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.08em;
 }
 
-/* ---------- Surfaces ----------
-   The site's `.plate`, calmed down: the same gradient and gold edge, none of the drift, and a
-   shadow that lifts the panel without throwing a halo across whatever is beneath it. */
+/* ---------- Clean Enterprise Cards & Plates ---------- */
 .plate {
-  background: linear-gradient(160deg, rgba(23, 55, 99, 0.72), rgba(9, 24, 45, 0.92));
+  background: #ffffff;
   border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
   box-shadow:
-    inset 0 1px 0 rgba(233, 199, 102, 0.1),
-    0 14px 34px -28px rgba(0, 0, 0, 0.9);
+    0 1px 3px 0 rgba(15, 23, 42, 0.03),
+    0 1px 2px -1px rgba(15, 23, 42, 0.02);
+  transition:
+    border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* A hairline that fades out, under a panel heading. */
+.plate:hover {
+  border-color: var(--color-line-strong);
+  box-shadow:
+    0 4px 12px -2px rgba(15, 23, 42, 0.05),
+    0 2px 6px -2px rgba(15, 23, 42, 0.03);
+}
+
+.plate-interactive {
+  cursor: pointer;
+}
+.plate-interactive:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+}
+
 .hairline {
-  background: linear-gradient(90deg, rgba(233, 199, 102, 0.55), rgba(233, 199, 102, 0.06));
+  background: var(--color-line);
 }
 
-/* ---------- Buttons ----------
-   The site's gold call-to-action, at working size. The white-on-navy button this replaces cannot
-   be seen at all on a navy ground.
-
-   The gradient's dark stop is the one that has to carry the contrast, because that is the corner
-   the last letter of a long label sits over. Navy on it measures 5.1:1, and 6.0:1 on the mid stop:
-   both clear of AA; the site's own tail (#8f6519) would have been 3.4:1, which is fine under a
-   16px hero button and not under a 13px one. */
+/* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   font-weight: 500;
   letter-spacing: 0.01em;
-  transition:
-    filter 0.18s ease,
-    background-color 0.18s ease,
-    border-color 0.18s ease;
+  font-size: 13px;
+  padding: 0.5rem 0.875rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
 }
 .btn:disabled,
 .btn[aria-disabled="true"] {
@@ -216,120 +237,163 @@ input[type="radio"] {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, #e9c766, #ca8a04 58%, #b8801a);
-  color: #0b192e;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #ffffff;
   font-weight: 600;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(180, 83, 9, 0.4);
+  box-shadow: 0 1px 2px 0 rgba(180, 83, 9, 0.2);
 }
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.07);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 4px 10px -2px rgba(180, 83, 9, 0.35);
 }
 
 .btn-secondary {
   border: 1px solid var(--color-line-strong);
-  background: transparent;
+  background: #ffffff;
   color: var(--color-body);
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.03);
 }
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(233, 199, 102, 0.08);
-  border-color: var(--color-gold-2);
+  background: var(--color-surface-2);
+  border-color: #94a3b8;
+  color: var(--color-navy);
 }
 
-/* Destructive and cautionary actions keep their own hue — a red that is merely gold would be a
-   dangerous piece of styling. Ink text on both, because these are light tones now. */
 .btn-danger {
-  background: var(--color-danger);
-  color: #2a0b08;
-  font-weight: 600;
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 500;
+  border: 1px solid #b91c1c;
+  box-shadow: 0 1px 2px 0 rgba(220, 38, 38, 0.2);
 }
 .btn-danger:hover:not(:disabled) {
-  filter: brightness(1.06);
+  background: #ef4444;
+  box-shadow: 0 4px 10px -2px rgba(220, 38, 38, 0.3);
 }
 
 .btn-warn {
-  background: var(--color-warn);
-  color: #2b2206;
+  background: #f59e0b;
+  color: #ffffff;
   font-weight: 600;
+  border: 1px solid #d97706;
 }
 .btn-warn:hover:not(:disabled) {
-  filter: brightness(1.06);
+  background: #d97706;
 }
 
-/* ---------- Form controls ----------
-   Inputs sit *below* the panel rather than on it, which is how a dark interface says "you may type
-   here" without a border heavy enough to drag the eye across a form of twenty fields. */
+/* ---------- Form Controls ---------- */
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="color"]):not([type="range"]):not([type="file"]),
+select,
+textarea,
 .control {
-  width: 100%;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--color-line-strong);
-  background: rgba(5, 11, 22, 0.55);
-  color: var(--color-body);
-  padding: 0.5rem 0.75rem;
-  font-size: 14px;
+  background-color: #ffffff !important;
+  color: var(--color-body) !important;
+  padding: 0.5rem 0.85rem;
+  font-size: 13.5px;
   font-family: inherit;
   outline: none;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="color"]):not([type="range"]):not([type="file"]):hover:not(:disabled),
+select:hover:not(:disabled),
+textarea:hover:not(:disabled),
 .control:hover:not(:disabled) {
-  border-color: rgba(233, 199, 102, 0.5);
+  border-color: #94a3b8;
 }
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="color"]):not([type="range"]):not([type="file"]):focus,
+select:focus,
+textarea:focus,
 .control:focus {
-  border-color: var(--color-gold-2);
-  background: rgba(5, 11, 22, 0.75);
+  border-color: var(--color-gold) !important;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15) !important;
+  background-color: #ffffff !important;
 }
+
+input:disabled,
+select:disabled,
+textarea:disabled,
 .control:disabled {
-  opacity: 0.55;
+  opacity: 0.6;
+  background-color: var(--color-surface-2) !important;
   cursor: not-allowed;
 }
-/* A native select's list is drawn by the OS; without this it inherits the dark ground and renders
-   black on black on Windows. */
+
+select option,
 .control option {
-  background: #102b4a;
-  color: #e7ecf3;
+  background-color: #ffffff !important;
+  color: var(--color-body) !important;
 }
-/* The date picker's own glyph is near-invisible ink on this ground. */
-.control::-webkit-calendar-picker-indicator {
-  filter: invert(0.85) sepia(0.4) saturate(3) hue-rotate(5deg);
-  cursor: pointer;
-}
+
+input::placeholder,
+textarea::placeholder,
 .control::placeholder {
   color: var(--color-faint);
 }
 
-/* ---------- Tables ----------
-   Zebra striping, rather than the light theme's reliance on a hairline: on navy a 1px rule at 0.16
-   alpha disappears at arm's length, and a table of forty rows needs the eye carried along one. */
+/* Neutralise any legacy opacity or dark ink utility on form elements */
+[class*="color-ink"] {
+  background-color: #ffffff !important;
+  color: var(--color-body) !important;
+}
+
+/* ---------- Data Tables ---------- */
+.data-table {
+  width: 100%;
+  background: #ffffff;
+  border-collapse: collapse;
+}
+.data-table thead tr {
+  background: #f8fafc;
+  border-bottom: 1px solid var(--color-line);
+}
+.data-table thead th {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: var(--color-faint);
+}
+.data-table tbody tr {
+  border-bottom: 1px solid var(--color-line);
+  transition: background-color 0.15s ease;
+}
 .data-table tbody tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.022);
+  background: rgba(248, 250, 252, 0.5);
 }
 .data-table tbody tr:hover {
-  background: rgba(233, 199, 102, 0.07);
+  background: #f1f5f9;
+}
+.data-table tbody td {
+  padding: 0.75rem 1rem;
+  color: var(--color-body);
 }
 
+/* Selection Highlight */
 ::selection {
-  background: var(--color-gold);
-  color: var(--color-navy);
+  background: #fde68a;
+  color: #0f172a;
 }
 
+/* Clean Slate Scrollbars */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
 }
 ::-webkit-scrollbar-track {
-  background: #08111f;
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: #234066;
-  border-radius: 10px;
+  background: #cbd5e1;
+  border-radius: 6px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-gold-3);
+  background: #94a3b8;
 }
 
-/* The platform is used for hours at a time. Nothing here animates on a loop; the transitions exist
-   only so a state change is not instantaneous, and they are dropped on request. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

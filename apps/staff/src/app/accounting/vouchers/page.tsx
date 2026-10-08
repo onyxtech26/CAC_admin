@@ -90,16 +90,16 @@ export default async function VouchersPage({
         </div>
 
         <Panel title="Filter">
-          <form method="get" className="flex flex-wrap items-end gap-3">
+          <form method="get" className="flex flex-wrap items-end gap-3.5">
             <div>
-              <label htmlFor="status" className="block text-[12px] font-medium">
+              <label htmlFor="status" className="block text-[12px] font-semibold text-slate-700">
                 Status
               </label>
               <select
                 id="status"
                 name="status"
                 defaultValue={query.status ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
+                className="control mt-1.5 min-w-[140px]"
               >
                 <option value="">All</option>
                 {Object.entries(LABEL).map(([value, label]) => (
@@ -110,25 +110,31 @@ export default async function VouchersPage({
               </select>
             </div>
             <div>
-              <label htmlFor="q" className="block text-[12px] font-medium">
+              <label htmlFor="q" className="block text-[12px] font-semibold text-slate-700">
                 Number, subject or payee
               </label>
               <input
                 id="q"
                 name="q"
+                placeholder="Search vouchers..."
                 defaultValue={query.q ?? ""}
-                className="mt-1 rounded-md border border-[var(--color-line-strong)] bg-[var(--color-ink)]/55 px-3 py-2 text-[13px]"
+                className="control mt-1.5 min-w-[240px]"
               />
             </div>
-            <button
-              type="submit"
-              className="btn btn-primary px-3 py-2 text-[13px]"
-            >
-              Apply
-            </button>
-            <Link href="/accounting/vouchers" className="pb-2 text-[12px] text-[var(--color-info)]">
-              Clear
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                className="btn btn-primary px-4 py-2 text-[13px] font-semibold shadow-xs"
+              >
+                Apply
+              </button>
+              <Link
+                href="/accounting/vouchers"
+                className="btn btn-ghost px-3 py-2 text-[12.5px] font-medium text-slate-500 hover:text-slate-800"
+              >
+                Clear
+              </Link>
+            </div>
           </form>
         </Panel>
 
