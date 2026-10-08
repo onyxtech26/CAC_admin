@@ -36,6 +36,9 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "CAC Internal Platform",
   description: "Conglomerate Appraisal Consultancy — internal operations.",

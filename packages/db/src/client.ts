@@ -1,52 +1,39 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { tmpdir } from "node:os";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
 import * as schema from "./schema/index.js";
 import type { DumpableDatabase } from "./backup.js";
 import { DatabaseInUseError, claimDirectory, releaseDirectory } from "./lock.js";
 
-/**
- * One database client for every environment.
- *
- * Locally we run PGlite — real PostgreSQL compiled to WASM, persisted to a
- * file. No server to install, no container, no credentials, and crucially the
- * *same SQL dialect* as the hosted database we will move to. Migrations,
- * constraints and queries written now carry over unchanged; only the
- * connection string differs.
- *
- * Set DATABASE_URL to a postgres:// URL and this module switches to a pooled
- * node-postgres connection instead. That switch is deliberately the only code
- * change required to go from local to hosted.
- *
- * ## PGlite is single-writer, and that shapes everything below
- *
- * PGlite is an embedded database: the process that opens the data directory owns
- * it, exclusively. Two PGlite instances over one directory is not "slower", it is
- * a second, divergent database — writes land in one and reads come from the
- * other, and the symptom is a record that was definitely saved and definitely is
- * not there.
- *
- * Two consequences:
- *
- *  1. The instance is cached on `globalThis`, not in a module-level variable.
- *     Next.js compiles server components, server actions and route handlers into
- *     separate module layers, so a module-level `let instance` is instantiated
- *     more than once *inside a single process* — which is exactly how a user
- *     created by a server action fails to appear on the page that lists users.
- *     It also survives dev-server hot reloads, which otherwise leak an instance
- *     per edit until the directory locks up.
- *
- *  2. A CLI command cannot run against the same directory while the application
- *     is running. `lock.ts` detects that and says so in a sentence, and — just as
- *     importantly — tells it apart from a previous run that was killed and left
- *     its lock files behind, which it clears up instead of refusing.
- *
- * When this moves to hosted PostgreSQL both constraints disappear: `pg` pools
- * over TCP and any number of processes may connect. That is one of the reasons
- * the move is on the plan rather than optional (docs/OPEN_QUESTIONS.md,
- * Q-INFRA-1).
- */
+const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+let bootstrapPromise: Promise<void> | null = null;
+
+async function ensureDatabaseBootstrapped(db: Database): Promise<void> {
+  if (bootstrapPromise) return bootstrapPromise;
+  bootstrapPromise = (async () => {
+    try {
+      const { sql } = await import("drizzle-orm");
+      const check = await db.execute(sql`
+        SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'user'
+      `).catch(() => null);
+
+      if (!check?.rows?.length) {
+        console.log("[db] Initializing schema and seed data on fresh database...");
+        const { runMigrations } = await import("./migrate.js");
+        const { seed } = await import("./seed.js");
+        await runMigrations(db);
+        await seed(db);
+        console.log("[db] Database bootstrap complete.");
+      }
+    } catch (err) {
+      console.warn("[db] Bootstrap check notice:", err);
+    }
+  })();
+  return bootstrapPromise;
+}
 
 export type Database = ReturnType<typeof drizzlePglite<typeof schema>>;
 
@@ -110,51 +97,62 @@ export async function getDb(): Promise<Database> {
 }
 
 async function open(): Promise<Database> {
-  const url = process.env.DATABASE_URL;
+  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
   if (url && /^postgres(ql)?:\/\//.test(url)) {
-    // Hosted Postgres. Imported lazily so local development never needs the
-    // driver installed.
+    // Hosted Postgres (Neon, Supabase, Vercel Postgres, AWS RDS, etc.)
     const { drizzle } = await import("drizzle-orm/node-postgres");
     const { Pool } = await import("pg");
-    const pool = new Pool({ connectionString: url, max: 10 });
-    return drizzle(pool, { schema }) as unknown as Database;
+    const isLocal = url.includes("localhost") || url.includes("127.0.0.1");
+    const pool = new Pool({
+      connectionString: url,
+      max: isServerless ? 3 : 10,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
+    });
+    const db = drizzle(pool, { schema }) as unknown as Database;
+    await ensureDatabaseBootstrapped(db);
+    return db;
   }
 
   return openLocalDatabase();
 }
 
 async function openLocalDatabase(): Promise<Database> {
+  const targetDir =
+    process.env.PGLITE_DIR ??
+    (isServerless ? join(tmpdir(), "cac-pglite") : LOCAL_DATA_DIR);
+
   // PGlite will not create intermediate directories for us.
   const { mkdir } = await import("node:fs/promises");
-  await mkdir(LOCAL_DATA_DIR, { recursive: true });
+  await mkdir(targetDir, { recursive: true });
 
-  // Throws DatabaseInUseError when a live process owns the directory, and clears
-  // up after one that died without shutting down. See lock.ts for why that
-  // distinction has to be drawn out here rather than by PostgreSQL itself.
-  const { recovered } = await claimDirectory(LOCAL_DATA_DIR);
-  if (recovered) {
-    console.warn(
-      "[db] The last session did not shut down cleanly. Cleared the stale lock files in " +
-        `${LOCAL_DATA_DIR}; PostgreSQL will replay its write-ahead log on start.`,
-    );
+  if (!isServerless) {
+    const { recovered } = await claimDirectory(targetDir);
+    if (recovered) {
+      console.warn(
+        "[db] The last session did not shut down cleanly. Cleared the stale lock files in " +
+          `${targetDir}; PostgreSQL will replay its write-ahead log on start.`,
+      );
+    }
   }
 
   const state = cache();
   try {
-    const pglite = new PGlite(LOCAL_DATA_DIR);
+    const pglite = new PGlite(targetDir);
     await pglite.waitReady;
     state.pglite = pglite;
-    return drizzlePglite(pglite, { schema });
+    const db = drizzlePglite(pglite, { schema });
+    if (isServerless) {
+      await ensureDatabaseBootstrapped(db);
+    }
+    return db;
   } catch (error) {
-    // The native failure is an abort trap from inside the WASM module, with no
-    // indication of the cause.
+    if (isServerless) {
+      console.error("[db] Serverless embedded database failed to start:", error);
+    }
     throw new Error(
-      `Could not open the local database at ${LOCAL_DATA_DIR}.\n\n` +
-        "The directory exists but PostgreSQL would not start against it. If this persists the " +
-        "directory may be damaged; it holds no production data at this stage of the project, so " +
-        "deleting it and re-running the seed is a legitimate repair.\n\n" +
-        "Set DATABASE_URL to a postgres:// connection string to use a real server instead.",
+      `Could not open database at ${targetDir}.\n\n` +
+        "Set DATABASE_URL or POSTGRES_URL to a postgres:// connection string in Vercel to connect a cloud PostgreSQL database.",
       { cause: error },
     );
   }
@@ -194,9 +192,14 @@ export async function createRestorableTestDb(): Promise<{
 
 export async function closeDb(): Promise<void> {
   const state = cache();
+  const targetDir =
+    process.env.PGLITE_DIR ??
+    (isServerless ? join(tmpdir(), "cac-pglite") : LOCAL_DATA_DIR);
   if (state.pglite) {
     await state.pglite.close();
-    await releaseDirectory(LOCAL_DATA_DIR);
+    if (!isServerless) {
+      await releaseDirectory(targetDir);
+    }
   }
   state.db = undefined;
   state.pglite = undefined;

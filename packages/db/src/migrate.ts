@@ -1,14 +1,15 @@
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { readFile, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { createHash } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { closeDb, getDb, type Database } from "./client.js";
 
-// fileURLToPath handles Windows drive letters and percent-encoding; slicing
-// URL.pathname by hand does not.
-const MIGRATIONS_DIR = fileURLToPath(new URL("../migrations/", import.meta.url));
+import { EMBEDDED_MIGRATIONS } from "./embedded-migrations.js";
+
+const PACKAGE_DIR = dirname(fileURLToPath(import.meta.url));
+const MIGRATIONS_DIR = join(PACKAGE_DIR, "..", "migrations");
 
 const BREAKPOINT = "--> statement-breakpoint";
 const LINE_SPLIT = /\r?\n/;
@@ -35,9 +36,18 @@ export async function runMigrations(db?: Database): Promise<string[]> {
     )
   `);
 
-  if (!existsSync(MIGRATIONS_DIR)) return [];
+  let entries: Array<{ name: string; body: string }> = [];
 
-  const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith(".sql")).sort();
+  if (existsSync(MIGRATIONS_DIR)) {
+    const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith(".sql")).sort();
+    for (const file of files) {
+      const body = await readFile(join(MIGRATIONS_DIR, file), "utf8");
+      entries.push({ name: file, body });
+    }
+  } else {
+    // In serverless / Vercel bundles, use the embedded migration definitions
+    entries = EMBEDDED_MIGRATIONS.map((m) => ({ name: m.name, body: m.sql }));
+  }
 
   const applied = new Map<string, string>();
   const existing = await database.execute<{ name: string; checksum: string }>(
@@ -47,8 +57,7 @@ export async function runMigrations(db?: Database): Promise<string[]> {
 
   const run: string[] = [];
 
-  for (const file of files) {
-    const body = await readFile(join(MIGRATIONS_DIR, file), "utf8");
+  for (const { name: file, body } of entries) {
     const checksum = createHash("sha256").update(body).digest("hex");
     const previous = applied.get(file);
 
