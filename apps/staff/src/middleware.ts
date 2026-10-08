@@ -23,7 +23,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * reaches the browser.
  */
 export function middleware(request: NextRequest) {
-  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const nonce = btoa(crypto.randomUUID());
 
   // React Refresh compiles hot updates with `eval`, and only in development. Allowing it there keeps
   // the policy identical in shape to the one that ships, which is the point — a CSP that is only
