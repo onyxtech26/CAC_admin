@@ -97,7 +97,10 @@ export async function getDb(): Promise<Database> {
 }
 
 async function open(): Promise<Database> {
-  const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  const url =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.STORAGE_URL;
 
   if (url && /^postgres(ql)?:\/\//.test(url)) {
     // Hosted Postgres (Neon, Supabase, Vercel Postgres, AWS RDS, etc.)
