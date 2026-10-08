@@ -7,10 +7,9 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev:web": "pnpm --filter @cac/web dev",
+    "dev": "pnpm --filter @cac/staff dev",
     "dev:staff": "pnpm --filter @cac/staff dev",
     "build": "pnpm -r build",
-    "build:web": "pnpm --filter @cac/web build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
