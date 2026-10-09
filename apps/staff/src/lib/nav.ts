@@ -205,6 +205,8 @@ export function visibleNavigation(
   };
 
   return NAVIGATION.filter((section) => {
+    // Hide administration from navigation for client demo
+    if (section.suite === "admin") return false;
     if (suiteFilter === "all") return true;
     if (section.heading === "Overview") return true;
     return section.suite === suiteFilter;

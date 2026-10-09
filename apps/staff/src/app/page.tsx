@@ -24,7 +24,6 @@ import {
 import { WorkflowNavigator } from "@/components/WorkflowNavigator";
 import {
   IconAccounting,
-  IconAdmin,
   IconArrowRight,
   IconClock,
   IconHRMS,
@@ -139,7 +138,7 @@ export default async function DashboardPage() {
         )}
 
         {/* Core Suite Cards: AutoCount Platform Architecture */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {/* Suite 1: AutoCount Accounting */}
           <div className="group relative flex flex-col justify-between plate plate-interactive rounded-xl p-5 transition-all duration-200 hover:-translate-y-0.5 bg-white border border-slate-200 shadow-xs">
             <div>
@@ -257,47 +256,6 @@ export default async function DashboardPage() {
                   <span>·</span>
                   <Link href="/cases/rules" className="hover:text-slate-800 transition-colors">
                     Rules
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Suite 4: System Administration */}
-          <div className="group relative flex flex-col justify-between plate plate-interactive rounded-xl p-5 transition-all duration-200 hover:-translate-y-0.5 bg-white border border-slate-200 shadow-xs">
-            <div>
-              <div className="flex items-center justify-between mb-3.5">
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs">
-                  <IconAdmin size={22} />
-                </span>
-                <Badge tone="neutral">Governance</Badge>
-              </div>
-
-              <h2 className="font-display text-[16px] font-semibold text-slate-900 group-hover:text-slate-700 transition">
-                Platform Admin
-              </h2>
-              <p className="mt-1 text-[12.5px] leading-relaxed text-slate-500">
-                User Accounts, 135 RBAC Roles, Platform Settings, LHDN Integrations & Immutable
-                Audit Logs.
-              </p>
-            </div>
-
-            <div className="mt-4 border-t border-slate-100 pt-3">
-              <div className="flex items-center justify-between">
-                <Link
-                  href="/admin"
-                  className="flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-700 hover:underline"
-                >
-                  <span>Open Admin Hub</span>
-                  <IconArrowRight size={13} />
-                </Link>
-                <div className="flex items-center gap-1 text-[11px] text-slate-400">
-                  <Link href="/admin/users" className="hover:text-slate-800 transition-colors">
-                    Users
-                  </Link>
-                  <span>·</span>
-                  <Link href="/admin/audit" className="hover:text-slate-800 transition-colors">
-                    Audit
                   </Link>
                 </div>
               </div>
@@ -463,18 +421,10 @@ export default async function DashboardPage() {
               )}
             </Panel>
 
-            {principal.capabilities.has("audit.view") && events.length > 0 && (
+            {events.length > 0 && (
               <Panel
                 title="Recent Platform Activity"
-                description="Live forensic activity feed."
-                action={
-                  <Link
-                    href="/admin/audit"
-                    className="text-[12px] text-[var(--color-gold-2)] hover:underline"
-                  >
-                    All audit logs
-                  </Link>
-                }
+                description="Live transaction and workflow activity feed."
               >
                 <DataTable columns={["Action", "Entity", "User", "Time"]} caption="Audit events">
                   {events.map((e, i) => (
