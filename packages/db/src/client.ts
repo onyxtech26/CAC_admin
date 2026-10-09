@@ -9,18 +9,21 @@ import { DatabaseInUseError, claimDirectory, releaseDirectory } from "./lock.js"
 
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
 
+let isBootstrapped = false;
 let bootstrapPromise: Promise<void> | null = null;
 
 async function ensureDatabaseBootstrapped(db: Database): Promise<void> {
+  if (isBootstrapped) return;
   if (bootstrapPromise) return bootstrapPromise;
   bootstrapPromise = (async () => {
     try {
       const { sql } = await import("drizzle-orm");
       const check = await db.execute(sql`
-        SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'user'
+        SELECT 1 FROM auth."user" LIMIT 1
       `).catch(() => null);
 
       if (check?.rows?.length) {
+        isBootstrapped = true;
         return;
       }
 
@@ -43,6 +46,7 @@ async function ensureDatabaseBootstrapped(db: Database): Promise<void> {
         const { seed } = await import("./seed.js");
         await runMigrations(db);
         await seed(db);
+        isBootstrapped = true;
         console.log("[db] Database bootstrap complete.");
       } finally {
         await db.execute(sql`SELECT pg_advisory_unlock(7421839)`).catch(() => null);
@@ -117,8 +121,9 @@ export async function getDb(): Promise<Database> {
 
 async function open(): Promise<Database> {
   const url =
-    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
     process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
     process.env.STORAGE_URL;
 
   if (url && /^postgres(ql)?:\/\//.test(url)) {
@@ -128,7 +133,9 @@ async function open(): Promise<Database> {
     const isLocal = url.includes("localhost") || url.includes("127.0.0.1");
     const pool = new Pool({
       connectionString: url,
-      max: isServerless ? 3 : 10,
+      max: isServerless ? 5 : 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
       ssl: isLocal ? false : { rejectUnauthorized: false },
     });
     const db = drizzle(pool, { schema }) as unknown as Database;

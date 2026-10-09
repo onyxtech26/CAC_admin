@@ -50,7 +50,9 @@ export default async function CasesPage({
   const db = await getDb();
   const filters = await searchParams;
 
-  const [cases, mine, approvedRules] = await Promise.all([
+  const canOpen = principal.capabilities.has("case.create");
+
+  const [cases, mine, approvedRules, employeesRes, customersRes] = await Promise.all([
     listCases(db, principal, {
       status: (filters.status as CaseStatus | "active" | undefined) ?? "active",
       matterType: filters.type as MatterType | undefined,
@@ -58,25 +60,24 @@ export default async function CasesPage({
     }),
     myCaseTasks(db, principal, 8).catch(() => []),
     listRequirementRules(db, { status: "approved" }),
+    canOpen
+      ? db
+          .execute<{ id: string; full_name: string; employee_no: string }>(
+            sql`SELECT id, full_name, employee_no FROM hr.employee WHERE status = 'active' ORDER BY full_name`,
+          )
+          .catch(() => ({ rows: [] }))
+      : Promise.resolve({ rows: [] }),
+    canOpen
+      ? db
+          .execute<{ id: string; name: string }>(
+            sql`SELECT id, name FROM accounting.customer WHERE is_active ORDER BY name LIMIT 500`,
+          )
+          .catch(() => ({ rows: [] }))
+      : Promise.resolve({ rows: [] }),
   ]);
 
-  const canOpen = principal.capabilities.has("case.create");
-
-  const employees = canOpen
-    ? (
-        await db.execute<{ id: string; full_name: string; employee_no: string }>(sql`
-          SELECT id, full_name, employee_no FROM hr.employee
-           WHERE status = 'active' ORDER BY full_name
-        `)
-      ).rows ?? []
-    : [];
-  const customers = canOpen
-    ? (
-        await db.execute<{ id: string; name: string }>(sql`
-          SELECT id, name FROM accounting.customer WHERE is_active ORDER BY name LIMIT 500
-        `)
-      ).rows ?? []
-    : [];
+  const employees = employeesRes.rows ?? [];
+  const customers = customersRes.rows ?? [];
 
   const outstanding = cases.reduce((total, entry) => total + entry.outstandingRequirements, 0);
   const overdue = cases.reduce((total, entry) => total + entry.overdueTasks, 0);

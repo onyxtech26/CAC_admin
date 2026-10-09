@@ -48,11 +48,15 @@ class OmnipotentCapabilitySet extends Set<string> {
   }
 }
 
+let devAdminPrincipalCache: Principal | null = null;
+
 /**
  * Resolves a full Super Admin principal with all capabilities so testing
  * the admin platform and all suites is completely seamless without login interruptions.
  */
 async function getDevAdminPrincipal(db: Awaited<ReturnType<typeof getDb>>): Promise<Principal> {
+  if (devAdminPrincipalCache) return devAdminPrincipalCache;
+
   let userId = "00000000-0000-0000-0000-000000000001";
   let email = "admin@conglomerate4u.com";
   let fullName = "System Administrator";
@@ -70,8 +74,8 @@ async function getDevAdminPrincipal(db: Awaited<ReturnType<typeof getDb>>): Prom
       WHERE status = 'active'
       ORDER BY CASE WHEN email = 'admin@conglomerate4u.com' THEN 0 ELSE 1 END, created_at ASC
       LIMIT 1
-    `);
-    const foundUser = userRows.rows?.[0];
+    `).catch(() => null);
+    const foundUser = userRows?.rows?.[0];
     if (foundUser) {
       userId = foundUser.id;
       email = foundUser.email;
@@ -79,32 +83,14 @@ async function getDevAdminPrincipal(db: Awaited<ReturnType<typeof getDb>>): Prom
       employeeId = foundUser.employee_id;
     }
 
-    // Link to an active employee if not already set, enabling self-service HR functions
     if (!employeeId) {
       const empRow = await db.execute<{ id: string }>(sql`
         SELECT id FROM hr.employee WHERE status = 'active' LIMIT 1
-      `);
-      employeeId = empRow.rows?.[0]?.id ?? null;
+      `).catch(() => null);
+      employeeId = empRow?.rows?.[0]?.id ?? null;
     }
 
-    // Ensure single-user mode works for maker/checker approvals across the database
-    await db.execute(sql`
-      UPDATE org.setting SET value = 'false'::jsonb WHERE key = 'accounting.journal_requires_second_person';
-      INSERT INTO org.setting (key, value) VALUES ('cases.legal_reviewer_confirmed', 'true'::jsonb)
-        ON CONFLICT (key) DO UPDATE SET value = 'true'::jsonb;
-      CREATE OR REPLACE FUNCTION estate.requirement_rule_second_person() RETURNS trigger AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql;
-      CREATE OR REPLACE FUNCTION estate.document_template_second_person() RETURNS trigger AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql;
-      CREATE OR REPLACE FUNCTION estate.generated_document_second_person() RETURNS trigger AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql;
-    `).catch(() => {});
-
-    // Grant all available capabilities across the platform catalogue for full test access
-    const permRows = await db.execute<{ key: string }>(sql`SELECT key FROM auth.permission`);
-    const capabilities = new OmnipotentCapabilitySet((permRows.rows ?? []).map((p) => p.key));
-
-    // Full system roles
-    const roleRows = await db.execute<{ key: string }>(sql`SELECT key FROM auth.role`);
-    const dbRoles = (roleRows.rows ?? []).map((r) => r.key);
-    const roles = Array.from(new Set([
+    const roles = [
       "SUPER_ADMIN",
       "DIRECTOR",
       "ACCOUNTANT",
@@ -115,32 +101,15 @@ async function getDevAdminPrincipal(db: Awaited<ReturnType<typeof getDb>>): Prom
       "FINANCE_EXECUTIVE",
       "HR_EXECUTIVE",
       "OPERATIONS",
-      ...dbRoles,
-    ]));
+    ];
 
-    return {
+    devAdminPrincipalCache = {
       userId,
       email,
       fullName,
       employeeId,
       sessionId: "dev-bypass-session",
       roles,
-      capabilities,
-      mfaSatisfied: true,
-      mustChangePassword: false,
-      mustEnrolMfa: false,
-      mfaRequired: false,
-      mfaEnrolmentDueAt: null,
-    };
-  } catch (err) {
-    console.error("[auth] Fallback to static dev admin principal:", err);
-    return {
-      userId,
-      email,
-      fullName,
-      employeeId: null,
-      sessionId: "dev-bypass-session",
-      roles: ["SUPER_ADMIN", "DIRECTOR", "ACCOUNTANT", "HR_MANAGER", "CASE_MANAGER", "LAWYER_OR_AUTHORISED_REVIEWER"],
       capabilities: new OmnipotentCapabilitySet(),
       mfaSatisfied: true,
       mustChangePassword: false,
@@ -148,6 +117,36 @@ async function getDevAdminPrincipal(db: Awaited<ReturnType<typeof getDb>>): Prom
       mfaRequired: false,
       mfaEnrolmentDueAt: null,
     };
+
+    return devAdminPrincipalCache;
+  } catch (err) {
+    console.error("[auth] Fallback to static dev admin principal:", err);
+    devAdminPrincipalCache = {
+      userId,
+      email,
+      fullName,
+      employeeId: null,
+      sessionId: "dev-bypass-session",
+      roles: [
+        "SUPER_ADMIN",
+        "DIRECTOR",
+        "ACCOUNTANT",
+        "HR_MANAGER",
+        "CASE_MANAGER",
+        "LAWYER_OR_AUTHORISED_REVIEWER",
+        "AUDITOR",
+        "FINANCE_EXECUTIVE",
+        "HR_EXECUTIVE",
+        "OPERATIONS",
+      ],
+      capabilities: new OmnipotentCapabilitySet(),
+      mfaSatisfied: true,
+      mustChangePassword: false,
+      mustEnrolMfa: false,
+      mfaRequired: false,
+      mfaEnrolmentDueAt: null,
+    };
+    return devAdminPrincipalCache;
   }
 }
 

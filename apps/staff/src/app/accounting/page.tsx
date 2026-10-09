@@ -9,7 +9,6 @@ import {
   listPeriods,
   today,
   toIsoDate,
-  trialBalance,
 } from "@cac/core";
 import { requireCapability } from "@/lib/auth";
 import { Shell } from "@/components/Shell";
@@ -44,12 +43,11 @@ export default async function AccountingPage() {
   const principal = await requireCapability("accounting.journal.view");
   const db = await getDb();
 
-  const [totals, years, periods, drafts, tb] = await Promise.all([
+  const [totals, years, periods, drafts] = await Promise.all([
     ledgerTotals(db),
     listFiscalYears(db),
     listPeriods(db),
     listJournals(db, { status: "draft", limit: 8 }),
-    trialBalance(db),
   ]);
 
   const now = toIsoDate(today());
@@ -144,7 +142,7 @@ export default async function AccountingPage() {
           <StatTile
             label="Trial balance status"
             value={balanced ? "BALANCED" : "OUT OF BALANCE"}
-            hint={balanced ? `Nil difference as at ${formatDate(tb.to)}` : "Discrepancy detected"}
+            hint={balanced ? `Nil difference as at ${formatDate(today())}` : "Discrepancy detected"}
             tone={balanced ? "ok" : "danger"}
           />
         </div>
