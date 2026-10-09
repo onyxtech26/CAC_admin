@@ -2,6 +2,7 @@ import Link from "next/link";
 import { sql } from "drizzle-orm";
 import { getDb } from "@cac/db";
 import { requireAnyCapability } from "@/lib/auth";
+import { memoize } from "@/lib/cache";
 import { Shell } from "@/components/Shell";
 import {
   Badge,
@@ -40,25 +41,29 @@ export default async function AdminHubPage() {
   ]);
   const db = await getDb();
 
-  const [usersCount, activeSessions, pendingSettings, recentAudit] = await Promise.all([
-    db.execute<{ n: string }>(sql`SELECT count(*)::text AS n FROM auth."user" WHERE status = 'active'`),
-    db.execute<{ n: string }>(
-      sql`SELECT count(*)::text AS n FROM auth.session WHERE revoked_at IS NULL AND expires_at > now()`,
-    ),
-    db.execute<{ key: string; label: string; description: string | null }>(
-      sql`SELECT key, label, description FROM org.setting WHERE needs_review ORDER BY category, key LIMIT 6`,
-    ),
-    principal.capabilities.has("audit.view")
-      ? db.execute<{ action: string; entity_type: string; actor_label: string | null; created_at: string }>(
-          sql`SELECT action, entity_type, actor_label, created_at FROM audit.event ORDER BY created_at DESC LIMIT 8`,
-        )
-      : Promise.resolve({ rows: [] as never[] }),
-  ]);
+  const { activeUsers, sessions, settings, events } = await memoize("admin.overview", 60, async () => {
+    const [usersCount, activeSessions, pendingSettings, recentAudit] = await Promise.all([
+      db.execute<{ n: string }>(sql`SELECT count(*)::text AS n FROM auth."user" WHERE status = 'active'`),
+      db.execute<{ n: string }>(
+        sql`SELECT count(*)::text AS n FROM auth.session WHERE revoked_at IS NULL AND expires_at > now()`,
+      ),
+      db.execute<{ key: string; label: string; description: string | null }>(
+        sql`SELECT key, label, description FROM org.setting WHERE needs_review ORDER BY category, key LIMIT 6`,
+      ),
+      principal.capabilities.has("audit.view")
+        ? db.execute<{ action: string; entity_type: string; actor_label: string | null; created_at: string }>(
+            sql`SELECT action, entity_type, actor_label, created_at FROM audit.event ORDER BY created_at DESC LIMIT 8`,
+          )
+        : Promise.resolve({ rows: [] as never[] }),
+    ]);
 
-  const activeUsers = usersCount.rows?.[0]?.n ?? "0";
-  const sessions = activeSessions.rows?.[0]?.n ?? "0";
-  const settings = pendingSettings.rows ?? [];
-  const events = recentAudit.rows ?? [];
+    return {
+      activeUsers: usersCount.rows?.[0]?.n ?? "0",
+      sessions: activeSessions.rows?.[0]?.n ?? "0",
+      settings: pendingSettings.rows ?? [],
+      events: recentAudit.rows ?? [],
+    };
+  });
 
   return (
     <Shell

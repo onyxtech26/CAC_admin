@@ -10,6 +10,11 @@ const config: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite", "@node-rs/argon2", "pg", "pdfkit"],
   poweredByHeader: false,
   experimental: {
+    // Enable client-side App Router cache for instant 0ms back/forward and tab navigation during demos
+    staleTimes: {
+      dynamic: 300,
+      static: 1800,
+    },
     // A document upload goes through a server action, and the default limit on an
     // action's body is 1 MB — so without this every scanned certificate over that size
     // fails with an error that says nothing about size. Matched to MAX_UPLOAD_BYTES in

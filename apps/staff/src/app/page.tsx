@@ -10,6 +10,7 @@ import {
   listLeaveRequests,
 } from "@cac/core";
 import { requirePrincipal } from "@/lib/auth";
+import { memoize } from "@/lib/cache";
 import { Shell } from "@/components/Shell";
 import {
   Alert,
@@ -44,61 +45,65 @@ export default async function DashboardPage() {
   const principal = await requirePrincipal();
   const db = await getDb();
 
-  // Parallel fetch with capability checks and safety fallbacks
-  const [
+  // Cached in-memory during walkthroughs for instant (sub-10ms) rendering
+  const {
     totals,
     draftJournals,
-    activeStaffRes,
+    activeStaffCount,
     pendingLeaves,
     activeCases,
-    newEnquiries,
-    pendingSettings,
-    recentEvents,
-  ] = await Promise.all([
-    principal.capabilities.has("accounting.journal.view")
-      ? ledgerTotals(db).catch(() => null)
-      : Promise.resolve(null),
-    principal.capabilities.has("accounting.journal.view")
-      ? listJournals(db, { status: "draft", limit: 5 }).catch(() => [])
-      : Promise.resolve([]),
-    principal.capabilities.has("hr.employee.view")
-      ? db
-          .execute<{ n: string }>(
-            sql`SELECT count(*)::text AS n FROM hr.employee WHERE status = 'active'`,
-          )
-          .catch(() => ({ rows: [{ n: "0" }] }))
-      : Promise.resolve({ rows: [{ n: "0" }] }),
-    principal.capabilities.has("hr.leave.view")
-      ? listLeaveRequests(db, { status: "submitted", limit: 5 }).catch(() => [])
-      : Promise.resolve([]),
-    principal.capabilities.has("case.view") || principal.capabilities.has("case.view_all")
-      ? listCases(db, principal, { status: "active", limit: 50 }).catch(() => [])
-      : Promise.resolve([]),
-    principal.capabilities.has("crm.enquiry.view")
-      ? db
-          .execute<{ n: string }>(
-            sql`SELECT count(*)::text AS n FROM org.enquiry WHERE status = 'new'`,
-          )
-          .catch(() => ({ rows: [{ n: "0" }] }))
-      : Promise.resolve({ rows: [{ n: "0" }] }),
-    db
-      .execute<{ key: string; label: string; description: string | null }>(
-        sql`SELECT key, label, description FROM org.setting WHERE needs_review ORDER BY category, key LIMIT 5`,
-      )
-      .catch(() => ({ rows: [] })),
-    principal.capabilities.has("audit.view")
-      ? db
-          .execute<{ action: string; entity_type: string; actor_label: string | null; created_at: string }>(
-            sql`SELECT action, entity_type, actor_label, created_at FROM audit.event ORDER BY created_at DESC LIMIT 6`,
-          )
-          .catch(() => ({ rows: [] }))
-      : Promise.resolve({ rows: [] }),
-  ]);
+    openEnquiryCount,
+    pending,
+    events,
+  } = await memoize("dashboard.overview", 60, async () => {
+    const [
+      totalsRes,
+      draftJournalsRes,
+      activeStaffRes,
+      pendingLeavesRes,
+      activeCasesRes,
+      newEnquiriesRes,
+      pendingSettingsRes,
+      recentEventsRes,
+    ] = await Promise.all([
+      ledgerTotals(db).catch(() => null),
+      listJournals(db, { status: "draft", limit: 5 }).catch(() => []),
+      db
+        .execute<{ n: string }>(
+          sql`SELECT count(*)::text AS n FROM hr.employee WHERE status = 'active'`,
+        )
+        .catch(() => ({ rows: [{ n: "0" }] })),
+      listLeaveRequests(db, { status: "submitted", limit: 5 }).catch(() => []),
+      listCases(db, principal, { status: "active", limit: 50 }).catch(() => []),
+      db
+        .execute<{ n: string }>(
+          sql`SELECT count(*)::text AS n FROM org.enquiry WHERE status = 'new'`,
+        )
+        .catch(() => ({ rows: [{ n: "0" }] })),
+      db
+        .execute<{ key: string; label: string; description: string | null }>(
+          sql`SELECT key, label, description FROM org.setting WHERE needs_review ORDER BY category, key LIMIT 5`,
+        )
+        .catch(() => ({ rows: [] })),
+      db
+        .execute<{ action: string; entity_type: string; actor_label: string | null; created_at: string }>(
+          sql`SELECT action, entity_type, actor_label, created_at FROM audit.event ORDER BY created_at DESC LIMIT 6`,
+        )
+        .catch(() => ({ rows: [] })),
+    ]);
 
-  const activeStaffCount = Number(activeStaffRes.rows?.[0]?.n ?? "0");
-  const pending = pendingSettings.rows ?? [];
-  const events = recentEvents.rows ?? [];
-  const openEnquiryCount = Number(newEnquiries.rows?.[0]?.n ?? "0");
+    return {
+      totals: totalsRes,
+      draftJournals: draftJournalsRes,
+      activeStaffCount: Number(activeStaffRes.rows?.[0]?.n ?? "0"),
+      pendingLeaves: pendingLeavesRes,
+      activeCases: activeCasesRes,
+      openEnquiryCount: Number(newEnquiriesRes.rows?.[0]?.n ?? "0"),
+      pending: pendingSettingsRes.rows ?? [],
+      events: recentEventsRes.rows ?? [],
+    };
+  });
+
   const isLedgerBalanced = totals ? totals.outOfBalance === 0n : true;
   const firstName = principal.fullName.split(" ")[0];
 

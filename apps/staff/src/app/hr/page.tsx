@@ -7,6 +7,7 @@ import {
   listPayrollRuns,
 } from "@cac/core";
 import { requireAnyCapability } from "@/lib/auth";
+import { memoize } from "@/lib/cache";
 import { Shell } from "@/components/Shell";
 import {
   Alert,
@@ -49,36 +50,49 @@ export default async function HRMSOverviewPage() {
   ]);
   const db = await getDb();
 
-  const [employeeMetricsRes, deptCountRes, pendingLeaves, payrollRuns] = await Promise.all([
-    db
-      .execute<{
-        active_count: number;
-        probation_count: number;
-        overdue_probation_count: number;
-      }>(sql`
-        SELECT
-          count(*) FILTER (WHERE status = 'active')::int AS active_count,
-          count(*) FILTER (WHERE status = 'active' AND confirmed_on IS NULL AND probation_months > 0)::int AS probation_count,
-          count(*) FILTER (WHERE status = 'active' AND confirmed_on IS NULL AND (joined_on + (probation_months || ' months')::interval)::date < CURRENT_DATE)::int AS overdue_probation_count
-        FROM hr.employee
-      `)
-      .catch(() => ({ rows: [{ active_count: 0, probation_count: 0, overdue_probation_count: 0 }] })),
-    db
-      .execute<{ n: string }>(sql`SELECT count(*)::text AS n FROM hr.department`)
-      .catch(() => ({ rows: [{ n: "0" }] })),
-    principal.capabilities.has("hr.leave.view")
-      ? listLeaveRequests(db, { status: "submitted", limit: 8 }).catch(() => [])
-      : Promise.resolve([]),
-    principal.capabilities.has("hr.payroll.view")
-      ? listPayrollRuns(db, 5).catch(() => [])
-      : Promise.resolve([]),
-  ]);
+  const { activeCount, probationCount, overdueProbationCount, departmentCount, pendingLeaves, payrollRuns } =
+    await memoize("hr.overview", 60, async () => {
+      const [employeeMetricsRes, deptCountRes, pendingLeavesRes, payrollRunsRes] = await Promise.all([
+        db
+          .execute<{
+            active_count: number;
+            probation_count: number;
+            overdue_probation_count: number;
+          }>(sql`
+            SELECT
+              count(*) FILTER (WHERE status = 'active')::int AS active_count,
+              count(*) FILTER (WHERE status = 'active' AND confirmed_on IS NULL AND probation_months > 0)::int AS probation_count,
+              count(*) FILTER (WHERE status = 'active' AND confirmed_on IS NULL AND (joined_on + (probation_months || ' months')::interval)::date < CURRENT_DATE)::int AS overdue_probation_count
+            FROM hr.employee
+          `)
+          .catch(() => ({ rows: [{ active_count: 0, probation_count: 0, overdue_probation_count: 0 }] })),
+        db
+          .execute<{ n: string }>(sql`SELECT count(*)::text AS n FROM hr.department`)
+          .catch(() => ({ rows: [{ n: "0" }] })),
+        principal.capabilities.has("hr.leave.view")
+          ? listLeaveRequests(db, { status: "submitted", limit: 8 }).catch(() => [])
+          : Promise.resolve([]),
+        principal.capabilities.has("hr.payroll.view")
+          ? listPayrollRuns(db, 5).catch(() => [])
+          : Promise.resolve([]),
+      ]);
 
-  const metrics = employeeMetricsRes.rows?.[0] ?? { active_count: 0, probation_count: 0, overdue_probation_count: 0 };
-  const activeCount = metrics.active_count ?? 0;
-  const probationCount = metrics.probation_count ?? 0;
-  const overdueProbationCount = metrics.overdue_probation_count ?? 0;
-  const departmentCount = Number(deptCountRes.rows?.[0]?.n ?? "0");
+      const metrics = employeeMetricsRes.rows?.[0] ?? {
+        active_count: 0,
+        probation_count: 0,
+        overdue_probation_count: 0,
+      };
+
+      return {
+        activeCount: metrics.active_count ?? 0,
+        probationCount: metrics.probation_count ?? 0,
+        overdueProbationCount: metrics.overdue_probation_count ?? 0,
+        departmentCount: Number(deptCountRes.rows?.[0]?.n ?? "0"),
+        pendingLeaves: pendingLeavesRes,
+        payrollRuns: payrollRunsRes,
+      };
+    });
+
   const latestPayroll = payrollRuns[0];
 
   return (

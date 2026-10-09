@@ -11,6 +11,7 @@ import {
   toIsoDate,
 } from "@cac/core";
 import { requireCapability } from "@/lib/auth";
+import { memoize } from "@/lib/cache";
 import { Shell } from "@/components/Shell";
 import {
   Alert,
@@ -43,12 +44,15 @@ export default async function AccountingPage() {
   const principal = await requireCapability("accounting.journal.view");
   const db = await getDb();
 
-  const [totals, years, periods, drafts] = await Promise.all([
-    ledgerTotals(db),
-    listFiscalYears(db),
-    listPeriods(db),
-    listJournals(db, { status: "draft", limit: 8 }),
-  ]);
+  const { totals, years, periods, drafts } = await memoize("accounting.overview", 60, async () => {
+    const [totalsRes, yearsRes, periodsRes, draftsRes] = await Promise.all([
+      ledgerTotals(db),
+      listFiscalYears(db),
+      listPeriods(db),
+      listJournals(db, { status: "draft", limit: 8 }),
+    ]);
+    return { totals: totalsRes, years: yearsRes, periods: periodsRes, drafts: draftsRes };
+  });
 
   const now = toIsoDate(today());
   const currentPeriod = periods.find((p) => p.startsOn <= now && p.endsOn >= now);
