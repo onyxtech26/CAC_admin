@@ -381,6 +381,7 @@ export function WorkflowNavigator({ defaultTab = "sales" }: { defaultTab?: FlowT
                 <div className="mt-4 flex items-center gap-2 border-t border-slate-200 pt-3">
                   <Link
                     href={step.href}
+                    prefetch={true}
                     className="flex-1 rounded-md px-2.5 py-1.5 text-center text-[11.5px] font-medium text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 hover:text-slate-900 transition"
                   >
                     Open list
@@ -388,6 +389,7 @@ export function WorkflowNavigator({ defaultTab = "sales" }: { defaultTab?: FlowT
                   {step.newHref && (
                     <Link
                       href={step.newHref}
+                      prefetch={true}
                       className="grid h-7 w-7 place-items-center rounded-md bg-amber-500 text-white hover:bg-amber-600 transition shadow-xs"
                       title={`New ${step.title}`}
                     >
@@ -417,6 +419,7 @@ export function WorkflowNavigator({ defaultTab = "sales" }: { defaultTab?: FlowT
             <Link
               key={link.href}
               href={link.href}
+              prefetch={true}
               className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-1 text-[12px] text-slate-700 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 transition shadow-2xs font-medium"
             >
               <span>{link.label}</span>

@@ -155,6 +155,7 @@ export function QuickActionMenu() {
                       <Link
                         key={action.title}
                         href={action.href}
+                        prefetch={true}
                         onClick={() => setOpen(false)}
                         className="flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[12.5px] text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                       >

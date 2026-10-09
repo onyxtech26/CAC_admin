@@ -320,6 +320,7 @@ export function Shell({
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <Link
                 href="/"
+                prefetch={true}
                 className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
                   activeSuite === "all"
                     ? "bg-slate-900 text-white font-semibold shadow-xs"
@@ -332,6 +333,7 @@ export function Shell({
 
               <Link
                 href="/accounting"
+                prefetch={true}
                 className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
                   activeSuite === "accounting"
                     ? "bg-slate-900 text-white font-semibold shadow-xs"
@@ -344,6 +346,7 @@ export function Shell({
 
               <Link
                 href="/hr"
+                prefetch={true}
                 className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
                   activeSuite === "hrms"
                     ? "bg-slate-900 text-white font-semibold shadow-xs"
@@ -356,6 +359,7 @@ export function Shell({
 
               <Link
                 href="/cases"
+                prefetch={true}
                 className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
                   activeSuite === "legal"
                     ? "bg-slate-900 text-white font-semibold shadow-xs"
@@ -368,6 +372,7 @@ export function Shell({
 
               <Link
                 href="/admin"
+                prefetch={true}
                 className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
                   activeSuite === "admin"
                     ? "bg-slate-900 text-white font-semibold shadow-xs"
@@ -452,6 +457,7 @@ function NavList({
                 ) : (
                   <Link
                     href={item.href}
+                    prefetch={true}
                     className="group flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[13px] text-slate-300 font-normal transition-all duration-150 hover:bg-slate-800 hover:text-white"
                   >
                     <span className="text-slate-400 group-hover:text-amber-400 transition-colors shrink-0">

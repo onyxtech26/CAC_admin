@@ -1,13 +1,10 @@
 import Link from "next/link";
+import { sql } from "drizzle-orm";
 import { getDb } from "@cac/db";
 import {
   formatDate,
-  listDepartments,
-  listEmployees,
   listLeaveRequests,
   listPayrollRuns,
-  today,
-  toIsoDate,
 } from "@cac/core";
 import { requireAnyCapability } from "@/lib/auth";
 import { Shell } from "@/components/Shell";
@@ -51,11 +48,24 @@ export default async function HRMSOverviewPage() {
     "hr.org.view",
   ]);
   const db = await getDb();
-  const now = toIsoDate(today());
 
-  const [employees, departments, pendingLeaves, payrollRuns] = await Promise.all([
-    listEmployees(db, { limit: 1000 }).catch(() => []),
-    listDepartments(db).catch(() => []),
+  const [employeeMetricsRes, deptCountRes, pendingLeaves, payrollRuns] = await Promise.all([
+    db
+      .execute<{
+        active_count: number;
+        probation_count: number;
+        overdue_probation_count: number;
+      }>(sql`
+        SELECT
+          count(*) FILTER (WHERE status = 'active')::int AS active_count,
+          count(*) FILTER (WHERE status = 'active' AND confirmed_on IS NULL AND probation_months > 0)::int AS probation_count,
+          count(*) FILTER (WHERE status = 'active' AND confirmed_on IS NULL AND (joined_on + (probation_months || ' months')::interval)::date < CURRENT_DATE)::int AS overdue_probation_count
+        FROM hr.employee
+      `)
+      .catch(() => ({ rows: [{ active_count: 0, probation_count: 0, overdue_probation_count: 0 }] })),
+    db
+      .execute<{ n: string }>(sql`SELECT count(*)::text AS n FROM hr.department`)
+      .catch(() => ({ rows: [{ n: "0" }] })),
     principal.capabilities.has("hr.leave.view")
       ? listLeaveRequests(db, { status: "submitted", limit: 8 }).catch(() => [])
       : Promise.resolve([]),
@@ -64,11 +74,11 @@ export default async function HRMSOverviewPage() {
       : Promise.resolve([]),
   ]);
 
-  const activeEmployees = employees.filter((e) => e.status === "active");
-  const onProbation = employees.filter(
-    (e) => e.status === "active" && !e.confirmedOn && e.probationEndsOn,
-  );
-  const overdueProbation = onProbation.filter((e) => e.probationEndsOn && e.probationEndsOn < now);
+  const metrics = employeeMetricsRes.rows?.[0] ?? { active_count: 0, probation_count: 0, overdue_probation_count: 0 };
+  const activeCount = metrics.active_count ?? 0;
+  const probationCount = metrics.probation_count ?? 0;
+  const overdueProbationCount = metrics.overdue_probation_count ?? 0;
+  const departmentCount = Number(deptCountRes.rows?.[0]?.n ?? "0");
   const latestPayroll = payrollRuns[0];
 
   return (
@@ -94,9 +104,9 @@ export default async function HRMSOverviewPage() {
     >
       <div className="space-y-5">
         {/* Probation Alert if any */}
-        {overdueProbation.length > 0 && (
+        {overdueProbationCount > 0 && (
           <Alert tone="warn">
-            <strong>{overdueProbation.length} employee probation period(s) have passed</strong>{" "}
+            <strong>{overdueProbationCount} employee probation period(s) have passed</strong>{" "}
             without a formal confirmation record. Review their status in the{" "}
             <Link href="/hr/employees" className="underline font-medium">
               Employee Directory
@@ -109,19 +119,19 @@ export default async function HRMSOverviewPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatTile
             label="Active workforce"
-            value={String(activeEmployees.length)}
-            hint={`${departments.length} department(s) active`}
+            value={String(activeCount)}
+            hint={`${departmentCount} department(s) active`}
             tone="neutral"
           />
           <StatTile
             label="Probations to review"
-            value={String(onProbation.length)}
+            value={String(probationCount)}
             hint={
-              overdueProbation.length > 0
-                ? `${overdueProbation.length} overdue confirmation`
+              overdueProbationCount > 0
+                ? `${overdueProbationCount} overdue confirmation`
                 : "All on schedule"
             }
-            tone={overdueProbation.length > 0 ? "warn" : "neutral"}
+            tone={overdueProbationCount > 0 ? "warn" : "neutral"}
           />
           <StatTile
             label="Pending leave requests"

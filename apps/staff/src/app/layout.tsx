@@ -45,13 +45,21 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+import { Suspense } from "react";
+import { NavigationProgressBar } from "@/components/NavigationProgressBar";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
       className={`${display.variable} ${body.variable} ${mono.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <Suspense fallback={null}>
+          <NavigationProgressBar />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

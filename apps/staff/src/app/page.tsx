@@ -6,7 +6,6 @@ import {
   formatDate,
   ledgerTotals,
   listCases,
-  listEmployees,
   listJournals,
   listLeaveRequests,
 } from "@cac/core";
@@ -49,7 +48,7 @@ export default async function DashboardPage() {
   const [
     totals,
     draftJournals,
-    employees,
+    activeStaffRes,
     pendingLeaves,
     activeCases,
     newEnquiries,
@@ -63,13 +62,17 @@ export default async function DashboardPage() {
       ? listJournals(db, { status: "draft", limit: 5 }).catch(() => [])
       : Promise.resolve([]),
     principal.capabilities.has("hr.employee.view")
-      ? listEmployees(db, { limit: 1000 }).catch(() => [])
-      : Promise.resolve([]),
+      ? db
+          .execute<{ n: string }>(
+            sql`SELECT count(*)::text AS n FROM hr.employee WHERE status = 'active'`,
+          )
+          .catch(() => ({ rows: [{ n: "0" }] }))
+      : Promise.resolve({ rows: [{ n: "0" }] }),
     principal.capabilities.has("hr.leave.view")
       ? listLeaveRequests(db, { status: "submitted", limit: 5 }).catch(() => [])
       : Promise.resolve([]),
     principal.capabilities.has("case.view") || principal.capabilities.has("case.view_all")
-      ? listCases(db, principal, { status: "active" }).catch(() => [])
+      ? listCases(db, principal, { status: "active", limit: 50 }).catch(() => [])
       : Promise.resolve([]),
     principal.capabilities.has("crm.enquiry.view")
       ? db
@@ -92,7 +95,7 @@ export default async function DashboardPage() {
       : Promise.resolve({ rows: [] }),
   ]);
 
-  const activeStaff = employees.filter((e) => e.status === "active");
+  const activeStaffCount = Number(activeStaffRes.rows?.[0]?.n ?? "0");
   const pending = pendingSettings.rows ?? [];
   const events = recentEvents.rows ?? [];
   const openEnquiryCount = Number(newEnquiries.rows?.[0]?.n ?? "0");
@@ -311,7 +314,7 @@ export default async function DashboardPage() {
           />
           <StatTile
             label="Workforce status"
-            value={String(activeStaff.length)}
+            value={String(activeStaffCount)}
             hint={
               pendingLeaves.length > 0
                 ? `${pendingLeaves.length} leave approval(s) waiting`

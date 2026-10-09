@@ -133,7 +133,7 @@ async function open(): Promise<Database> {
     const isLocal = url.includes("localhost") || url.includes("127.0.0.1");
     const pool = new Pool({
       connectionString: url,
-      max: isServerless ? 5 : 10,
+      max: isServerless ? 15 : 20,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 5000,
       ssl: isLocal ? false : { rejectUnauthorized: false },
