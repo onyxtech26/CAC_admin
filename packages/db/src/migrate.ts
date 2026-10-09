@@ -71,13 +71,31 @@ export async function runMigrations(db?: Database): Promise<string[]> {
       continue;
     }
 
-    // PGlite executes one statement per call, so split on the breakpoint
-    // drizzle-kit emits.
-    const chunks = body.includes(BREAKPOINT) ? body.split(BREAKPOINT) : [body];
+    // On hosted PostgreSQL, execute the entire migration file in a single
+    // network round-trip. On PGlite, split on drizzle-kit breakpoints.
+    const isHosted = Boolean(
+      process.env.DATABASE_URL ||
+        process.env.POSTGRES_URL ||
+        process.env.STORAGE_URL,
+    );
 
-    for (const chunk of chunks) {
-      if (!hasExecutableSql(chunk)) continue;
-      await database.execute(sql.raw(chunk.trim()));
+    if (isHosted) {
+      try {
+        await database.execute(sql.raw(body));
+      } catch {
+        // Fallback to chunks if multi-statement execution hits an engine guard
+        const chunks = body.includes(BREAKPOINT) ? body.split(BREAKPOINT) : [body];
+        for (const chunk of chunks) {
+          if (!hasExecutableSql(chunk)) continue;
+          await database.execute(sql.raw(chunk.trim()));
+        }
+      }
+    } else {
+      const chunks = body.includes(BREAKPOINT) ? body.split(BREAKPOINT) : [body];
+      for (const chunk of chunks) {
+        if (!hasExecutableSql(chunk)) continue;
+        await database.execute(sql.raw(chunk.trim()));
+      }
     }
 
     await database.execute(

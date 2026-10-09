@@ -20,13 +20,32 @@ async function ensureDatabaseBootstrapped(db: Database): Promise<void> {
         SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'user'
       `).catch(() => null);
 
-      if (!check?.rows?.length) {
+      if (check?.rows?.length) {
+        return;
+      }
+
+      // Concurrency guard: acquire Postgres advisory lock so concurrent serverless
+      // functions do not race or block each other
+      const lockRes = await db.execute<{ locked: boolean }>(sql`
+        SELECT pg_try_advisory_lock(7421839) AS locked
+      `).catch(() => null);
+      const hasLock = lockRes?.rows?.[0]?.locked !== false;
+
+      if (!hasLock) {
+        // Another worker is actively migrating; yield and proceed
+        await new Promise((r) => setTimeout(r, 2000));
+        return;
+      }
+
+      try {
         console.log("[db] Initializing schema and seed data on fresh database...");
         const { runMigrations } = await import("./migrate.js");
         const { seed } = await import("./seed.js");
         await runMigrations(db);
         await seed(db);
         console.log("[db] Database bootstrap complete.");
+      } finally {
+        await db.execute(sql`SELECT pg_advisory_unlock(7421839)`).catch(() => null);
       }
     } catch (err) {
       console.warn("[db] Bootstrap check notice:", err);
