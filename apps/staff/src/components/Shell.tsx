@@ -191,10 +191,8 @@ export function Shell({
 
   const activeSuite = suiteFromPath ?? currentSuite ?? inferActiveSuite(breadcrumbs, title);
 
-  // Filter navigation contextually based on the active suite:
-  // If in a specific suite (e.g. accounting, hrms, legal, admin), show only its tools.
-  // In the overview hub ("all"), show everything cleanly.
-  const sections = visibleNavigation(principal, activeSuite === "all" ? "all" : activeSuite);
+  // Always display the complete enterprise navigation suite in the sidebar rail
+  const sections = visibleNavigation(principal, "all");
 
   return (
     <div className="min-h-screen bg-[var(--color-canvas)] lg:grid lg:grid-cols-[260px_1fr]">
@@ -226,33 +224,6 @@ export function Shell({
               </p>
             </div>
           </Link>
-
-          {/* Active Suite Indicator Pill in Sidebar */}
-          {activeSuite !== "all" && (
-            <div className="px-3 pt-3 pb-1">
-              <div className="flex items-center justify-between rounded-lg bg-slate-850/80 border border-slate-750 px-3 py-1.5 text-[11.5px]">
-                <div className="flex items-center gap-1.5 truncate">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
-                  <span className="truncate text-slate-200 font-medium">
-                    {activeSuite === "accounting"
-                      ? "Accounting Suite"
-                      : activeSuite === "hrms"
-                        ? "HRMS & Payroll"
-                        : activeSuite === "legal"
-                          ? "Legal AI Forensics"
-                          : "Administration"}
-                  </span>
-                </div>
-                <Link
-                  href="/"
-                  className="text-[10.5px] text-amber-400 hover:text-amber-300 transition font-medium ml-2 shrink-0 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/60"
-                  title="Return to Command Hub"
-                >
-                  All Suites
-                </Link>
-              </div>
-            </div>
-          )}
 
           {/* Mobile menu toggle */}
           <details className="lg:hidden" open={false}>
@@ -507,6 +478,14 @@ function NavList({
     return false;
   };
 
+  // Auto-scroll active item into view inside the sidebar if needed
+  useEffect(() => {
+    const activeEl = document.querySelector('[data-active="true"]');
+    if (activeEl) {
+      activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [pathname]);
+
   return (
     <nav className="px-3 py-3 space-y-4" aria-label="Sections">
       {sections.map((section) => (
@@ -534,6 +513,7 @@ function NavList({
                     <Link
                       href={item.href}
                       prefetch={true}
+                      data-active={active ? "true" : undefined}
                       aria-current={active ? "page" : undefined}
                       className={`group flex items-center justify-between rounded-lg px-3 py-1.5 text-[13px] transition-all duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
                         active
