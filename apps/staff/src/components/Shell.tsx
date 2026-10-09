@@ -1,3 +1,7 @@
+"use client";
+
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import Link from "next/link";
 import type { Principal } from "@cac/core";
 import { visibleNavigation, type AppSuite } from "@/lib/nav";
@@ -162,7 +166,30 @@ export function Shell({
   children: React.ReactNode;
   currentSuite?: AppSuite;
 }) {
-  const activeSuite = currentSuite ?? inferActiveSuite(breadcrumbs, title);
+  const pathname = usePathname();
+
+  // Reset scroll and focus main canvas on route navigation
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    const mainEl = document.getElementById("main");
+    if (mainEl) {
+      mainEl.focus({ preventScroll: true });
+    }
+  }, [pathname]);
+
+  const suiteFromPath: AppSuite | null = pathname.startsWith("/accounting")
+    ? "accounting"
+    : pathname.startsWith("/hr")
+      ? "hrms"
+      : pathname.startsWith("/cases") || pathname.startsWith("/documents")
+        ? "legal"
+        : pathname.startsWith("/admin")
+          ? "admin"
+          : pathname === "/" || pathname.startsWith("/enquiries")
+            ? "all"
+            : null;
+
+  const activeSuite = suiteFromPath ?? currentSuite ?? inferActiveSuite(breadcrumbs, title);
 
   // Filter navigation contextually based on the active suite:
   // If in a specific suite (e.g. accounting, hrms, legal, admin), show only its tools.
@@ -205,8 +232,8 @@ export function Shell({
             <div className="px-3 pt-3 pb-1">
               <div className="flex items-center justify-between rounded-lg bg-slate-850/80 border border-slate-750 px-3 py-1.5 text-[11.5px]">
                 <div className="flex items-center gap-1.5 truncate">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
-                  <span className="truncate text-slate-300 font-medium">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                  <span className="truncate text-slate-200 font-medium">
                     {activeSuite === "accounting"
                       ? "Accounting Suite"
                       : activeSuite === "hrms"
@@ -218,10 +245,10 @@ export function Shell({
                 </div>
                 <Link
                   href="/"
-                  className="text-[10.5px] text-slate-400 hover:text-amber-300 transition font-medium ml-2 shrink-0"
+                  className="text-[10.5px] text-amber-400 hover:text-amber-300 transition font-medium ml-2 shrink-0 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/60"
                   title="Return to Command Hub"
                 >
-                  Hub
+                  All Suites
                 </Link>
               </div>
             </div>
@@ -232,12 +259,12 @@ export function Shell({
             <summary className="cursor-pointer list-none px-4 py-2.5 text-[11px] text-amber-400 uppercase font-mono">
               Toggle Menu
             </summary>
-            <NavList sections={sections} />
+            <NavList sections={sections} pathname={pathname} />
           </details>
 
           {/* Desktop Nav List */}
           <div className="hidden lg:block">
-            <NavList sections={sections} />
+            <NavList sections={sections} pathname={pathname} />
           </div>
         </div>
 
@@ -321,66 +348,86 @@ export function Shell({
               <Link
                 href="/"
                 prefetch={true}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                aria-current={activeSuite === "all" ? "page" : undefined}
+                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
                   activeSuite === "all"
-                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
-                <IconDashboard size={14} />
-                <span>Command Hub</span>
+                <IconDashboard size={14} className={activeSuite === "all" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
+                <span className={activeSuite === "all" ? "text-white" : ""}>Command Hub</span>
+                {activeSuite === "all" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                )}
               </Link>
 
               <Link
                 href="/accounting"
                 prefetch={true}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                aria-current={activeSuite === "accounting" ? "page" : undefined}
+                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
                   activeSuite === "accounting"
-                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
-                <IconAccounting size={14} />
-                <span>AutoCount Accounting</span>
+                <IconAccounting size={14} className={activeSuite === "accounting" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
+                <span className={activeSuite === "accounting" ? "text-white" : ""}>AutoCount Accounting</span>
+                {activeSuite === "accounting" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                )}
               </Link>
 
               <Link
                 href="/hr"
                 prefetch={true}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                aria-current={activeSuite === "hrms" ? "page" : undefined}
+                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
                   activeSuite === "hrms"
-                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
-                <IconHRMS size={14} />
-                <span>AutoCount HRMS</span>
+                <IconHRMS size={14} className={activeSuite === "hrms" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
+                <span className={activeSuite === "hrms" ? "text-white" : ""}>AutoCount HRMS</span>
+                {activeSuite === "hrms" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                )}
               </Link>
 
               <Link
                 href="/cases"
                 prefetch={true}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                aria-current={activeSuite === "legal" ? "page" : undefined}
+                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
                   activeSuite === "legal"
-                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
-                <IconLegalAI size={14} />
-                <span>Legal AI Forensics</span>
+                <IconLegalAI size={14} className={activeSuite === "legal" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
+                <span className={activeSuite === "legal" ? "text-white" : ""}>Legal AI Forensics</span>
+                {activeSuite === "legal" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                )}
               </Link>
 
               <Link
                 href="/admin"
                 prefetch={true}
-                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all ${
+                aria-current={activeSuite === "admin" ? "page" : undefined}
+                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
                   activeSuite === "admin"
-                    ? "bg-slate-900 text-white font-semibold shadow-xs"
+                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 }`}
               >
-                <IconAdmin size={14} />
-                <span>Administration</span>
+                <IconAdmin size={14} className={activeSuite === "admin" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
+                <span className={activeSuite === "admin" ? "text-white" : ""}>Administration</span>
+                {activeSuite === "admin" && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
+                )}
               </Link>
             </div>
 
@@ -391,7 +438,7 @@ export function Shell({
         </div>
 
         {/* Main Content Area: Generous Enterprise Canvas */}
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 p-6 lg:p-8 page-transition">
+        <main id="main" tabIndex={-1} className="min-w-0 flex-1 p-6 lg:p-8 page-transition focus:outline-hidden">
           {principal.mfaRequired && !principal.mustEnrolMfa && (
             <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
               This account needs an authenticator by{" "}
@@ -430,9 +477,36 @@ export function Shell({
 
 function NavList({
   sections,
+  pathname,
 }: {
   sections: ReturnType<typeof visibleNavigation>;
+  pathname: string;
 }) {
+  const allHrefs = sections.flatMap((section) => section.items.map((item) => item.href));
+
+  const isItemActive = (itemHref: string) => {
+    if (pathname === itemHref) return true;
+    if (
+      itemHref === "/" ||
+      itemHref === "/accounting" ||
+      itemHref === "/hr" ||
+      itemHref === "/cases" ||
+      itemHref === "/admin"
+    ) {
+      return pathname === itemHref;
+    }
+    if (pathname.startsWith(itemHref + "/")) {
+      const hasLongerMatch = allHrefs.some(
+        (other) =>
+          other !== itemHref &&
+          other.length > itemHref.length &&
+          (pathname === other || pathname.startsWith(other + "/")),
+      );
+      return !hasLongerMatch;
+    }
+    return false;
+  };
+
   return (
     <nav className="px-3 py-3 space-y-4" aria-label="Sections">
       {sections.map((section) => (
@@ -441,33 +515,62 @@ function NavList({
             {section.heading}
           </p>
           <ul className="space-y-0.5">
-            {section.items.map((item) => (
-              <li key={item.href}>
-                {item.phase ? (
-                  <span
-                    className="flex cursor-not-allowed items-center justify-between rounded-lg px-3 py-1.5 text-[13px] text-slate-500"
-                    title={`Planned for phase ${item.phase}`}
-                  >
-                    <span className="flex items-center gap-2.5">
-                      <span className="opacity-40">{getNavIcon(item.icon)}</span>
-                      <span>{item.label}</span>
+            {section.items.map((item) => {
+              const active = isItemActive(item.href);
+              return (
+                <li key={item.href}>
+                  {item.phase ? (
+                    <span
+                      className="flex cursor-not-allowed items-center justify-between rounded-lg px-3 py-1.5 text-[13px] text-slate-500"
+                      title={`Planned for phase ${item.phase}`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <span className="opacity-40">{getNavIcon(item.icon)}</span>
+                        <span>{item.label}</span>
+                      </span>
+                      <span className="text-[10px] font-mono">P{item.phase}</span>
                     </span>
-                    <span className="text-[10px] font-mono">P{item.phase}</span>
-                  </span>
-                ) : (
-                  <Link
-                    href={item.href}
-                    prefetch={true}
-                    className="group flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-[13px] text-slate-300 font-normal transition-all duration-150 hover:bg-slate-800 hover:text-white"
-                  >
-                    <span className="text-slate-400 group-hover:text-amber-400 transition-colors shrink-0">
-                      {getNavIcon(item.icon)}
-                    </span>
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                )}
-              </li>
-            ))}
+                  ) : (
+                    <Link
+                      href={item.href}
+                      prefetch={true}
+                      aria-current={active ? "page" : undefined}
+                      className={`group flex items-center justify-between rounded-lg px-3 py-1.5 text-[13px] transition-all duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
+                        active
+                          ? "bg-slate-800/90 text-amber-300 font-semibold border-l-[3px] border-amber-400 shadow-xs ring-1 ring-amber-400/20"
+                          : "text-slate-300 font-normal hover:bg-slate-800/60 hover:text-white border-l-[3px] border-transparent"
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5 truncate">
+                        <span
+                          className={`shrink-0 transition-colors ${
+                            active
+                              ? "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
+                              : "text-slate-400 group-hover:text-amber-300"
+                          }`}
+                        >
+                          {getNavIcon(item.icon)}
+                        </span>
+                        <span
+                          className={`truncate ${
+                            active
+                              ? "text-amber-200 font-semibold"
+                              : "text-slate-300 group-hover:text-white"
+                          }`}
+                        >
+                          {item.label}
+                        </span>
+                      </span>
+                      {active && (
+                        <span className="ml-2 flex h-2 w-2 items-center justify-center shrink-0">
+                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.9)] animate-pulse" />
+                        </span>
+                      )}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </div>
       ))}
