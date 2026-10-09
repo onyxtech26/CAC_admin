@@ -73,11 +73,11 @@ const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2;
 
 /** The column set a line-item document uses: description, quantity, unit price, discount, amount. */
 export const LINE_COLUMNS: DocumentColumn[] = [
-  { heading: "DESCRIPTION", offset: 0, width: 240, wraps: true },
-  { heading: "QTY", offset: 250, width: 50, align: "right" },
-  { heading: "UNIT PRICE", offset: 310, width: 65, align: "right" },
-  { heading: "DISCOUNT", offset: 385, width: 60, align: "right" },
-  { heading: "AMOUNT", offset: 455, width: 92, align: "right" },
+  { heading: "DESCRIPTION", offset: 0, width: 220, wraps: true },
+  { heading: "QTY", offset: 225, width: 40, align: "right" },
+  { heading: "UNIT PRICE", offset: 270, width: 70, align: "right" },
+  { heading: "DISCOUNT", offset: 345, width: 55, align: "right" },
+  { heading: "AMOUNT", offset: 405, width: 94, align: "right" },
 ];
 
 export async function renderDocumentPdf(
@@ -137,12 +137,12 @@ export async function renderDocumentPdf(
 
   let metaY = detailsTop;
   for (const [label, value] of spec.meta) {
-    doc.fontSize(8).fillColor("#555555").text(label, PAGE_MARGIN + 320, metaY, { width: 100 });
+    doc.fontSize(8).fillColor("#555555").text(label, PAGE_MARGIN + 280, metaY, { width: 110 });
     doc
       .fontSize(9)
       .fillColor("#000000")
-      .text(value, PAGE_MARGIN + 420, metaY, {
-        width: CONTENT_WIDTH - 420 + PAGE_MARGIN,
+      .text(value, PAGE_MARGIN + 395, metaY, {
+        width: CONTENT_WIDTH - 395,
         align: "right",
       });
     metaY += 16;
@@ -201,8 +201,8 @@ export async function renderDocumentPdf(
   // ---- Totals -------------------------------------------------------------
   for (const total of spec.totals ?? []) {
     doc.font(total.bold ? "Helvetica-Bold" : "Helvetica").fontSize(total.bold ? 11 : 9);
-    doc.text(total.label, PAGE_MARGIN + 305, y, { width: 140, align: "right" });
-    doc.text(total.value, PAGE_MARGIN + 455, y, { width: 92, align: "right" });
+    doc.text(total.label, PAGE_MARGIN + 250, y, { width: 145, align: "right" });
+    doc.text(total.value, PAGE_MARGIN + 405, y, { width: 94, align: "right" });
     y += total.bold ? 18 : 14;
   }
 

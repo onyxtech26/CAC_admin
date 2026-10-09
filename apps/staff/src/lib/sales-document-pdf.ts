@@ -138,10 +138,10 @@ export async function renderReceiptPdf(
       columns:
         rows.length > 0
           ? [
-              { heading: "INVOICE", offset: 0, width: 240, wraps: true },
-              { heading: "DATED", offset: 250, width: 110, align: "right" },
-              { heading: "INVOICE TOTAL", offset: 370, width: 75, align: "right" },
-              { heading: "APPLIED", offset: 455, width: 92, align: "right" },
+              { heading: "INVOICE", offset: 0, width: 210, wraps: true },
+              { heading: "DATED", offset: 215, width: 85, align: "right" },
+              { heading: "INVOICE TOTAL", offset: 305, width: 95, align: "right" },
+              { heading: "APPLIED", offset: 405, width: 94, align: "right" },
             ]
           : undefined,
       rows: rows.length > 0 ? rows : undefined,
