@@ -1,155 +1,17 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
 import Link from "next/link";
 import type { Principal } from "@cac/core";
 import { visibleNavigation, type AppSuite } from "@/lib/nav";
+import { NavigationRail } from "./NavigationRail";
+import { SuiteSwitcher } from "./SuiteSwitcher";
 import { QuickActionMenu } from "./QuickActionMenu";
-import {
-  IconAccounting,
-  IconAdmin,
-  IconAward,
-  IconBank,
-  IconBill,
-  IconCase,
-  IconCheckCircle,
-  IconClock,
-  IconDashboard,
-  IconEnquiry,
-  IconFileCheck,
-  IconFolder,
-  IconHRMS,
-  IconInvoice,
-  IconJournal,
-  IconLegalAI,
-  IconLetters,
-  IconPayroll,
-  IconPayslip,
-  IconQuote,
-  IconReceipt,
-  IconTax,
-  IconUsers,
-  IconVoucher,
-} from "./icons";
-
-function getNavIcon(name?: string) {
-  switch (name) {
-    case "dashboard":
-      return <IconDashboard size={16} />;
-    case "enquiry":
-      return <IconEnquiry size={16} />;
-    case "accounting":
-      return <IconAccounting size={16} />;
-    case "hrms":
-      return <IconHRMS size={16} />;
-    case "legal":
-      return <IconLegalAI size={16} />;
-    case "admin":
-      return <IconAdmin size={16} />;
-    case "invoice":
-      return <IconInvoice size={16} />;
-    case "receipt":
-      return <IconReceipt size={16} />;
-    case "quote":
-      return <IconQuote size={16} />;
-    case "bill":
-      return <IconBill size={16} />;
-    case "voucher":
-      return <IconVoucher size={16} />;
-    case "journal":
-      return <IconJournal size={16} />;
-    case "bank":
-      return <IconBank size={16} />;
-    case "tax":
-      return <IconTax size={16} />;
-    case "users":
-      return <IconUsers size={16} />;
-    case "clock":
-      return <IconClock size={16} />;
-    case "payroll":
-      return <IconPayroll size={16} />;
-    case "payslip":
-      return <IconPayslip size={16} />;
-    case "award":
-      return <IconAward size={16} />;
-    case "letters":
-      return <IconLetters size={16} />;
-    case "case":
-      return <IconCase size={16} />;
-    case "folder":
-      return <IconFolder size={16} />;
-    case "check":
-      return <IconCheckCircle size={16} />;
-    default:
-      return <IconFileCheck size={16} />;
-  }
-}
-
-function inferActiveSuite(
-  breadcrumbs?: Array<{ label: string; href?: string }>,
-  title?: string,
-): AppSuite {
-  const combined = `${title ?? ""} ${(breadcrumbs ?? []).map((b) => b.label).join(" ")}`.toLowerCase();
-  if (
-    combined.includes("accounting") ||
-    combined.includes("invoice") ||
-    combined.includes("quote") ||
-    combined.includes("receipt") ||
-    combined.includes("bill") ||
-    combined.includes("voucher") ||
-    combined.includes("ledger") ||
-    combined.includes("journal") ||
-    combined.includes("aging") ||
-    combined.includes("bank") ||
-    combined.includes("tax") ||
-    combined.includes("customer") ||
-    combined.includes("supplier")
-  ) {
-    return "accounting";
-  }
-  if (
-    combined.includes("hr") ||
-    combined.includes("employee") ||
-    combined.includes("leave") ||
-    combined.includes("attendance") ||
-    combined.includes("payroll") ||
-    combined.includes("payslip") ||
-    combined.includes("statutory") ||
-    combined.includes("appraisal") ||
-    combined.includes("letter")
-  ) {
-    return "hrms";
-  }
-  if (
-    combined.includes("case") ||
-    combined.includes("matter") ||
-    combined.includes("probate") ||
-    combined.includes("rule") ||
-    combined.includes("legal") ||
-    combined.includes("document")
-  ) {
-    return "legal";
-  }
-  if (
-    combined.includes("admin") ||
-    combined.includes("user") ||
-    combined.includes("role") ||
-    combined.includes("setting") ||
-    combined.includes("integration") ||
-    combined.includes("audit")
-  ) {
-    return "admin";
-  }
-  return "all";
-}
+import { IconDashboard } from "./icons";
 
 /**
- * Re-architected Ergonomic 3-Tier Enterprise Shell:
+ * Re-architected Ergonomic Enterprise Shell (Server Component):
  *
- * Tier 1: Top Suite Switcher with isolated focus (Command Hub / Accounting / HRMS / Legal AI / Admin)
- * Tier 2: Contextual Left Navigation (shows only the relevant tools for the active suite, eliminating sidebar clutter)
- * Tier 3: High-Legibility Canvas with generous padding, crisp borders, and executive contrast
+ * Tier 1: Top Suite Switcher with active route focus (Command Hub / Accounting / HRMS / Legal AI / Admin)
+ * Tier 2: Persistent Navigation Rail with complete 35+ enterprise modules and active gold indicator
+ * Tier 3: High-Legibility Canvas with generous padding, crisp borders, and zero intrusive outlines
  */
 export function Shell({
   principal,
@@ -157,7 +19,6 @@ export function Shell({
   title,
   actions,
   children,
-  currentSuite,
 }: {
   principal: Principal;
   breadcrumbs?: Array<{ label: string; href?: string }>;
@@ -166,32 +27,7 @@ export function Shell({
   children: React.ReactNode;
   currentSuite?: AppSuite;
 }) {
-  const pathname = usePathname();
-
-  // Reset scroll and focus main canvas on route navigation
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
-    const mainEl = document.getElementById("main");
-    if (mainEl) {
-      mainEl.focus({ preventScroll: true });
-    }
-  }, [pathname]);
-
-  const suiteFromPath: AppSuite | null = pathname.startsWith("/accounting")
-    ? "accounting"
-    : pathname.startsWith("/hr")
-      ? "hrms"
-      : pathname.startsWith("/cases") || pathname.startsWith("/documents")
-        ? "legal"
-        : pathname.startsWith("/admin")
-          ? "admin"
-          : pathname === "/" || pathname.startsWith("/enquiries")
-            ? "all"
-            : null;
-
-  const activeSuite = suiteFromPath ?? currentSuite ?? inferActiveSuite(breadcrumbs, title);
-
-  // Always display the complete enterprise navigation suite in the sidebar rail
+  // Always compute the complete enterprise navigation suite on the server with full capabilities
   const sections = visibleNavigation(principal, "all");
 
   return (
@@ -225,18 +61,8 @@ export function Shell({
             </div>
           </Link>
 
-          {/* Mobile menu toggle */}
-          <details className="lg:hidden" open={false}>
-            <summary className="cursor-pointer list-none px-4 py-2.5 text-[11px] text-amber-400 uppercase font-mono">
-              Toggle Menu
-            </summary>
-            <NavList sections={sections} pathname={pathname} />
-          </details>
-
-          {/* Desktop Nav List */}
-          <div className="hidden lg:block">
-            <NavList sections={sections} pathname={pathname} />
-          </div>
+          {/* Navigation Rail with all sections & active path highlighting */}
+          <NavigationRail sections={sections} />
         </div>
 
         {/* Sidebar Footer */}
@@ -312,104 +138,11 @@ export function Shell({
           </div>
         </header>
 
-        {/* Tier 1: Suite Switcher Bar (Spacious Ergonomic Navigation) */}
-        <div className="border-b border-slate-200/90 bg-white px-6 py-2.5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-              <Link
-                href="/"
-                prefetch={true}
-                aria-current={activeSuite === "all" ? "page" : undefined}
-                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                  activeSuite === "all"
-                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <IconDashboard size={14} className={activeSuite === "all" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
-                <span className={activeSuite === "all" ? "text-white" : ""}>Command Hub</span>
-                {activeSuite === "all" && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
-                )}
-              </Link>
+        {/* Tier 1: Suite Switcher Bar */}
+        <SuiteSwitcher />
 
-              <Link
-                href="/accounting"
-                prefetch={true}
-                aria-current={activeSuite === "accounting" ? "page" : undefined}
-                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                  activeSuite === "accounting"
-                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <IconAccounting size={14} className={activeSuite === "accounting" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
-                <span className={activeSuite === "accounting" ? "text-white" : ""}>AutoCount Accounting</span>
-                {activeSuite === "accounting" && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
-                )}
-              </Link>
-
-              <Link
-                href="/hr"
-                prefetch={true}
-                aria-current={activeSuite === "hrms" ? "page" : undefined}
-                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                  activeSuite === "hrms"
-                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <IconHRMS size={14} className={activeSuite === "hrms" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
-                <span className={activeSuite === "hrms" ? "text-white" : ""}>AutoCount HRMS</span>
-                {activeSuite === "hrms" && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
-                )}
-              </Link>
-
-              <Link
-                href="/cases"
-                prefetch={true}
-                aria-current={activeSuite === "legal" ? "page" : undefined}
-                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                  activeSuite === "legal"
-                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <IconLegalAI size={14} className={activeSuite === "legal" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
-                <span className={activeSuite === "legal" ? "text-white" : ""}>Legal AI Forensics</span>
-                {activeSuite === "legal" && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
-                )}
-              </Link>
-
-              <Link
-                href="/admin"
-                prefetch={true}
-                aria-current={activeSuite === "admin" ? "page" : undefined}
-                className={`group flex items-center gap-2 rounded-lg px-3 py-1.5 text-[12.5px] font-medium transition-all focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-500 ${
-                  activeSuite === "admin"
-                    ? "bg-slate-900 text-amber-300 font-semibold shadow-xs ring-1 ring-slate-800"
-                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-                }`}
-              >
-                <IconAdmin size={14} className={activeSuite === "admin" ? "text-amber-400" : "text-slate-400 group-hover:text-slate-600"} />
-                <span className={activeSuite === "admin" ? "text-white" : ""}>Administration</span>
-                {activeSuite === "admin" && (
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0 shadow-[0_0_6px_rgba(251,191,36,0.8)]" />
-                )}
-              </Link>
-            </div>
-
-            <span className="hidden xl:inline text-[11px] text-slate-400 font-mono">
-              Malaysian SST & Bar Council Compliant
-            </span>
-          </div>
-        </div>
-
-        {/* Main Content Area: Generous Enterprise Canvas */}
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 p-6 lg:p-8 page-transition focus:outline-hidden">
+        {/* Main Content Area */}
+        <main id="main" className="min-w-0 flex-1 p-6 lg:p-8 page-transition outline-none">
           {principal.mfaRequired && !principal.mustEnrolMfa && (
             <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-900">
               This account needs an authenticator by{" "}
@@ -443,117 +176,5 @@ export function Shell({
         </main>
       </div>
     </div>
-  );
-}
-
-function NavList({
-  sections,
-  pathname,
-}: {
-  sections: ReturnType<typeof visibleNavigation>;
-  pathname: string;
-}) {
-  const allHrefs = sections.flatMap((section) => section.items.map((item) => item.href));
-
-  const isItemActive = (itemHref: string) => {
-    if (pathname === itemHref) return true;
-    if (
-      itemHref === "/" ||
-      itemHref === "/accounting" ||
-      itemHref === "/hr" ||
-      itemHref === "/cases" ||
-      itemHref === "/admin"
-    ) {
-      return pathname === itemHref;
-    }
-    if (pathname.startsWith(itemHref + "/")) {
-      const hasLongerMatch = allHrefs.some(
-        (other) =>
-          other !== itemHref &&
-          other.length > itemHref.length &&
-          (pathname === other || pathname.startsWith(other + "/")),
-      );
-      return !hasLongerMatch;
-    }
-    return false;
-  };
-
-  // Auto-scroll active item into view inside the sidebar if needed
-  useEffect(() => {
-    const activeEl = document.querySelector('[data-active="true"]');
-    if (activeEl) {
-      activeEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }
-  }, [pathname]);
-
-  return (
-    <nav className="px-3 py-3 space-y-4" aria-label="Sections">
-      {sections.map((section) => (
-        <div key={section.heading} className="space-y-1">
-          <p className="px-3 py-1 font-mono text-[9.5px] uppercase tracking-wider text-slate-400 font-semibold">
-            {section.heading}
-          </p>
-          <ul className="space-y-0.5">
-            {section.items.map((item) => {
-              const active = isItemActive(item.href);
-              return (
-                <li key={item.href}>
-                  {item.phase ? (
-                    <span
-                      className="flex cursor-not-allowed items-center justify-between rounded-lg px-3 py-1.5 text-[13px] text-slate-500"
-                      title={`Planned for phase ${item.phase}`}
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <span className="opacity-40">{getNavIcon(item.icon)}</span>
-                        <span>{item.label}</span>
-                      </span>
-                      <span className="text-[10px] font-mono">P{item.phase}</span>
-                    </span>
-                  ) : (
-                    <Link
-                      href={item.href}
-                      prefetch={true}
-                      data-active={active ? "true" : undefined}
-                      aria-current={active ? "page" : undefined}
-                      className={`group flex items-center justify-between rounded-lg px-3 py-1.5 text-[13px] transition-all duration-150 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${
-                        active
-                          ? "bg-slate-800/90 text-amber-300 font-semibold border-l-[3px] border-amber-400 shadow-xs ring-1 ring-amber-400/20"
-                          : "text-slate-300 font-normal hover:bg-slate-800/60 hover:text-white border-l-[3px] border-transparent"
-                      }`}
-                    >
-                      <span className="flex items-center gap-2.5 truncate">
-                        <span
-                          className={`shrink-0 transition-colors ${
-                            active
-                              ? "text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.6)]"
-                              : "text-slate-400 group-hover:text-amber-300"
-                          }`}
-                        >
-                          {getNavIcon(item.icon)}
-                        </span>
-                        <span
-                          className={`truncate ${
-                            active
-                              ? "text-amber-200 font-semibold"
-                              : "text-slate-300 group-hover:text-white"
-                          }`}
-                        >
-                          {item.label}
-                        </span>
-                      </span>
-                      {active && (
-                        <span className="ml-2 flex h-2 w-2 items-center justify-center shrink-0">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.9)] animate-pulse" />
-                        </span>
-                      )}
-                    </Link>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
-    </nav>
   );
 }

@@ -191,6 +191,19 @@ export function visibleNavigation(
   principal: Principal,
   suiteFilter: AppSuite = "all",
 ): NavSection[] {
+  const isSuperAdmin =
+    principal?.roles?.includes("SUPER_ADMIN") ||
+    principal?.roles?.includes("MANAGEMENT");
+
+  const hasCap = (cap: string): boolean => {
+    if (isSuperAdmin) return true;
+    const caps = principal?.capabilities;
+    if (!caps) return false;
+    if (typeof (caps as any).has === "function") return (caps as any).has(cap);
+    if (Array.isArray(caps)) return (caps as any).includes(cap);
+    return false;
+  };
+
   return NAVIGATION.filter((section) => {
     if (suiteFilter === "all") return true;
     if (section.heading === "Overview") return true;
@@ -201,7 +214,7 @@ export function visibleNavigation(
       items: section.items.filter(
         (item) =>
           item.capabilities.length === 0 ||
-          item.capabilities.some((c) => principal.capabilities.has(c)),
+          item.capabilities.some((c) => hasCap(c)),
       ),
     }))
     .filter((section) => section.items.length > 0);
