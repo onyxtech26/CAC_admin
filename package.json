@@ -16,6 +16,7 @@
     "db:generate": "pnpm --filter @cac/db generate",
     "db:migrate": "pnpm --filter @cac/db migrate",
     "db:seed": "pnpm --filter @cac/db seed",
+    "db:demo": "pnpm --filter @cac/db demo:seed",
     "db:bootstrap": "pnpm --filter @cac/db bootstrap",
     "verify": "node scripts/check-route-guards.mjs && node scripts/check-capabilities.mjs && pnpm -r typecheck && pnpm -r test",
     "check:routes": "node scripts/check-route-guards.mjs",

@@ -41,13 +41,11 @@ async function ensureDatabaseBootstrapped(db: Database): Promise<void> {
       }
 
       try {
-        console.log("[db] Initializing schema and seed data on fresh database...");
-        const { runMigrations } = await import("./migrate.js");
-        const { seed } = await import("./seed.js");
-        await runMigrations(db);
-        await seed(db);
+        console.log("[db] Initializing schema and demo dataset on fresh database...");
+        const { seedDemo } = await import("./demo-seed.js");
+        await seedDemo(db);
         isBootstrapped = true;
-        console.log("[db] Database bootstrap complete.");
+        console.log("[db] Database bootstrap complete with demo dataset.");
       } finally {
         await db.execute(sql`SELECT pg_advisory_unlock(7421839)`).catch(() => null);
       }
